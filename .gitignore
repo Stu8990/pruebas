@@ -1,0 +1,7 @@
+data.json
+image.png
+reports/
+*.local
+.env
+.env.*
+supabase/.temp/
