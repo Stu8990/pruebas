@@ -44,7 +44,8 @@ export async function fetchMarketData() {
         const dotColor = item.pe < 18 ? '#10b981' : item.pe > 25 ? '#dc2626' : '#f59e0b';
         perDot = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:3px;"></span>`;
       }
-      return `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;">
+      return `<div data-ticker="${esc(item.ticker)}" data-price="${item.currentPrice ?? ''}" data-change="${item.changePercent ?? ''}" data-pe="${item.pe ?? ''}" data-rating="${esc(item.analystRating ?? '')}"
+        style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
           <div><div style="font-weight:700;font-size:13px;">${esc(item.ticker)}</div><div style="font-size:10px;color:var(--text-3);">${esc((item.name??'').split(' ').slice(0,3).join(' '))}</div></div>
           ${item.analystRating ? `<span style="font-size:10px;font-weight:700;color:${ratingColor};background:${ratingColor}18;padding:2px 6px;border-radius:20px;">${item.analystRating}</span>` : ''}

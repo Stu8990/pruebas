@@ -345,9 +345,12 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div>
             <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Qué hacer ahora</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Consejos basados en tus datos reales</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Análisis generado por Llama 3.3 70B · Groq</div>
           </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-3);"><span class="pulse"></span> IA activa</div>
+          <button onclick="refreshAi()" class="btn btn-ghost btn-sm" style="gap:5px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Actualizar IA
+          </button>
         </div>
         <div id="recommendations"></div>
       </div>

@@ -128,6 +128,8 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .explain-body { display: none; margin-top: 12px; }
 .explain-body.open { display: block; }
 
+@keyframes pulse-skeleton { 0%,100%{opacity:.4} 50%{opacity:.15} }
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
 

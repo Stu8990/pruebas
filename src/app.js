@@ -5,6 +5,7 @@ import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
 import { UI } from './ui.js';
 import { fetchMarketData } from './prices.js';
+import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast } from './utils.js';
 import { setSyncState } from './sync.js';
@@ -47,6 +48,7 @@ function goTo(id, btn) {
   if (id === 'portfolio')   Charts.returns();
   if (id === 'history')     UI.history();
   if (id === 'per')         renderWatchlist();
+  if (id === 'ai')          triggerAiAnalysis();
 }
 
 function toggleSidebar() {
@@ -77,6 +79,47 @@ function dismissBanner() {
 }
 
 function refreshData()      { UI.all(); toast('✓ Dashboard actualizado'); }
+
+let _aiLoading = false;
+async function triggerAiAnalysis(force = false) {
+  if (_aiLoading) return;
+  if (Store.history.length < 2) return; // Learn.recommendations handles empty state
+  const insightEl = document.getElementById('daily-insight');
+  const recsEl    = document.getElementById('recommendations');
+  if (!force) {
+    // Check cache first — if valid, just render without showing spinner
+    try {
+      const cached = await fetchAiAnalysis(false);
+      if (cached) { renderAiPage(cached); return; }
+    } catch { /* fall through to full load */ }
+  }
+  _aiLoading = true;
+  if (insightEl) insightEl.textContent = '🤖 Analizando tu portafolio con IA…';
+  if (recsEl)    recsEl.innerHTML = _aiSkeleton();
+  try {
+    const data = await fetchAiAnalysis(force);
+    if (data) renderAiPage(data);
+    else UI.recs(Store.cur(), Store.prev()); // fallback to rule-based
+  } catch (err) {
+    console.error('[ai-analysis]', err);
+    if (insightEl) insightEl.textContent = 'Análisis IA no disponible. Mostrando análisis local.';
+    UI.pulse(); UI.insight(Store.cur(), Store.prev()); UI.recs(Store.cur(), Store.prev());
+  } finally {
+    _aiLoading = false;
+  }
+}
+
+function _aiSkeleton() {
+  return Array(3).fill(0).map(() =>
+    `<div class="rec rec-blue" style="opacity:.4;animation:pulse-skeleton 1.4s ease infinite;">
+      <div style="height:12px;background:#bae6fd;border-radius:6px;width:60%;margin-bottom:8px;"></div>
+      <div style="height:10px;background:#bae6fd;border-radius:6px;width:90%;margin-bottom:5px;"></div>
+      <div style="height:10px;background:#bae6fd;border-radius:6px;width:75%;"></div>
+    </div>`
+  ).join('');
+}
+
+function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
 function onRecordChange(e)  { Store.idx = +e.target.value; UI.all(); }
 function checkMenuBtn()     { const b = document.getElementById('menu-btn'); if (b) b.style.display = window.innerWidth <= 1024 ? 'flex' : 'none'; }
 
@@ -248,6 +291,7 @@ window.onRecordChange  = onRecordChange;
 window.checkMenuBtn    = checkMenuBtn;
 window.autoDesc        = autoDesc;
 window.fetchMarketData = fetchMarketData;
+window.refreshAi       = refreshAi;
 window.evaluateAllPer  = evaluateAllPer;
 window.analyzeTickerPer  = analyzeTickerPer;
 window.openAddAsset      = openAddAsset;
