@@ -131,23 +131,59 @@ export const UI = {
 
   journey() {
     const el = document.getElementById('growth-journey'); if (!el) return;
-    if (!Store.history.length) { el.innerHTML = ''; return; }
-    const pts = [Store.history[0], ...Learn.s.injections.map(inj => Store.history.filter(r => r.fecha===inj.date).at(-1)).filter(Boolean), Store.history.at(-1)];
-    const unique = [...new Map(pts.map(r => [r?.fecha+r?.valor_total_usd, r])).values()].filter(Boolean).slice(0, 6);
-    el.innerHTML = unique.map((m, i) => {
-      const isInj = Learn.s.injections.some(x => x.date === m.fecha);
-      const emoji = isInj ? '💰' : i===0 ? '🌱' : i===unique.length-1 ? '🎯' : '📈';
-      const borderColor = isInj ? '#7c3aed' : i===0 ? '#10b981' : '#e7e5e4';
-      const bg = isInj ? '#f5f3ff' : i===0 ? '#ecfdf5' : '#fafaf9';
-      const fi = Store.history.findIndex(r => r === m);
+    const hist = Store.history;
+    if (!hist.length) { el.innerHTML = ''; return; }
+
+    // Group sessions by the Monday of their week
+    const mondayKey = dateStr => {
+      const d = new Date(dateStr + 'T12:00:00');
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      return monday.toISOString().slice(0, 10);
+    };
+
+    const byWeek = new Map();
+    hist.forEach(s => byWeek.set(mondayKey(s.fecha), s)); // last session of each week wins
+
+    const weeks = [...byWeek.values()].slice(-6);
+
+    // Short date label: "2 jun"
+    const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const dateLabel = dateStr => {
+      const d = new Date(dateStr + 'T12:00:00');
+      return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    };
+
+    // Is this week the current one?
+    const todayMonday = mondayKey(new Date().toISOString().slice(0, 10));
+
+    el.innerHTML = weeks.map((s, i) => {
+      const prev = weeks[i - 1];
+      const isFirst = i === 0;
+      const isLast  = i === weeks.length - 1;
+      const isCurrent = mondayKey(s.fecha) === todayMonday;
+
+      const weekPct = prev
+        ? ((s.valor_total_usd - prev.valor_total_usd) / prev.valor_total_usd) * 100
+        : null;
+      const up = weekPct === null || weekPct >= 0;
+      const chgColor = weekPct === null ? 'var(--text-3)' : up ? 'var(--success)' : 'var(--danger)';
+      const chgText  = weekPct !== null ? `${weekPct >= 0 ? '+' : ''}${weekPct.toFixed(1)}%` : '';
+
+      const emoji       = isFirst ? '🌱' : (isCurrent || isLast) ? '🎯' : up ? '↑' : '↓';
+      const borderColor = isFirst ? '#10b981' : (isCurrent || isLast) ? '#7c3aed' : up ? '#10b981' : '#dc2626';
+      const bg          = isFirst ? '#ecfdf5' : (isCurrent || isLast) ? '#f5f3ff' : up ? '#f0fdf4' : '#fef2f2';
+      const label       = (isCurrent || isLast) ? 'Esta sem.' : dateLabel(s.fecha);
+
       return `<div style="display:flex;align-items:center;flex-shrink:0;">
         <div class="journey-step">
-          <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 5px;font-size:15px;background:${bg};border:2px solid ${borderColor};">${emoji}</div>
-          <div class="mono" style="font-size:11px;font-weight:700;">${$f.format(m.valor_total_usd)}</div>
-          <div style="font-size:10px;color:var(--text-3);">${shortLabel(m, fi, Store.history)}</div>
-          ${isInj ? '<div style="font-size:9px;color:var(--primary);font-weight:700;margin-top:2px;">+Capital</div>' : ''}
+          <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:14px;background:${bg};border:2px solid ${borderColor};">${emoji}</div>
+          <div class="mono" style="font-size:11px;font-weight:700;">${$f.format(s.valor_total_usd)}</div>
+          <div style="font-size:10px;color:var(--text-3);">${label}</div>
+          ${chgText ? `<div class="mono" style="font-size:10px;font-weight:700;color:${chgColor};margin-top:1px;">${chgText}</div>` : ''}
         </div>
-        ${i < unique.length-1 ? '<div class="journey-connector" style="flex:1;height:2px;background:linear-gradient(90deg,#e5e7eb,#c4b5fd);min-width:14px;"></div>' : ''}
+        ${i < weeks.length - 1 ? '<div class="journey-connector"></div>' : ''}
       </div>`;
     }).join('');
   },
