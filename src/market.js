@@ -1,8 +1,12 @@
-import { ASSETS, EDGE_BASE } from './config.js';
+import { ASSETS, ASSET_META, EDGE_BASE } from './config.js';
 import { toast, esc } from './utils.js';
 import { db } from './auth.js';
 
 const safeUrl = url => /^https?:\/\//.test(url ?? '') ? url : '#';
+
+// Map internal ticker keys → Yahoo Finance symbols (e.g. VISA → V)
+const _yfTickers  = ASSETS.map(a => ASSET_META[a].yfTicker ?? a);
+const _reverseMap = Object.fromEntries(ASSETS.map(a => [ASSET_META[a].yfTicker ?? a, a]));
 
 export async function fetchMarketData() {
   const loadingEl  = document.getElementById('market-loading');
@@ -21,10 +25,12 @@ export async function fetchMarketData() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ tickers: ASSETS }),
+      body: JSON.stringify({ tickers: _yfTickers }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const items = await res.json();
+    const raw   = await res.json();
+    // Restore original ticker keys (e.g. V → VISA)
+    const items = raw.map(item => ({ ...item, ticker: _reverseMap[item.ticker] ?? item.ticker }));
     if (loadingEl) loadingEl.style.display = 'none';
 
     gridEl.innerHTML = items.map(item => {
@@ -67,10 +73,18 @@ export async function fetchMarketData() {
     });
 
     toast('✓ Precios actualizados');
-  } catch {
+  } catch (err) {
+    console.error('[market-data]', err);
     if (loadingEl) {
       loadingEl.style.display = 'block';
-      loadingEl.textContent = '⚠️ Edge Function no desplegada aún. Sigue las instrucciones de setup.';
+      const msg = err?.message ?? String(err);
+      if (msg.includes('401')) {
+        loadingEl.textContent = '⚠️ Error 401 — sesión no válida. Recarga la página.';
+      } else if (msg.includes('404') || msg.includes('Failed to fetch')) {
+        loadingEl.textContent = '⚠️ Edge Function no desplegada. Ejecuta: supabase functions deploy market-data';
+      } else {
+        loadingEl.textContent = `⚠️ Error al obtener precios: ${msg}`;
+      }
     }
   }
 }

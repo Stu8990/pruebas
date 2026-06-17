@@ -1,4 +1,5 @@
 import { ASSETS, ASSET_META } from './config.js';
+import { getAllAssets, getCustomAssets } from './assets.js';
 import { Store } from './store.js';
 import { Learn } from './learn.js';
 import { Charts } from './charts.js';
@@ -175,34 +176,44 @@ export const UI = {
 
   returnInputs() {
     const el = document.getElementById('return-inputs'); if (!el) return;
-    el.innerHTML = ASSETS.map(a =>
-      `<label>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:5px;">
-          <div style="width:7px;height:7px;border-radius:50%;background:${ASSET_META[a].color};"></div>
-          ${a} — ${ASSET_META[a].full}
+    const all = getAllAssets();
+    el.innerHTML = all.map(a =>
+      `<label data-asset="${esc(a.ticker)}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:5px;">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:${a.color};flex-shrink:0;"></div>
+            ${esc(a.ticker)} — ${esc(a.full)}
+          </div>
+          ${a.isCustom ? `<button type="button" onclick="removeCustomAsset('${esc(a.ticker)}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:#a8a29e;font-size:13px;padding:0;line-height:1;">✕</button>` : ''}
         </div>
-        <input id="inp-${a}" type="number" step="0.01" placeholder="0.00" oninput="autoDesc()" />
+        <input id="inp-${esc(a.ticker)}" type="number" step="0.01" placeholder="0.00" oninput="autoDesc()" />
       </label>`
-    ).join('');
+    ).join('') +
+    `<button type="button" onclick="openAddAsset()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;border-style:dashed;color:var(--primary);">+ Agregar activo o ETF</button>`;
   },
 
   prefill() {
     const r = Store.history.at(-1); if (!r) return;
     val('f-fecha', r.fecha); val('f-valor', r.valor_total_usd.toFixed(2)); val('f-fase', '');
-    ASSETS.forEach(a => val('inp-' + a, r.rendimientos[a] ?? ''));
+    getAllAssets().forEach(a => val('inp-' + a.ticker, r.rendimientos[a.ticker] ?? ''));
   },
 
   perMyAssets() {
     const el = document.getElementById('per-my-assets'); if (!el) return;
+    // Preserve user-entered values before re-render
+    const saved = {};
+    ASSETS.forEach(a => { const inp = document.getElementById('per-inp-' + a); if (inp?.value) saved[a] = inp.value; });
     el.innerHTML = ASSETS.map(a =>
       `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:#fafaf9;">
         <div style="width:8px;height:8px;border-radius:50%;background:${ASSET_META[a].color};flex-shrink:0;"></div>
         <div style="flex:1;">
-          <div style="font-size:13px;font-weight:600;">${a} — ${ASSET_META[a].full}</div>
-          <div style="font-size:11px;color:var(--text-3);">${ASSET_META[a].role}</div>
+          <div style="font-size:13px;font-weight:600;">${esc(a)} — ${esc(ASSET_META[a].full)}</div>
+          <div style="font-size:11px;color:var(--text-3);">${esc(ASSET_META[a].role)}</div>
         </div>
-        <input id="per-inp-${a}" type="number" step="0.1" placeholder="PER" style="width:80px;font-size:13px;padding:6px 8px;" />
+        <input id="per-inp-${a}" type="number" step="0.1" placeholder="—" readonly style="width:80px;font-size:13px;padding:6px 8px;background:#f5f5f4;color:var(--text-2);cursor:default;border-color:#e7e5e4;" />
       </div>`
     ).join('');
+    // Restore saved values
+    ASSETS.forEach(a => { if (saved[a]) { const inp = document.getElementById('per-inp-' + a); if (inp) inp.value = saved[a]; } });
   },
 };

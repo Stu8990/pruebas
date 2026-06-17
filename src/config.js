@@ -11,7 +11,7 @@ export const ASSET_META = {
   MNST: { full:'Monster Beverage',  role:'Consumo defensivo',    sector:'Defense', color:'#10b981' },
   NVDA: { full:'NVIDIA',            role:'Semiconductores / IA', sector:'Tech',    color:'#f59e0b' },
   SCHD: { full:'Schwab Dividend',   role:'Dividendos / valor',   sector:'Defense', color:'#14b8a6' },
-  VISA: { full:'Visa Inc.',         role:'Pagos globales',       sector:'Quality', color:'#ef4444' },
+  VISA: { full:'Visa Inc.',         role:'Pagos globales',       sector:'Quality', color:'#ef4444', yfTicker:'V' },
 };
 
 export const SECTOR_COLORS = { Core:'#3b82f6', Tech:'#8b5cf6', Defense:'#10b981', Quality:'#ef4444' };

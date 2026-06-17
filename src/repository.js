@@ -1,17 +1,15 @@
-let _client = null;
-
-export function setDbClient(client) { _client = client; }
+import { db } from './auth.js';
 
 export const SessionRepo = {
   findByUser(userId) {
-    return _client
+    return db
       .from('sessions')
       .select('fecha,fase,valor_total_usd,rendimientos')
       .eq('user_id', userId)
       .order('fecha',      { ascending: true })
       .order('created_at', { ascending: true });
   },
-  insert(rows)  { return _client.from('sessions').insert(rows); },
-  insertOne(row){ return _client.from('sessions').insert(row);  },
-  deleteByUser(userId) { return _client.from('sessions').delete().eq('user_id', userId); },
+  insert(rows)        { return db.from('sessions').insert(rows); },
+  insertOne(row)      { return db.from('sessions').insert(row);  },
+  deleteByUser(userId){ return db.from('sessions').delete().eq('user_id', userId); },
 };

@@ -1,19 +1,22 @@
-import { BK, ASSETS } from './config.js';
+import { BK, ASSETS, EDGE_BASE } from './config.js';
+import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset } from './assets.js';
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
 import { UI } from './ui.js';
 import { fetchMarketData } from './market.js';
-import { evaluateAllPer, perZone } from './per.js';
+import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast } from './utils.js';
 import { setSyncState } from './sync.js';
-import { setDbClient } from './repository.js';
+import { showOnboarding, isOnboardingDone } from './onboarding.js';
 import {
   db,
-  createAuthenticatedClient,
   loginWithPassword,
   showForgot,
   backToLogin,
+  showSignup,
+  signUp,
+  toggleSignupPwd,
   sendReset,
   showChangePwd,
   closePwdModal,
@@ -43,6 +46,7 @@ function goTo(id, btn) {
   if (id === 'dashboard') { Charts.value(); Charts.sector(); }
   if (id === 'portfolio')   Charts.returns();
   if (id === 'history')     UI.history();
+  if (id === 'per')         renderWatchlist();
 }
 
 function toggleSidebar() {
@@ -81,10 +85,75 @@ function autoDesc() {
   const valor = parseFloat(document.getElementById('f-valor')?.value || '0');
   if (!fecha || !valor) return;
   const rend = {};
-  ASSETS.forEach(a => { const v = document.getElementById('inp-' + a)?.value; rend[a] = (v === '' || v === undefined) ? null : +v; });
+  getAllAssets().forEach(({ ticker: t }) => { const v = document.getElementById('inp-' + t)?.value; rend[t] = (v === '' || v === undefined) ? null : +v; });
   const desc = generateDescription({ fecha, valor_total_usd: valor, rendimientos: rend });
   const ta = document.getElementById('f-fase');
   if (ta) ta.value = desc;
+}
+
+// ── Custom assets ─────────────────────────────────────
+function openAddAsset() {
+  let panel = document.getElementById('add-asset-panel');
+  if (panel) { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; return; }
+  panel = document.createElement('div');
+  panel.id = 'add-asset-panel';
+  panel.style.cssText = 'margin-top:8px;padding:14px;background:#f5f3ff;border-radius:11px;border:1px solid #ddd6fe;';
+  panel.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">Agregar activo personalizado</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <label style="flex:1;margin:0;">
+        <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px;">Símbolo (ticker)</span>
+        <input id="new-asset-ticker" placeholder="Ej: AAPL, GLD, BTC-USD" style="text-transform:uppercase;font-size:13px;" />
+      </label>
+      <button type="button" onclick="confirmAddAsset()" class="btn btn-primary btn-sm">Agregar</button>
+      <button type="button" onclick="document.getElementById('add-asset-panel').style.display='none'" class="btn btn-ghost btn-sm">✕</button>
+    </div>
+    <div id="add-asset-msg" style="font-size:11px;margin-top:7px;min-height:16px;"></div>`;
+  const container = document.getElementById('return-inputs');
+  container?.insertAdjacentElement('afterend', panel);
+}
+
+async function confirmAddAsset() {
+  const inp = document.getElementById('new-asset-ticker');
+  const msg = document.getElementById('add-asset-msg');
+  const ticker = inp?.value.trim().toUpperCase();
+  if (!ticker) return;
+  if (msg) { msg.textContent = `Buscando ${ticker}…`; msg.style.color = 'var(--text-3)'; }
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/market-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ tickers: [ticker] }),
+    });
+    const items = await res.json();
+    const item  = items[0];
+    if (item?.error) {
+      if (msg) { msg.textContent = `No se encontró "${ticker}". Verifica el símbolo exacto.`; msg.style.color = 'var(--danger)'; }
+      return;
+    }
+    const added = addCustomAsset(ticker, item.name ?? ticker);
+    if (!added) {
+      if (msg) { msg.textContent = `${ticker} ya está en tu lista.`; msg.style.color = 'var(--warning)'; }
+      return;
+    }
+    if (inp) inp.value = '';
+    if (msg) { msg.textContent = `✓ ${ticker} (${item.name ?? ''}) agregado`; msg.style.color = 'var(--success)'; }
+    UI.returnInputs(); UI.prefill();
+    // Reinsert the panel after re-render
+    const panel = document.getElementById('add-asset-panel');
+    if (panel) document.getElementById('return-inputs')?.insertAdjacentElement('afterend', panel);
+  } catch (err) {
+    if (msg) { msg.textContent = 'Error: ' + err.message; msg.style.color = 'var(--danger)'; }
+  }
+}
+
+function removeCustomAsset(ticker) {
+  _removeCustomAsset(ticker);
+  UI.returnInputs(); UI.prefill();
+  const panel = document.getElementById('add-asset-panel');
+  if (panel) document.getElementById('return-inputs')?.insertAdjacentElement('afterend', panel);
+  toast(`✓ ${ticker} eliminado`);
 }
 
 // ── App lifecycle ─────────────────────────────────────
@@ -105,6 +174,7 @@ async function initApp(userId, email) {
 
   Store._syncCloud().then(changed => {
     if (changed) { Learn.train(Store.history); UI.prefill(); UI.all(); }
+    if (Store.history.length === 0 && !isOnboardingDone()) showOnboarding();
   });
 
   fetchMarketData();
@@ -113,8 +183,6 @@ async function initApp(userId, email) {
 async function startApp(session) {
   if (_appReady) return;
   _appReady = true;
-  const adb = createAuthenticatedClient(session.access_token);
-  setDbClient(adb);
   await initApp(session.user.id, session.user.email);
 }
 
@@ -130,7 +198,7 @@ document.getElementById('record-form').addEventListener('submit', async e => {
   const btn = document.getElementById('btn-save-record');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const rend = {};
-  ASSETS.forEach(a => { const v = document.getElementById('inp-' + a)?.value; rend[a] = (v === '' || v === undefined) ? null : +v; });
+  getAllAssets().forEach(({ ticker: t }) => { const v = document.getElementById('inp-' + t)?.value; rend[t] = (v === '' || v === undefined) ? null : +v; });
   const fecha = document.getElementById('f-fecha').value;
   const valor = +document.getElementById('f-valor').value;
   const fase  = document.getElementById('f-fase').value.trim() || generateDescription({ fecha, valor_total_usd: valor, rendimientos: rend });
@@ -155,15 +223,7 @@ document.getElementById('btn-export').addEventListener('click', () => {
 document.getElementById('per-form').addEventListener('submit', e => {
   e.preventDefault();
   const ticker = document.getElementById('per-ticker').value.trim();
-  const per    = parseFloat(document.getElementById('per-val').value);
-  if (!ticker || isNaN(per) || per <= 0) { toast('Completa los dos campos'); return; }
-  const z  = perZone(per);
-  const el = document.getElementById('per-result');
-  el.style.display = 'block';
-  el.innerHTML = `<div style="background:${z.bg};border:1px solid ${z.border};border-radius:11px;padding:15px;">
-    <div style="font-size:14px;font-weight:700;color:${z.text};margin-bottom:5px;">${ticker} con PER ${per.toFixed(1)}x → ${z.zone}</div>
-    <p style="font-size:13px;color:${z.text};opacity:.9;margin:0;line-height:1.7;">${z.tip}</p>
-  </div>`;
+  analyzeTickerPer(ticker);
 });
 
 document.getElementById('auth-email').addEventListener('keydown',    e => { if (e.key === 'Enter') document.getElementById('auth-password').focus(); });
@@ -189,11 +249,18 @@ window.checkMenuBtn    = checkMenuBtn;
 window.autoDesc        = autoDesc;
 window.fetchMarketData = fetchMarketData;
 window.evaluateAllPer  = evaluateAllPer;
+window.analyzeTickerPer  = analyzeTickerPer;
+window.openAddAsset      = openAddAsset;
+window.confirmAddAsset   = confirmAddAsset;
+window.removeCustomAsset = removeCustomAsset;
 window.loginWithPassword = loginWithPassword;
-window.toggleAuthPwd   = toggleAuthPwd;
-window.showForgot      = showForgot;
-window.backToLogin     = backToLogin;
-window.sendReset       = sendReset;
+window.toggleAuthPwd     = toggleAuthPwd;
+window.showForgot        = showForgot;
+window.backToLogin       = backToLogin;
+window.showSignup        = showSignup;
+window.signUp            = signUp;
+window.toggleSignupPwd   = toggleSignupPwd;
+window.sendReset         = sendReset;
 window.showChangePwd   = showChangePwd;
 window.closePwdModal   = closePwdModal;
 window.changePassword  = changePassword;

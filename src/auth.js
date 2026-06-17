@@ -9,12 +9,6 @@ export const db = createClient(SUPA_URL, SUPA_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
-export function createAuthenticatedClient(accessToken) {
-  return createClient(SUPA_URL, SUPA_KEY, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth:   { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function showAuthErr(msg) {
   const e = document.getElementById('auth-err');
@@ -48,12 +42,66 @@ export async function loginWithPassword() {
 
 export function showForgot() {
   document.getElementById('auth-login-form').style.display  = 'none';
+  document.getElementById('auth-signup-form').style.display = 'none';
   document.getElementById('auth-forgot-form').style.display = 'block';
 }
 
 export function backToLogin() {
   document.getElementById('auth-forgot-form').style.display = 'none';
+  document.getElementById('auth-signup-form').style.display = 'none';
   document.getElementById('auth-login-form').style.display  = 'block';
+}
+
+export function showSignup() {
+  document.getElementById('auth-login-form').style.display  = 'none';
+  document.getElementById('auth-forgot-form').style.display = 'none';
+  document.getElementById('auth-signup-form').style.display = 'block';
+  document.getElementById('signup-email')?.focus();
+}
+
+export function toggleSignupPwd() {
+  const inp = document.getElementById('signup-password');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+export async function signUp() {
+  const email = document.getElementById('signup-email')?.value.trim();
+  const pwd   = document.getElementById('signup-password')?.value;
+  const pwd2  = document.getElementById('signup-password2')?.value;
+  const err   = document.getElementById('signup-err');
+
+  const show = (msg, color = 'var(--danger)') => {
+    if (err) { err.textContent = msg; err.style.color = color; err.style.display = 'block'; }
+  };
+  const hide = () => { if (err) err.style.display = 'none'; };
+
+  if (!email || !pwd)  { show('Completa todos los campos'); return; }
+  if (pwd.length < 6)  { show('La contraseña debe tener al menos 6 caracteres'); return; }
+  if (pwd !== pwd2)    { show('Las contraseñas no coinciden'); return; }
+  hide();
+
+  const btn = document.getElementById('btn-signup');
+  btn.disabled = true; btn.textContent = 'Creando cuenta…';
+  const { data, error } = await db.auth.signUp({ email, password: pwd });
+  btn.disabled = false; btn.textContent = 'Crear cuenta';
+
+  if (error) {
+    const msg = error.message?.toLowerCase() ?? '';
+    if (msg.includes('already registered') || msg.includes('user already'))
+      show('Este correo ya tiene cuenta. Inicia sesión.');
+    else
+      show('Error: ' + error.message);
+    return;
+  }
+
+  if (data.session) {
+    // Confirmación de email desactivada → ya está autenticado, onAuthStateChange lo maneja
+    hide();
+  } else {
+    // Supabase requiere confirmar el email
+    show('✓ ¡Cuenta creada! Revisa tu correo para confirmar y luego inicia sesión.', 'var(--success)');
+    btn.textContent = 'Revisa tu correo';
+  }
 }
 
 export async function sendReset() {
