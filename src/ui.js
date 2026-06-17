@@ -134,53 +134,47 @@ export const UI = {
     const hist = Store.history;
     if (!hist.length) { el.innerHTML = ''; return; }
 
-    // Group sessions by the Monday of their week
+    // Parse "YYYY-MM-DD" in LOCAL time (avoids UTC timezone offset shifting the date)
+    const parseLocal = str => { const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d); };
+
+    // Monday key as local "YYYY-MM-DD" — no toISOString() to avoid UTC drift
     const mondayKey = dateStr => {
-      const d = new Date(dateStr + 'T12:00:00');
+      const d = parseLocal(dateStr);
       const day = d.getDay();
-      const monday = new Date(d);
-      monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-      return monday.toISOString().slice(0, 10);
+      d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     };
 
+    // Sort chronologically, then group by week (last session of each week wins)
+    const sorted = [...hist].sort((a, b) => a.fecha.localeCompare(b.fecha));
     const byWeek = new Map();
-    hist.forEach(s => byWeek.set(mondayKey(s.fecha), s)); // last session of each week wins
+    sorted.forEach(s => byWeek.set(mondayKey(s.fecha), s));
 
     const weeks = [...byWeek.values()].slice(-6);
 
-    // Short date label: "2 jun"
     const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    const dateLabel = dateStr => {
-      const d = new Date(dateStr + 'T12:00:00');
-      return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-    };
-
-    // Is this week the current one?
-    const todayMonday = mondayKey(new Date().toISOString().slice(0, 10));
+    const dateLabel = dateStr => { const [,m,d] = dateStr.split('-').map(Number); return `${d} ${MONTHS[m-1]}`; };
 
     el.innerHTML = weeks.map((s, i) => {
-      const prev = weeks[i - 1];
+      const prev    = weeks[i - 1];
       const isFirst = i === 0;
       const isLast  = i === weeks.length - 1;
-      const isCurrent = mondayKey(s.fecha) === todayMonday;
 
-      const weekPct = prev
-        ? ((s.valor_total_usd - prev.valor_total_usd) / prev.valor_total_usd) * 100
-        : null;
-      const up = weekPct === null || weekPct >= 0;
+      const weekPct  = prev ? ((s.valor_total_usd - prev.valor_total_usd) / prev.valor_total_usd) * 100 : null;
+      const up       = weekPct === null || weekPct >= 0;
       const chgColor = weekPct === null ? 'var(--text-3)' : up ? 'var(--success)' : 'var(--danger)';
       const chgText  = weekPct !== null ? `${weekPct >= 0 ? '+' : ''}${weekPct.toFixed(1)}%` : '';
 
-      const emoji       = isFirst ? '🌱' : (isCurrent || isLast) ? '🎯' : up ? '↑' : '↓';
-      const borderColor = isFirst ? '#10b981' : (isCurrent || isLast) ? '#7c3aed' : up ? '#10b981' : '#dc2626';
-      const bg          = isFirst ? '#ecfdf5' : (isCurrent || isLast) ? '#f5f3ff' : up ? '#f0fdf4' : '#fef2f2';
-      const label       = (isCurrent || isLast) ? 'Esta sem.' : dateLabel(s.fecha);
+      const emoji       = isFirst ? '🌱' : isLast ? '🎯' : up ? '↑' : '↓';
+      const borderColor = isFirst ? '#10b981' : isLast ? '#7c3aed' : up ? '#10b981' : '#dc2626';
+      const bg          = isFirst ? '#ecfdf5' : isLast ? '#f5f3ff' : up ? '#f0fdf4' : '#fef2f2';
+      const label       = isLast ? 'Reciente' : isFirst ? `${dateLabel(s.fecha)} (inicio)` : dateLabel(s.fecha);
 
       return `<div style="display:flex;align-items:center;flex-shrink:0;">
         <div class="journey-step">
           <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:14px;background:${bg};border:2px solid ${borderColor};">${emoji}</div>
           <div class="mono" style="font-size:11px;font-weight:700;">${$f.format(s.valor_total_usd)}</div>
-          <div style="font-size:10px;color:var(--text-3);">${label}</div>
+          <div style="font-size:10px;color:var(--text-3);white-space:nowrap;">${label}</div>
           ${chgText ? `<div class="mono" style="font-size:10px;font-weight:700;color:${chgColor};margin-top:1px;">${chgText}</div>` : ''}
         </div>
         ${i < weeks.length - 1 ? '<div class="journey-connector"></div>' : ''}
