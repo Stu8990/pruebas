@@ -131,19 +131,105 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
 
+/* ── Tablet / mobile sidebar ─────────────────────── */
 @media (max-width:1024px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
   .main-wrapper { margin-left: 0; padding-bottom: 72px; }
   .bottom-nav { display: flex; }
 }
+
+/* ── Tablet 768px ────────────────────────────────── */
 @media (max-width:768px) {
   .g4 { grid-template-columns: 1fr 1fr !important; }
   .g2 { grid-template-columns: 1fr !important; }
   .g3 { grid-template-columns: 1fr !important; }
+  .pad { padding: 14px 16px !important; }
 }
+
+/* ── Phone 480px ─────────────────────────────────── */
 @media (max-width:480px) {
-  .g4 { grid-template-columns: 1fr 1fr !important; }
-  .num-hero { font-size: 26px; }
-  .pad { padding: 12px !important; }
+  /* Spacing */
+  .pad { padding: 10px 12px !important; }
+
+  /* Auth */
+  .auth-card { padding: 28px 22px; border-radius: 16px; }
+
+  /* Typography */
+  .num-hero  { font-size: 24px; }
+  .num-large { font-size: 18px; }
+
+  /* KPI grid: 2 cols, tighter cards */
+  .g4 { grid-template-columns: 1fr 1fr !important; gap: 9px !important; }
+  .kpi-card { padding: 12px 13px !important; }
+
+  /* Grids: 1 column */
+  .g2 { grid-template-columns: 1fr !important; gap: 10px !important; }
+
+  /* Header: wrap second row */
+  .main-wrapper header {
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .main-wrapper header > div:first-of-type { flex: 1; min-width: 0; }
+  .main-wrapper header > div:first-of-type h1 { font-size: 14px !important; }
+  .main-wrapper header > div:first-of-type span { display: none; } /* hide subtitle */
+  .main-wrapper header > div:last-child {
+    width: 100%; display: flex; gap: 8px;
+  }
+  #record-sel { flex: 1; max-width: none !important; font-size: 11px !important; padding: 6px 8px !important; }
+
+  /* Record form: inputs 1 col */
+  #return-inputs { grid-template-columns: 1fr !important; }
+  #record-form .g2-inner,
+  #record-form > div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+  /* PER search: stack vertically */
+  #per-form { flex-direction: column !important; }
+  #per-form button { width: 100%; }
+
+  /* Market grid: 2 cols */
+  #market-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+
+  /* Buttons */
+  .btn-sm { padding: 6px 10px; font-size: 11px; }
+
+  /* Toast: above bottom nav */
+  .toast { bottom: 78px; right: 10px; max-width: calc(100vw - 20px); }
+
+  /* Bottom nav: tighter */
+  .bnav-btn { font-size: 9px; padding: 7px 3px; gap: 2px; }
+
+  /* Cards: less inner breathing room */
+  .rec { padding: 11px 13px; }
+
+  /* PER explain box */
+  .explain-body > div { padding: 12px !important; }
+
+  /* Journey: smaller steps */
+  .journey-step { min-width: 72px; }
+}
+
+/* ── Small phone 390px (Moto Edge G16) ──────────── */
+@media (max-width:400px) {
+  .pad { padding: 8px 10px !important; }
+  .auth-card { padding: 24px 18px; }
+  .num-hero  { font-size: 20px; }
+  .num-large { font-size: 16px; }
+  .kpi-card  { padding: 10px 11px !important; }
+  .g4 { gap: 7px !important; }
+
+  /* Header record selector below title */
+  .main-wrapper header { gap: 6px; }
+
+  /* Watchlist + market cards: compact */
+  #market-grid > div { padding: 10px !important; }
+
+  /* Badges smaller */
+  .badge { font-size: 10px; padding: 2px 7px; }
+
+  /* Bottom nav */
+  .bnav-btn { font-size: 9px; padding: 6px 2px; }
+  .bnav-btn svg { width: 17px; height: 17px; }
 }
