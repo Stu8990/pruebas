@@ -154,7 +154,13 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          {
+            role: 'system',
+            content: 'Eres un asesor de inversiones senior. DEBES responder EXCLUSIVAMENTE en español latinoamericano. Está terminantemente prohibido usar inglés en cualquier parte de tu respuesta, incluyendo títulos, descripciones y valores. Responde solo con el JSON solicitado, en español.',
+          },
+          { role: 'user', content: prompt },
+        ],
         temperature: 0.4,
         max_tokens: 1200,
         response_format: { type: 'json_object' },
