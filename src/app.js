@@ -4,7 +4,7 @@ import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
 import { UI } from './ui.js';
-import { fetchMarketData } from './market.js';
+import { fetchMarketData } from './prices.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast } from './utils.js';
 import { setSyncState } from './sync.js';
