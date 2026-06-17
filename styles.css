@@ -133,7 +133,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 
 /* ── Tablet / mobile sidebar ─────────────────────── */
 @media (max-width:1024px) {
-  .sidebar { transform: translateX(-100%); }
+  .sidebar { transform: translateX(-100%); padding-bottom: 80px; } /* space above bottom nav */
   .sidebar.open { transform: translateX(0); }
   .main-wrapper { margin-left: 0; padding-bottom: 72px; }
   .bottom-nav { display: flex; }
@@ -223,13 +223,49 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
   /* Header record selector below title */
   .main-wrapper header { gap: 6px; }
 
-  /* Watchlist + market cards: compact */
-  #market-grid > div { padding: 10px !important; }
-
   /* Badges smaller */
   .badge { font-size: 10px; padding: 2px 7px; }
 
   /* Bottom nav */
   .bnav-btn { font-size: 9px; padding: 6px 2px; }
   .bnav-btn svg { width: 17px; height: 17px; }
+}
+
+/* ── Portfolio page (Mis Activos) mobile ─────────── */
+@media (max-width:768px) {
+  /* Market price cards: 2 col, compact */
+  #market-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #market-grid > div { padding: 11px !important; }
+  /* Hide 52-week range on small screens — too much text */
+  #market-grid > div > div:last-of-type { display: none; }
+
+  /* Asset table: hide "Tipo" column (col 2) to reduce overflow */
+  .tbl th:nth-child(2),
+  .tbl td:nth-child(2) { display: none; }
+
+  /* Charts: reduce height */
+  #value-chart   { max-height: 200px; }
+  #returns-chart { max-height: 220px; }
+  #sector-chart  { max-height: 150px; }
+
+  /* Journey: smaller step width */
+  .journey-step { min-width: 68px; }
+  .journey-step > div:first-child { width: 30px !important; height: 30px !important; font-size: 13px !important; }
+}
+
+@media (max-width:480px) {
+  /* Market cards: minimal — show only price + change */
+  #market-grid > div { padding: 10px !important; }
+  #market-grid > div .mono[style*="font-size:10px"] { display: none; } /* hide PE row */
+
+  /* Pulse cards: 2 col instead of 4 */
+  #pulse-cards { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+
+  /* Recommendation cards: smaller padding */
+  .rec { padding: 10px 12px; margin-bottom: 7px; }
+  .rec > div > span:first-child { font-size: 15px !important; }
+
+  /* Page section titles */
+  [style*="font-size:14px"][style*="font-weight:700"] { font-size: 13px !important; }
+  [style*="font-size:15px"][style*="font-weight:700"] { font-size: 14px !important; }
 }
