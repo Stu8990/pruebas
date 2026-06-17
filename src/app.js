@@ -316,3 +316,10 @@ window.signOut         = signOut;
   if (session?.user) await startApp(session);
   else showLogin();
 })();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/pruebas/sw.js', { scope: '/pruebas/' })
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  });
+}

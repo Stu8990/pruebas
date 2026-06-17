@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1035"/>
+      <stop offset="100%" stop-color="#3b1d84"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="34" fill="url(#bg)"/>
+  <path d="M30,132 L70,85 L102,107 L148,52 L148,150 L30,150 Z"
+    fill="rgba(167,139,250,0.13)"/>
+  <polyline
+    points="30,132 70,85 102,107 148,52"
+    fill="none" stroke="white" stroke-width="8"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline
+    points="126,44 148,52 140,74"
+    fill="none" stroke="white" stroke-width="8"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="70" cy="85" r="5" fill="#a78bfa"/>
+  <circle cx="102" cy="107" r="5" fill="#a78bfa"/>
+  <circle cx="148" cy="52" r="7" fill="#c4b5fd"/>
+</svg>

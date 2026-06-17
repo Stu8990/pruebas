@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1035"/>
+      <stop offset="100%" stop-color="#3b1d84"/>
+    </linearGradient>
+  </defs>
+  <!-- Full bleed for maskable — content within inner 80% safe zone -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Area fill under chart (inset for safe zone) -->
+  <path d="M108,385 L212,262 L298,318 L408,168 L408,436 L108,436 Z"
+    fill="rgba(167,139,250,0.13)"/>
+  <!-- Chart line -->
+  <polyline
+    points="108,385 212,262 298,318 408,168"
+    fill="none" stroke="white" stroke-width="22"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow head -->
+  <polyline
+    points="350,146 408,168 388,230"
+    fill="none" stroke="white" stroke-width="22"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="212" cy="262" r="13" fill="#a78bfa"/>
+  <circle cx="298" cy="318" r="13" fill="#a78bfa"/>
+  <circle cx="408" cy="168" r="18" fill="#c4b5fd"/>
+</svg>
