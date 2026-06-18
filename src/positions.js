@@ -1,4 +1,5 @@
 import { esc } from './utils.js';
+import { db } from './auth.js';
 
 const POS_KEY = 'investsmart-positions';
 
@@ -6,23 +7,47 @@ export function getPositions() {
   try { return JSON.parse(localStorage.getItem(POS_KEY) || '{}'); } catch { return {}; }
 }
 
-function _save(pos) {
+function _saveLocal(pos) {
   localStorage.setItem(POS_KEY, JSON.stringify(pos));
 }
 
-export function addPurchase(ticker, date, shares, price) {
+async function _syncToCloud(pos) {
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    await db.from('user_positions').upsert(
+      { user_id: user.id, data: pos, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  } catch { /* silent — localStorage already saved */ }
+}
+
+export async function loadPositions() {
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    const { data, error } = await db.from('user_positions').select('data').eq('user_id', user.id).single();
+    if (!error && data?.data) {
+      _saveLocal(data.data);
+    }
+  } catch { /* fallback to localStorage */ }
+}
+
+export async function addPurchase(ticker, date, shares, price) {
   const pos = getPositions();
   if (!pos[ticker]) pos[ticker] = { purchases: [] };
   pos[ticker].purchases.push({ date, shares: +shares, price: +price });
-  _save(pos);
+  _saveLocal(pos);
+  await _syncToCloud(pos);
 }
 
-export function removePurchase(ticker, idx) {
+export async function removePurchase(ticker, idx) {
   const pos = getPositions();
   if (!pos[ticker]) return;
   pos[ticker].purchases.splice(idx, 1);
   if (!pos[ticker].purchases.length) delete pos[ticker];
-  _save(pos);
+  _saveLocal(pos);
+  await _syncToCloud(pos);
 }
 
 export function getAvgPrice(ticker) {
@@ -77,7 +102,7 @@ export function renderPositionsPanel() {
           </div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:700;">${esc(ticker)}</div>
-            <div style="font-size:11px;color:var(--text-3);">${shares} acc. · avg $${avg?.toFixed(2) ?? '—'}</div>
+            <div style="font-size:11px;color:var(--text-3);">${shares.toFixed(4)} acc. · avg $${avg?.toFixed(2) ?? '—'}</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:2px;">${buyRows}</div>

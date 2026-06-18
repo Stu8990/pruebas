@@ -9,7 +9,7 @@ import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast, attachTickerSearch } from './utils.js';
-import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, renderPositionsPanel } from './positions.js';
+import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, renderPositionsPanel, loadPositions } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
 import {
@@ -402,7 +402,7 @@ async function initApp(userId, email) {
 
   fetchMarketData();
   loadBuySlots();
-  renderPositionsPanel();
+  loadPositions().then(() => renderPositionsPanel());
   _attachAllTickerSearches();
 }
 

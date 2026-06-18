@@ -21,3 +21,14 @@ create policy "own_delete" on sessions for delete using (auth.uid() = user_id);
 create index if not exists idx_sessions_user_fecha
   on sessions(user_id, fecha asc, created_at asc);
 
+-- ── Tabla de posiciones del usuario ───────────────────────────
+create table if not exists user_positions (
+  user_id    uuid references auth.users(id) on delete cascade primary key,
+  data       jsonb not null default '{}',
+  updated_at timestamptz default now()
+);
+
+alter table user_positions enable row level security;
+create policy "own_positions" on user_positions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
