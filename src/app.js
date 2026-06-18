@@ -331,9 +331,22 @@ async function initApp(userId, email) {
   _attachAllTickerSearches();
 }
 
+const _LAST_USER_KEY = 'investsmart-last-user';
+
+function _clearCacheIfUserChanged(userId) {
+  const lastUser = localStorage.getItem(_LAST_USER_KEY);
+  if (lastUser && lastUser !== userId) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('investsmart-') && k !== _LAST_USER_KEY)
+      .forEach(k => localStorage.removeItem(k));
+  }
+  localStorage.setItem(_LAST_USER_KEY, userId);
+}
+
 async function startApp(session) {
   if (_appReady) return;
   _appReady = true;
+  _clearCacheIfUserChanged(session.user.id);
   await initApp(session.user.id, session.user.email);
 }
 
