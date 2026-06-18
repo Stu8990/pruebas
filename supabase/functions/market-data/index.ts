@@ -21,9 +21,10 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-const TICKER_RE   = /^[A-Z0-9.\-]{1,10}$/;
-const MAX_TICKERS = 20;
-const RATE_LIMIT  = 60; // llamadas por hora
+const TICKER_RE        = /^[A-Z0-9.\-]{1,10}$/;
+const MAX_TICKERS      = 20;
+const RATE_LIMIT_PRICE = 200; // precios en vivo — por usuario por hora
+const RATE_LIMIT_SEARCH = 60; // búsquedas de activos — por usuario por hora
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 // ── Auth: retorna el usuario o null ──────────────────────────
@@ -40,7 +41,7 @@ async function getAuthUser(req: Request): Promise<{ id: string } | null> {
 }
 
 // ── Rate limiting — SERVICE_ROLE para escribir sin RLS ───────
-async function checkRateLimit(userId: string): Promise<boolean> {
+async function checkRateLimit(userId: string, endpoint: string, limit: number): Promise<boolean> {
   try {
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -51,11 +52,11 @@ async function checkRateLimit(userId: string): Promise<boolean> {
       .from('api_usage')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('endpoint', 'market-data')
+      .eq('endpoint', endpoint)
       .gte('created_at', since);
 
-    if ((count ?? 0) >= RATE_LIMIT) return false;
-    await admin.from('api_usage').insert({ user_id: userId, endpoint: 'market-data' });
+    if ((count ?? 0) >= limit) return false;
+    await admin.from('api_usage').insert({ user_id: userId, endpoint });
     return true;
   } catch { return true; } // si falla el check, no bloqueamos
 }
@@ -164,18 +165,17 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const allowed = await checkRateLimit(user.id);
-  if (!allowed) {
-    return new Response(JSON.stringify({ error: 'Límite de solicitudes alcanzado. Intenta en unos minutos.' }), {
-      status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
-    });
-  }
-
   try {
     const body = await req.json() as { tickers?: unknown; search?: unknown };
 
     // ── Modo búsqueda ────────────────────────────────
     if (body.search !== undefined) {
+      const allowed = await checkRateLimit(user.id, 'market-data-search', RATE_LIMIT_SEARCH);
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: 'Límite de búsquedas alcanzado. Intenta en unos minutos.' }), {
+          status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
       const q = String(body.search).slice(0, 80).replace(/[^\w\s.\-]/g, '');
       if (!q.trim()) return new Response(JSON.stringify([]), { headers: { ...cors, 'Content-Type': 'application/json' } });
       const auth = await getYahooCrumb();
@@ -185,6 +185,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Modo precios ─────────────────────────────────
+    const allowed = await checkRateLimit(user.id, 'market-data', RATE_LIMIT_PRICE);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Límite de solicitudes alcanzado. Intenta en unos minutos.' }), {
+        status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { tickers } = body;
     if (!Array.isArray(tickers) || tickers.length === 0 || tickers.length > MAX_TICKERS)
       return new Response(JSON.stringify({ error: 'tickers debe ser un array de 1-20 elementos' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
