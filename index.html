@@ -126,7 +126,7 @@
     <div class="nav-section" style="margin-top:10px;">Acciones</div>
     <button class="nav-item" onclick="goTo('record',this)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Registrar sesión
+      Registrar
     </button>
     <button class="nav-item" onclick="goTo('history',this)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>
@@ -143,6 +143,7 @@
       <div style="font-size:10px;color:#6d5fa0;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Mi portafolio</div>
       <div id="sb-value" class="mono" style="font-size:24px;font-weight:800;color:white;font-family:'Space Grotesk',sans-serif;">$0.00</div>
       <div id="sb-delta" style="font-size:12px;color:#6d5fa0;margin-top:3px;"></div>
+      <div id="sb-streak" style="font-size:11px;color:#8b7fcf;margin-top:5px;"></div>
     </div>
     <!-- Sync status + logout -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:0 2px;">
@@ -201,6 +202,7 @@
           </div>
           <button onclick="dismissBanner()" style="flex-shrink:0;border:none;background:none;cursor:pointer;color:#9d8fc7;font-size:18px;padding:2px;">✕</button>
         </div>
+        <button onclick="goTo('record')" class="btn btn-primary" style="margin-top:12px;width:100%;font-size:13px;">📋 Registrar mi primer día →</button>
       </div>
 
       <!-- KPIs -->
@@ -237,6 +239,9 @@
           <div style="font-size:11px;color:var(--text-3);margin-top:6px;">NVDA · MSFT · AMZN</div>
         </div>
       </div>
+
+      <!-- Setup checklist — visible hasta completar los 3 pasos, luego desaparece -->
+      <div id="setup-checklist" style="margin-bottom:12px;"></div>
 
       <!-- Unsync banner — aparece cuando el valor en vivo difiere del último registro -->
       <div id="kpi-unsync-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
@@ -432,13 +437,16 @@
     <div id="page-record" class="page">
       <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div class="card" style="padding:22px;">
-          <div style="font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:4px;">Registrar sesión de hoy</div>
+          <div style="font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:4px;">Registrar mi portafolio de hoy</div>
           <div style="font-size:12px;color:var(--text-3);margin-bottom:18px;">Completa los números del día. La descripción se genera sola.</div>
           <form id="record-form" style="display:flex;flex-direction:column;gap:13px;">
             <!-- ⚡ Registro rápido -->
             <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:11px;padding:13px;">
               <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">⚡ Registro rápido</div>
               <div style="font-size:11px;color:#6d28d9;margin-bottom:10px;line-height:1.5;">Calcula automáticamente desde tus posiciones registradas. Solo ingresa tu saldo en efectivo de XTB.</div>
+              <div id="qr-no-positions-hint" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;font-size:12px;color:#78350f;margin-bottom:8px;line-height:1.5;">
+                ⚠️ Primero agrega tus posiciones en la sección <strong>"Mis posiciones"</strong> aquí abajo — solo se hace una vez.
+              </div>
               <div id="qr-cash-hint" style="display:none;font-size:11px;color:var(--text-3);margin-bottom:8px;line-height:1.5;"></div>
               <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;">⚡ Calcular y registrar</button>
               <div id="qr-cash-row" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #ddd6fe;">

@@ -3,7 +3,7 @@ import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset }
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
-import { UI, renderPositionsPanel, kpiLive } from './ui.js';
+import { UI, renderPositionsPanel, kpiLive, renderSetupChecklist } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
@@ -311,7 +311,7 @@ async function initApp(userId, email) {
   checkMenuBtn();
 
   document.addEventListener('autorecord:done', () => {
-    Learn.train(Store.history); UI.prefill(); UI.all();
+    Learn.train(Store.history); UI.prefill(); UI.all(); renderSetupChecklist();
   }, { once: false });
 
   Store._syncCloud().then(changed => {
@@ -327,7 +327,7 @@ async function initApp(userId, email) {
 
   fetchMarketData();
   loadBuySlots();
-  loadPositions().then(() => { renderPositionsPanel(); _startLiveRefresh(); });
+  loadPositions().then(() => { renderPositionsPanel(); renderSetupChecklist(); _startLiveRefresh(); });
   _attachAllTickerSearches();
 }
 

@@ -265,7 +265,8 @@ async function _createFirstSession() {
     if (!ok) throw new Error('Error al guardar en la nube');
     hideOnboarding();
     UI.returnInputs(); UI.prefill(); UI.all();
-    toast('🚀 ¡Tu portafolio está listo!');
+    toast('🚀 ¡Tu portafolio está listo! Ahora agrega tus posiciones para activar el registro rápido.');
+    setTimeout(() => window.goTo('record'), 900);
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Crear mi portafolio ✓'; }
     toast('⚠️ ' + err.message);

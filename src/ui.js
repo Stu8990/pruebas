@@ -4,7 +4,7 @@ import { Store } from './store.js';
 import { Learn } from './learn.js';
 import { Charts } from './charts.js';
 import { pct, pp, $f, set, val, shortLabel, esc } from './utils.js';
-import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
+import { getPositions, getAvgPrice, getTotalShares, hasPositions } from './positions.js';
 
 export const UI = {
   all() {
@@ -40,6 +40,11 @@ export const UI = {
     set('sb-value', $f.format(cur.valor_total_usd));
     const el = document.getElementById('sb-delta');
     if (el) { el.textContent = delta === null ? '' : pct(delta) + ' hoy'; el.style.color = delta === null || delta >= 0 ? '#34d399' : '#f87171'; }
+    const streakEl = document.getElementById('sb-streak');
+    if (streakEl) {
+      const s = _calcStreak(Store.history);
+      streakEl.textContent = s >= 5 ? `📅 ${s} días registrando · ¡Sigue así!` : s > 1 ? `📅 ${s} días registrando` : '';
+    }
   },
 
   selector() {
@@ -333,10 +338,13 @@ export function renderPositionsPanel() {
   const pos = getPositions();
   const tickers = Object.keys(pos);
 
+  const hintEl = document.getElementById('qr-no-positions-hint');
   if (!tickers.length) {
     el.innerHTML = `<p style="font-size:12px;color:var(--text-3);padding:10px 0;">Sin posiciones registradas. Agrega tu primera compra para activar el registro rápido.</p>`;
+    if (hintEl) hintEl.style.display = 'block';
     return;
   }
+  if (hintEl) hintEl.style.display = 'none';
 
   el.innerHTML = tickers.map(ticker => {
     const avg    = getAvgPrice(ticker);
@@ -366,4 +374,55 @@ export function renderPositionsPanel() {
         <div style="display:flex;flex-direction:column;gap:2px;">${buyRows}</div>
       </div>`;
   }).join('');
+}
+
+// ── Setup checklist ───────────────────────────────────
+const SETUP_DONE_KEY = 'investsmart-setup-done';
+
+export function renderSetupChecklist() {
+  const el = document.getElementById('setup-checklist');
+  if (!el) return;
+  if (localStorage.getItem(SETUP_DONE_KEY)) { el.innerHTML = ''; return; }
+
+  const hasPosns  = hasPositions();
+  const hasRecord = Store.history.length > 0;
+
+  if (hasPosns && hasRecord) {
+    localStorage.setItem(SETUP_DONE_KEY, '1');
+    el.innerHTML = '';
+    return;
+  }
+
+  const step = (done, label, action) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
+      <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+        background:${done ? '#d1fae5' : '#f5f3ff'};color:${done ? '#065f46' : '#7c3aed'};border:1.5px solid ${done ? '#6ee7b7' : '#ddd6fe'};">
+        ${done ? '✓' : '○'}
+      </div>
+      <div style="flex:1;font-size:13px;color:${done ? 'var(--text-3)' : 'var(--text-1)'};${done ? 'text-decoration:line-through;' : ''}">${label}</div>
+      ${!done && action ? `<button onclick="${action}" class="btn btn-primary btn-sm" style="font-size:11px;padding:4px 10px;flex-shrink:0;">${action.includes('record') ? 'Ir →' : 'Agregar →'}</button>` : ''}
+    </div>`;
+
+  el.innerHTML = `
+    <div style="background:#faf5ff;border:1.5px solid #ddd6fe;border-radius:12px;padding:14px 16px;margin-bottom:4px;">
+      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">🚀 Primeros pasos</div>
+      ${step(true,  'Cuenta creada', '')}
+      <div style="height:1px;background:#ede9fe;margin:2px 0;"></div>
+      ${step(hasPosns,  'Agrega tus posiciones (qué acciones tienes y a qué precio)', "goTo('record')")}
+      <div style="height:1px;background:#ede9fe;margin:2px 0;"></div>
+      ${step(hasRecord, 'Guarda tu primer registro del día', "goTo('record')")}
+    </div>`;
+}
+
+// ── Streak helper ────────────────────────────────────
+function _calcStreak(history) {
+  if (!history || history.length < 2) return history?.length ?? 0;
+  const sorted = [...history].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  let streak = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = (new Date(sorted[i-1].fecha) - new Date(sorted[i].fecha)) / 86400000;
+    if (diff <= 3) streak++;
+    else break;
+  }
+  return streak;
 }
