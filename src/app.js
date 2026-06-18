@@ -9,6 +9,7 @@ import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast } from './utils.js';
+import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, renderPositionsPanel } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
 import {
@@ -121,6 +122,142 @@ function _aiSkeleton() {
 }
 
 function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
+
+// ── Positions ─────────────────────────────────────────
+function toggleAddPosition() {
+  const panel = document.getElementById('add-position-panel');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+}
+
+function calcPosShares() {
+  const price = parseFloat(document.getElementById('pos-price')?.value || '');
+  const monto = parseFloat(document.getElementById('pos-monto')?.value || '');
+  const sharesEl = document.getElementById('pos-shares');
+  if (price > 0 && monto > 0 && sharesEl && !sharesEl._manual) {
+    sharesEl.value = (monto / price).toFixed(6);
+  }
+}
+
+function clearPosMonto() {
+  const sharesEl = document.getElementById('pos-shares');
+  if (sharesEl) sharesEl._manual = true;
+  const montoEl = document.getElementById('pos-monto');
+  if (montoEl) montoEl.value = '';
+}
+
+function savePosition() {
+  const ticker = document.getElementById('pos-ticker')?.value.trim().toUpperCase();
+  const price  = parseFloat(document.getElementById('pos-price')?.value || '');
+  const msg    = document.getElementById('pos-msg');
+
+  // Resolve shares: manual volume OR monto / price
+  const sharesEl = document.getElementById('pos-shares');
+  const montoEl  = document.getElementById('pos-monto');
+  let shares = parseFloat(sharesEl?.value || '');
+  if ((!shares || shares <= 0) && price > 0) {
+    const monto = parseFloat(montoEl?.value || '');
+    if (monto > 0) shares = monto / price;
+  }
+
+  if (!ticker || !/^[A-Z0-9.\-]{1,10}$/.test(ticker)) { if (msg) { msg.textContent = 'Escribe un símbolo válido (ej: VOO, NVDA, BRK-B)'; msg.style.color = 'var(--danger)'; } return; }
+  if (!shares || shares <= 0)  { if (msg) { msg.textContent = 'Ingresa el volumen XTB o el monto invertido'; msg.style.color = 'var(--danger)'; } return; }
+  if (!price  || price  <= 0)  { if (msg) { msg.textContent = 'Ingresa el precio por acción al momento de la compra'; msg.style.color = 'var(--danger)'; } return; }
+
+  addPurchase(ticker, '', shares, price);
+  renderPositionsPanel();
+
+  ['pos-ticker','pos-shares','pos-price','pos-monto'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) { e.value = ''; if (id === 'pos-shares') e._manual = false; }
+  });
+  if (msg) { msg.textContent = `✓ ${ticker} · ${shares.toFixed(4)} vol. a $${price.toFixed(2)} guardado`; msg.style.color = 'var(--success)'; }
+  toast(`✓ ${ticker} guardado`);
+}
+
+function removePurchaseEntry(ticker, idx) {
+  removePurchase(ticker, idx);
+  renderPositionsPanel();
+}
+
+// ── Quick record ──────────────────────────────────────
+let _qrData = null;
+
+async function quickRecord() {
+  if (!hasPositions()) {
+    toast('Agrega tus posiciones primero en la sección "Mis posiciones"');
+    return;
+  }
+  const btn = document.getElementById('btn-quick-record');
+  if (btn) { btn.disabled = true; btn.textContent = 'Calculando…'; }
+
+  try {
+    const positions = getPositions();
+    const tickers   = Object.keys(positions);
+    const { data: { session } } = await db.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/market-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ tickers }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const items = await res.json();
+    const byTicker = Object.fromEntries(items.map(i => [i.ticker, i]));
+
+    let stocksValue = 0;
+    const rendimientosCalc = {};
+
+    for (const ticker of tickers) {
+      const market = byTicker[ticker];
+      if (!market?.currentPrice) continue;
+      const avgPrice    = getAvgPrice(ticker);
+      const totalShares = getTotalShares(ticker);
+      if (!avgPrice || !totalShares) continue;
+      const rend = ((market.currentPrice - avgPrice) / avgPrice) * 100;
+      stocksValue += totalShares * market.currentPrice;
+      rendimientosCalc[ticker] = +rend.toFixed(2);
+    }
+
+    _qrData = { stocksValue, rendimientosCalc };
+
+    const cashRow  = document.getElementById('qr-cash-row');
+    const stocksEl = document.getElementById('qr-stocks-value');
+    if (stocksEl) stocksEl.textContent = `$${stocksValue.toFixed(2)}`;
+    if (cashRow)  cashRow.style.display = 'block';
+  } catch (err) {
+    toast('Error al calcular precios: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Calcular desde mis posiciones'; }
+  }
+}
+
+function applyQuickRecord() {
+  if (!_qrData) return;
+  const { stocksValue, rendimientosCalc } = _qrData;
+  const cash  = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
+  const total = stocksValue + cash;
+
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const fechaEl = document.getElementById('f-fecha');
+  if (fechaEl && !fechaEl.value) fechaEl.value = dateStr;
+
+  const valorEl = document.getElementById('f-valor');
+  if (valorEl) { valorEl.value = total.toFixed(2); valorEl.dispatchEvent(new Event('input')); }
+
+  for (const [ticker, rend] of Object.entries(rendimientosCalc)) {
+    const inp = document.getElementById('inp-' + ticker);
+    if (inp) inp.value = rend;
+  }
+
+  autoDesc();
+  document.getElementById('qr-cash-row').style.display = 'none';
+  document.getElementById('qr-cash').value = '';
+  _qrData = null;
+  toast('✓ Formulario pre-llenado. Revisa los datos y guarda.');
+  document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 function onRecordChange(e)  { Store.idx = +e.target.value; UI.all(); }
 function checkMenuBtn()     { const b = document.getElementById('menu-btn'); if (b) b.style.display = window.innerWidth <= 1024 ? 'flex' : 'none'; }
 
@@ -224,6 +361,7 @@ async function initApp(userId, email) {
 
   fetchMarketData();
   loadBuySlots();
+  renderPositionsPanel();
 }
 
 async function startApp(session) {
@@ -312,9 +450,16 @@ window.showChangePwd   = showChangePwd;
 window.closePwdModal   = closePwdModal;
 window.changePassword  = changePassword;
 window.signOut         = signOut;
-window.analyzeBuy               = analyzeBuy;
-window.clearBuySlot             = clearBuySlot;
+window.analyzeBuy                = analyzeBuy;
+window.clearBuySlot              = clearBuySlot;
 window.refreshBuyRecommendations = refreshBuyRecommendations;
+window.toggleAddPosition         = toggleAddPosition;
+window.savePosition              = savePosition;
+window.removePurchaseEntry       = removePurchaseEntry;
+window.quickRecord               = quickRecord;
+window.applyQuickRecord          = applyQuickRecord;
+window.calcPosShares             = calcPosShares;
+window.clearPosMonto             = clearPosMonto;
 
 // ── Bootstrap ─────────────────────────────────────────
 (async () => {
