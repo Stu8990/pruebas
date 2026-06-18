@@ -1,4 +1,4 @@
-import { ASSETS, ASSET_META, EDGE_BASE } from './config.js';
+import { ASSET_META, EDGE_BASE } from './config.js';
 import { toast, esc } from './utils.js';
 import { db } from './auth.js';
 
@@ -190,19 +190,21 @@ export async function renderWatchlist() {
 }
 
 export function evaluateAllPer() {
-  const results = ASSETS
-    .map(a => ({ a, per: parseFloat(document.getElementById('per-inp-' + a)?.value || '') }))
+  const results = Array.from(document.querySelectorAll('[id^="per-inp-"]'))
+    .map(inp => ({ ticker: inp.id.replace('per-inp-', ''), per: parseFloat(inp.value || '') }))
     .filter(x => !isNaN(x.per) && x.per > 0);
   if (!results.length) { toast('Ingresa al menos un PER para evaluar'); return; }
   const el = document.getElementById('per-my-results');
   el.style.display = 'block';
   el.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">Resultado de tus acciones:</div>' +
-    results.map(({ a, per }) => {
-      const z = perZone(per);
+    results.map(({ ticker, per }) => {
+      const z    = perZone(per);
+      const meta = ASSET_META[ticker];
+      const label = meta ? `${esc(ticker)} — ${esc(meta.full)}` : esc(ticker);
       return `<div class="per-row" style="background:${z.bg};border-color:${z.border};">
         <div class="per-dot" style="background:${z.dot};"></div>
         <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:${z.text};">${esc(a)} — ${esc(ASSET_META[a].full)} · PER ${per.toFixed(1)}x → ${z.zone}</div>
+          <div style="font-size:13px;font-weight:700;color:${z.text};">${label} · PER ${per.toFixed(1)}x → ${z.zone}</div>
           <div style="font-size:12px;color:${z.text};opacity:.85;margin-top:2px;">${z.tip}</div>
         </div>
       </div>`;

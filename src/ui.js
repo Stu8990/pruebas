@@ -246,21 +246,36 @@ export const UI = {
 
   perMyAssets() {
     const el = document.getElementById('per-my-assets'); if (!el) return;
+
+    // Build ticker list from user's actual data (sessions + positions)
+    const allMetaMap  = Object.fromEntries(getAllAssets().map(a => [a.ticker, a]));
+    const sessTickers = Object.keys(Store.cur()?.rendimientos ?? {});
+    const posTickers  = Object.keys(getPositions());
+    const myTickers   = [...new Set([...sessTickers, ...posTickers])];
+
+    if (!myTickers.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:8px 4px;">Agrega posiciones o registra tu portafolio para ver el PER de tus activos.</div>';
+      return;
+    }
+
     // Preserve user-entered values before re-render
     const saved = {};
-    ASSETS.forEach(a => { const inp = document.getElementById('per-inp-' + a); if (inp?.value) saved[a] = inp.value; });
-    el.innerHTML = ASSETS.map(a =>
-      `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:#fafaf9;">
-        <div style="width:8px;height:8px;border-radius:50%;background:${ASSET_META[a].color};flex-shrink:0;"></div>
+    myTickers.forEach(t => { const inp = document.getElementById('per-inp-' + t); if (inp?.value) saved[t] = inp.value; });
+
+    el.innerHTML = myTickers.map(ticker => {
+      const meta = allMetaMap[ticker] ?? { full: ticker, role: '', color: '#a8a29e' };
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:#fafaf9;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${meta.color};flex-shrink:0;"></div>
         <div style="flex:1;">
-          <div style="font-size:13px;font-weight:600;">${esc(a)} — ${esc(ASSET_META[a].full)}</div>
-          <div style="font-size:11px;color:var(--text-3);">${esc(ASSET_META[a].role)}</div>
+          <div style="font-size:13px;font-weight:600;">${esc(ticker)} — ${esc(meta.full)}</div>
+          <div style="font-size:11px;color:var(--text-3);">${esc(meta.role ?? '')}</div>
         </div>
-        <input id="per-inp-${a}" type="number" step="0.1" placeholder="—" readonly style="width:80px;font-size:13px;padding:6px 8px;background:#f5f5f4;color:var(--text-2);cursor:default;border-color:#e7e5e4;" />
-      </div>`
-    ).join('');
+        <input id="per-inp-${ticker}" type="number" step="0.1" placeholder="—" readonly style="width:80px;font-size:13px;padding:6px 8px;background:#f5f5f4;color:var(--text-2);cursor:default;border-color:#e7e5e4;" />
+      </div>`;
+    }).join('');
+
     // Restore saved values
-    ASSETS.forEach(a => { if (saved[a]) { const inp = document.getElementById('per-inp-' + a); if (inp) inp.value = saved[a]; } });
+    myTickers.forEach(t => { if (saved[t]) { const inp = document.getElementById('per-inp-' + t); if (inp) inp.value = saved[t]; } });
   },
 };
 
