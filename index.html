@@ -305,8 +305,17 @@
     <!-- ════════ PORTFOLIO ════════ -->
     <div id="page-portfolio" class="page">
 
+      <!-- Empty state for users with no sessions and no positions -->
+      <div id="portfolio-empty-state" style="display:none;text-align:center;padding:48px 24px;">
+        <div style="font-size:40px;margin-bottom:16px;">📊</div>
+        <div style="font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:8px;">Aún no tienes activos registrados</div>
+        <div style="font-size:13px;color:var(--text-3);margin-bottom:24px;max-width:320px;margin-left:auto;margin-right:auto;">Agrega tus posiciones y registra tu primer día para ver el análisis completo de tu portafolio.</div>
+        <button onclick="goTo('record')" class="btn btn-primary" style="margin-right:8px;">Registrar mi portafolio</button>
+        <button onclick="goTo('buy')" class="btn btn-ghost">Agregar posiciones</button>
+      </div>
+
       <!-- Precios reales del mercado -->
-      <div class="card" style="padding:18px;margin-bottom:14px;">
+      <div id="market-prices-card" class="card" style="padding:18px;margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div>
             <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Precios reales de hoy</div>

@@ -11,10 +11,20 @@ export const UI = {
     const cur = Store.cur(), prv = Store.prev();
     Learn.train(Store.history);
     this.selector(); this.history();
+
+    const marketCard = document.getElementById('market-prices-card');
+    const emptyState = document.getElementById('portfolio-empty-state');
+
     if (!cur) {
       document.getElementById('welcome-banner').style.display = 'block';
+      // No sessions: show empty state on portfolio page unless user already has positions
+      const showPrices = hasPositions();
+      if (marketCard) marketCard.style.display = showPrices ? '' : 'none';
+      if (emptyState) emptyState.style.display = showPrices ? 'none' : 'block';
       return;
     }
+    if (marketCard) marketCard.style.display = '';
+    if (emptyState) emptyState.style.display = 'none';
     this.kpis(cur, prv); this.sidebar(cur, prv);
     this.assetTable(cur, prv); this.recs(cur, prv);
     this.pulse(); this.insight(cur, prv);
