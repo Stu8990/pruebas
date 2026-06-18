@@ -28,8 +28,11 @@ export async function loadPositions() {
     const { data, error } = await db.from('user_positions').select('data').eq('user_id', user.id).single();
     if (!error && data?.data) {
       _saveLocal(data.data);
+    } else if (error?.code === 'PGRST116') {
+      // Supabase confirmed no positions for this user — clear stale cache from a previous user
+      localStorage.removeItem(POS_KEY);
     }
-  } catch { /* fallback to localStorage */ }
+  } catch { /* fallback to localStorage — don't clear on network errors */ }
 }
 
 export async function addPurchase(ticker, date, shares, price) {
