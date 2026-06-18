@@ -144,6 +144,7 @@ async function _refreshLiveValue() {
 }
 
 function _startLiveRefresh() {
+  if (_liveInterval) clearInterval(_liveInterval);
   _refreshLiveValue();
   _liveInterval = setInterval(_refreshLiveValue, 5 * 60 * 1000);
 }

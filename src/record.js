@@ -33,6 +33,7 @@ async function _fetchPositionPrices() {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
     body: JSON.stringify({ tickers: tickers.map(t => toYf[t]) }),
   });
+  if (res.status === 429) { toast('⏳ Límite de peticiones alcanzado. Espera un momento.'); return null; }
   if (!res.ok) return null;
   const items = await res.json();
   if (!Array.isArray(items)) return null;

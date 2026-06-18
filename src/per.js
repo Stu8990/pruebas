@@ -37,6 +37,7 @@ async function _fetchTickers(tickers) {
     },
     body: JSON.stringify({ tickers }),
   });
+  if (res.status === 429) throw new Error('RATE_LIMIT');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -130,7 +131,10 @@ export async function analyzeTickerPer(rawTicker) {
     if (loading) loading.style.display = 'none';
     if (result) {
       result.style.display = 'block';
-      result.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:15px;color:#7f1d1d;font-size:13px;">Error al obtener datos: ${esc(err.message)}</div>`;
+      const msg = err.message === 'RATE_LIMIT'
+        ? '⏳ Límite de peticiones alcanzado. Espera un momento e intenta de nuevo.'
+        : `Error al obtener datos: ${esc(err.message)}`;
+      result.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:15px;color:#7f1d1d;font-size:13px;">${msg}</div>`;
     }
   }
 }
