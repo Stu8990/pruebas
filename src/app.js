@@ -58,7 +58,7 @@ function goTo(id, btn) {
   if (id === 'ai')          triggerAiAnalysis();
   if (id === 'record') {
     const f = document.getElementById('f-fecha'); if (f) f.value = _todayStr();
-    _updateCashHint(parseFloat(localStorage.getItem(CASH_KEY) || '') || 0);
+    _loadCashCloud().then(cash => _updateCashHint(cash));
   }
 }
 
@@ -266,8 +266,27 @@ function _updateCashHint(cash) {
   }
 }
 
+async function _saveCashCloud(amount) {
+  try {
+    await db.auth.updateUser({ data: { last_cash: amount > 0 ? amount : null } });
+  } catch { /* localStorage ya guardó, cloud es best-effort */ }
+}
+
+async function _loadCashCloud() {
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    const cloud = user?.user_metadata?.last_cash;
+    if (cloud > 0) {
+      localStorage.setItem(CASH_KEY, String(cloud));
+      return cloud;
+    }
+  } catch { /* fallback a localStorage */ }
+  return parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
+}
+
 function clearSavedCash() {
   localStorage.removeItem(CASH_KEY);
+  _saveCashCloud(0);
   _updateCashHint(0);
   const cashRow = document.getElementById('qr-cash-row');
   if (cashRow) cashRow.style.display = 'none';
@@ -277,7 +296,7 @@ function clearSavedCash() {
 function _applyWithCash(cash) {
   if (!_qrData) return;
   const { stocksValue, rendimientosCalc } = _qrData;
-  if (cash > 0) localStorage.setItem(CASH_KEY, cash.toFixed(2));
+  if (cash > 0) { localStorage.setItem(CASH_KEY, cash.toFixed(2)); _saveCashCloud(cash); }
 
   const total = stocksValue + cash;
   const valorEl = document.getElementById('f-valor');
@@ -428,6 +447,7 @@ async function initApp(userId, email) {
 
   const fechaEl = document.getElementById('f-fecha');
   if (fechaEl) fechaEl.value = _todayStr();
+  _loadCashCloud().then(cash => _updateCashHint(cash));
 
   fetchMarketData();
   loadBuySlots();

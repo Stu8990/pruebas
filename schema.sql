@@ -32,3 +32,18 @@ alter table user_positions enable row level security;
 create policy "own_positions" on user_positions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- ── Rate limiting — llamadas a Edge Functions ──────────────────
+create table if not exists api_usage (
+  id         uuid default gen_random_uuid() primary key,
+  user_id    uuid references auth.users(id) on delete cascade not null,
+  endpoint   text not null,
+  created_at timestamptz default now()
+);
+
+alter table api_usage enable row level security;
+create policy "own_api_usage" on api_usage
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create index if not exists idx_api_usage_lookup
+  on api_usage(user_id, endpoint, created_at desc);
+

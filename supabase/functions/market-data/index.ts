@@ -5,25 +5,59 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// ── CORS dinámico — solo orígenes autorizados ─────────────────
+const ALLOWED_ORIGINS = [
+  'https://stu8990.github.io',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
 
-const TICKER_RE  = /^[A-Z0-9.\-]{1,10}$/;
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') ?? '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+const TICKER_RE   = /^[A-Z0-9.\-]{1,10}$/;
 const MAX_TICKERS = 20;
+const RATE_LIMIT  = 60; // llamadas por hora
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-async function verifyAuth(req: Request): Promise<boolean> {
+// ── Auth: retorna el usuario o null ──────────────────────────
+async function getAuthUser(req: Request): Promise<{ id: string } | null> {
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return false;
+  if (!authHeader?.startsWith('Bearer ')) return null;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_ANON_KEY')!,
     { global: { headers: { Authorization: authHeader } } }
   );
   const { data: { user }, error } = await supabase.auth.getUser();
-  return !error && !!user;
+  return (!error && user) ? user : null;
+}
+
+// ── Rate limiting — SERVICE_ROLE para escribir sin RLS ───────
+async function checkRateLimit(userId: string): Promise<boolean> {
+  try {
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count } = await admin
+      .from('api_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('endpoint', 'market-data')
+      .gte('created_at', since);
+
+    if ((count ?? 0) >= RATE_LIMIT) return false;
+    await admin.from('api_usage').insert({ user_id: userId, endpoint: 'market-data' });
+    return true;
+  } catch { return true; } // si falla el check, no bloqueamos
 }
 
 async function getYahooCrumb(): Promise<{ crumb: string; cookie: string } | null> {
@@ -120,11 +154,20 @@ async function searchAssets(q: string, crumb: string, cookie: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const cors = getCorsHeaders(req);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  if (!(await verifyAuth(req))) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const allowed = await checkRateLimit(user.id);
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: 'Límite de solicitudes alcanzado. Intenta en unos minutos.' }), {
+      status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
 
@@ -134,32 +177,32 @@ Deno.serve(async (req: Request) => {
     // ── Modo búsqueda ────────────────────────────────
     if (body.search !== undefined) {
       const q = String(body.search).slice(0, 80).replace(/[^\w\s.\-]/g, '');
-      if (!q.trim()) return new Response(JSON.stringify([]), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (!q.trim()) return new Response(JSON.stringify([]), { headers: { ...cors, 'Content-Type': 'application/json' } });
       const auth = await getYahooCrumb();
-      if (!auth) return new Response(JSON.stringify({ error: 'No se pudo conectar con Yahoo Finance' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (!auth) return new Response(JSON.stringify({ error: 'No se pudo conectar con Yahoo Finance' }), { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } });
       const results = await searchAssets(q, auth.crumb, auth.cookie);
-      return new Response(JSON.stringify(results), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify(results), { headers: { ...cors, 'Content-Type': 'application/json' } });
     }
 
     // ── Modo precios ─────────────────────────────────
     const { tickers } = body;
     if (!Array.isArray(tickers) || tickers.length === 0 || tickers.length > MAX_TICKERS)
-      return new Response(JSON.stringify({ error: 'tickers must be an array of 1-20 items' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'tickers debe ser un array de 1-20 elementos' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const invalid = tickers.find(t => typeof t !== 'string' || !TICKER_RE.test(t));
     if (invalid !== undefined)
-      return new Response(JSON.stringify({ error: `Invalid ticker: ${invalid}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `Símbolo inválido: ${invalid}` }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const auth = await getYahooCrumb();
     if (!auth)
-      return new Response(JSON.stringify({ error: 'No se pudo autenticar con Yahoo Finance' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'No se pudo autenticar con Yahoo Finance' }), { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const results = await Promise.all((tickers as string[]).map(t => fetchTicker(t, auth.crumb, auth.cookie)));
-    return new Response(JSON.stringify(results), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(results), { headers: { ...cors, 'Content-Type': 'application/json' } });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ error: 'Error interno del servidor' }), {
+      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
 });

@@ -4,21 +4,54 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// ── CORS dinámico ─────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  'https://stu8990.github.io',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
 
-async function verifyAuth(req: Request): Promise<boolean> {
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') ?? '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+const RATE_LIMIT = 20; // llamadas por hora
+
+async function getAuthUser(req: Request): Promise<{ id: string } | null> {
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) return false;
+  if (!authHeader?.startsWith('Bearer ')) return null;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_ANON_KEY')!,
     { global: { headers: { Authorization: authHeader } } }
   );
   const { data: { user }, error } = await supabase.auth.getUser();
-  return !error && !!user;
+  return (!error && user) ? user : null;
+}
+
+async function checkRateLimit(userId: string): Promise<boolean> {
+  try {
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count } = await admin
+      .from('api_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('endpoint', 'ai-analysis')
+      .gte('created_at', since);
+
+    if ((count ?? 0) >= RATE_LIMIT) return false;
+    await admin.from('api_usage').insert({ user_id: userId, endpoint: 'ai-analysis' });
+    return true;
+  } catch { return true; }
 }
 
 interface Session {
@@ -235,18 +268,27 @@ ${marketSummary || '  (sin datos de mercado disponibles)'}`;
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const cors = getCorsHeaders(req);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  if (!(await verifyAuth(req))) {
+  const user = await getAuthUser(req);
+  if (!user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const allowed = await checkRateLimit(user.id);
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: 'Límite de análisis alcanzado (20/hora). Intenta más tarde.' }), {
+      status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
 
   const groqKey = Deno.env.get('GROQ_API_KEY');
   if (!groqKey) {
-    return new Response(JSON.stringify({ error: 'GROQ_API_KEY not configured' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ error: 'Servicio no configurado' }), {
+      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
 
@@ -275,7 +317,7 @@ Deno.serve(async (req: Request) => {
       const groqJson = await groqRes.json();
       const content  = groqJson.choices?.[0]?.message?.content;
       if (!content) throw new Error('Empty response from Groq');
-      return new Response(content, { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(content, { headers: { ...cors, 'Content-Type': 'application/json' } });
     }
 
     // ── Buy analysis mode ──────────────────────────────────
@@ -285,7 +327,7 @@ Deno.serve(async (req: Request) => {
 
       if (!rawTicker || !marketData) {
         return new Response(JSON.stringify({ error: 'Missing ticker or marketData' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
         });
       }
 
@@ -324,7 +366,7 @@ Deno.serve(async (req: Request) => {
 
       const analysis = JSON.parse(content);
       return new Response(JSON.stringify(analysis), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       });
     }
 
@@ -333,7 +375,7 @@ Deno.serve(async (req: Request) => {
 
     if (!history?.length) {
       return new Response(JSON.stringify({ error: 'No history provided' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
       });
     }
 
@@ -372,12 +414,12 @@ Deno.serve(async (req: Request) => {
     const analysis = JSON.parse(content);
 
     return new Response(JSON.stringify(analysis), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
 });

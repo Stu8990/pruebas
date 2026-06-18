@@ -20,8 +20,8 @@ export const Store = {
       const { data, error } = await SessionRepo.findByUser(this.userId);
       if (error) {
         if (error.code === '42P01') {
-          toast('⚠️ Las tablas de Supabase no existen. Abre Supabase → SQL Editor y ejecuta schema.sql');
-          setSyncState('err', 'Schema SQL pendiente');
+          toast('⚠️ Configuración pendiente. Contacta al administrador.');
+          setSyncState('err', 'Error de configuración');
           return false;
         }
         throw error;
@@ -37,7 +37,6 @@ export const Store = {
         return true;
       }
     } catch (err) {
-      console.error('Supabase sync error:', err);
       setSyncState('err', 'Sin conexión');
       return false;
     }
