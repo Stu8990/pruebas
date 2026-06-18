@@ -318,3 +318,14 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
   .rec:hover     { transform: none; }
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* ── Buy Analysis ─────────────────────────────────────── */
+.buy-slot { border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; }
+.buy-slot-input { display: flex; gap: 8px; align-items: flex-end; }
+.buy-slot-input input { flex: 1; text-transform: uppercase; letter-spacing: .05em; }
+
+.verdict-buy   { background: #ecfdf5; color: #065f46; font-weight: 800; font-size: 13px; padding: 3px 12px; border-radius: 20px; white-space: nowrap; }
+.verdict-wait  { background: #fffbeb; color: #78350f; font-weight: 800; font-size: 13px; padding: 3px 12px; border-radius: 20px; white-space: nowrap; }
+.verdict-avoid { background: #fef2f2; color: #7f1d1d; font-weight: 800; font-size: 13px; padding: 3px 12px; border-radius: 20px; white-space: nowrap; }
+
+@keyframes spin { to { transform: rotate(360deg); } }

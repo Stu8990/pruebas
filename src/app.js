@@ -6,6 +6,7 @@ import { Charts } from './charts.js';
 import { UI } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
+import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast } from './utils.js';
 import { setSyncState } from './sync.js';
@@ -218,9 +219,11 @@ async function initApp(userId, email) {
   Store._syncCloud().then(changed => {
     if (changed) { Learn.train(Store.history); UI.prefill(); UI.all(); }
     if (Store.history.length === 0 && !isOnboardingDone()) showOnboarding();
+    autoRecommend();
   });
 
   fetchMarketData();
+  loadBuySlots();
 }
 
 async function startApp(session) {
@@ -309,6 +312,9 @@ window.showChangePwd   = showChangePwd;
 window.closePwdModal   = closePwdModal;
 window.changePassword  = changePassword;
 window.signOut         = signOut;
+window.analyzeBuy               = analyzeBuy;
+window.clearBuySlot             = clearBuySlot;
+window.refreshBuyRecommendations = refreshBuyRecommendations;
 
 // ── Bootstrap ─────────────────────────────────────────
 (async () => {
