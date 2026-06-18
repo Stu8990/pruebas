@@ -1,17 +1,18 @@
-import { BK, ASSETS, ASSET_META, EDGE_BASE } from './config.js';
+import { BK, ASSET_META, EDGE_BASE } from './config.js';
 import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset } from './assets.js';
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
-import { UI } from './ui.js';
+import { UI, renderPositionsPanel } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
-import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
+import { evaluateAllPer, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast, attachTickerSearch } from './utils.js';
-import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, renderPositionsPanel, loadPositions } from './positions.js';
+import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, loadPositions } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
+import { quickRecord, applyQuickRecord, clearSavedCash, autoDesc, refreshCashHint } from './record.js';
 import {
   db,
   loginWithPassword,
@@ -43,7 +44,7 @@ function _todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function goTo(id, btn) {
+export function goTo(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -58,47 +59,47 @@ function goTo(id, btn) {
   if (id === 'ai')          triggerAiAnalysis();
   if (id === 'record') {
     const f = document.getElementById('f-fecha'); if (f) f.value = _todayStr();
-    _loadCashCloud().then(cash => _updateCashHint(cash));
+    refreshCashHint();
   }
 }
 
-function toggleSidebar() {
+export function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('active');
 }
 
-function closeSidebar() {
+export function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('active');
 }
 
-function toggleExplain() {
+export function toggleExplain() {
   const b = document.getElementById('explain-body');
   const a = document.getElementById('explain-arrow');
   b.classList.toggle('open');
   a.textContent = b.classList.contains('open') ? '▲' : '▼';
 }
 
-function checkBanner() {
+export function checkBanner() {
   if (!localStorage.getItem(BK))
     document.getElementById('welcome-banner').style.display = 'block';
 }
 
-function dismissBanner() {
+export function dismissBanner() {
   document.getElementById('welcome-banner').style.display = 'none';
   localStorage.setItem(BK, '1');
 }
 
-function refreshData()      { UI.all(); toast('✓ Dashboard actualizado'); }
+export function refreshData() { UI.all(); toast('✓ Dashboard actualizado'); }
 
+// ── AI analysis ───────────────────────────────────────
 let _aiLoading = false;
 async function triggerAiAnalysis(force = false) {
   if (_aiLoading) return;
-  if (Store.history.length < 2) return; // Learn.recommendations handles empty state
+  if (Store.history.length < 2) return;
   const insightEl = document.getElementById('daily-insight');
   const recsEl    = document.getElementById('recommendations');
   if (!force) {
-    // Check cache first — if valid, just render without showing spinner
     try {
       const cached = await fetchAiAnalysis(false);
       if (cached) { renderAiPage(cached); return; }
@@ -110,9 +111,8 @@ async function triggerAiAnalysis(force = false) {
   try {
     const data = await fetchAiAnalysis(force);
     if (data) renderAiPage(data);
-    else UI.recs(Store.cur(), Store.prev()); // fallback to rule-based
-  } catch (err) {
-    console.error('[ai-analysis]', err);
+    else UI.recs(Store.cur(), Store.prev());
+  } catch {
     if (insightEl) insightEl.textContent = 'Análisis IA no disponible. Mostrando análisis local.';
     UI.pulse(); UI.insight(Store.cur(), Store.prev()); UI.recs(Store.cur(), Store.prev());
   } finally {
@@ -130,17 +130,16 @@ function _aiSkeleton() {
   ).join('');
 }
 
-function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
+export function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
 
-// ── Positions ─────────────────────────────────────────
-function toggleAddPosition() {
+// ── Positions form handlers ───────────────────────────
+export function toggleAddPosition() {
   const panel = document.getElementById('add-position-panel');
   if (!panel) return;
-  const open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'block';
+  panel.style.display = panel.style.display !== 'none' ? 'none' : 'block';
 }
 
-function calcPosShares() {
+export function calcPosShares() {
   const price = parseFloat(document.getElementById('pos-price')?.value || '');
   const monto = parseFloat(document.getElementById('pos-monto')?.value || '');
   const sharesEl = document.getElementById('pos-shares');
@@ -149,19 +148,18 @@ function calcPosShares() {
   }
 }
 
-function clearPosMonto() {
+export function clearPosMonto() {
   const sharesEl = document.getElementById('pos-shares');
   if (sharesEl) sharesEl._manual = true;
   const montoEl = document.getElementById('pos-monto');
   if (montoEl) montoEl.value = '';
 }
 
-function savePosition() {
+export function savePosition() {
   const ticker = document.getElementById('pos-ticker')?.value.trim().toUpperCase();
   const price  = parseFloat(document.getElementById('pos-price')?.value || '');
   const msg    = document.getElementById('pos-msg');
 
-  // Resolve shares: manual volume OR monto / price
   const sharesEl = document.getElementById('pos-shares');
   const montoEl  = document.getElementById('pos-monto');
   let shares = parseFloat(sharesEl?.value || '');
@@ -185,158 +183,13 @@ function savePosition() {
   toast(`✓ ${ticker} guardado`);
 }
 
-function removePurchaseEntry(ticker, idx) {
+export function removePurchaseEntry(ticker, idx) {
   removePurchase(ticker, idx);
   renderPositionsPanel();
 }
 
-// ── Quick record ──────────────────────────────────────
-let _qrData = null;
-const CASH_KEY = 'investsmart-last-cash';
-
-async function quickRecord() {
-  if (!hasPositions()) {
-    toast('Agrega tus posiciones primero en la sección "Mis posiciones"');
-    return;
-  }
-  const btn = document.getElementById('btn-quick-record');
-  if (btn) { btn.disabled = true; btn.textContent = 'Calculando…'; }
-
-  try {
-    const positions = getPositions();
-    const tickers   = Object.keys(positions);
-
-    const toYf = {}, fromYf = {};
-    for (const t of tickers) {
-      const yf = ASSET_META[t]?.yfTicker ?? t;
-      toYf[t] = yf; fromYf[yf] = t;
-    }
-
-    const { data: { session } } = await db.auth.getSession();
-    const res = await fetch(`${EDGE_BASE}/market-data`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({ tickers: tickers.map(t => toYf[t]) }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const items = await res.json();
-    const byTicker = Object.fromEntries(items.map(i => [fromYf[i.ticker] ?? i.ticker, i]));
-
-    let stocksValue = 0;
-    const rendimientosCalc = {};
-    for (const ticker of tickers) {
-      const market = byTicker[ticker];
-      if (!market?.currentPrice) continue;
-      const avgPrice = getAvgPrice(ticker), totalShares = getTotalShares(ticker);
-      if (!avgPrice || !totalShares) continue;
-      stocksValue += totalShares * market.currentPrice;
-      rendimientosCalc[ticker] = +( ((market.currentPrice - avgPrice) / avgPrice) * 100 ).toFixed(2);
-    }
-
-    _qrData = { stocksValue, rendimientosCalc };
-
-    const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
-
-    if (savedCash > 0) {
-      // Cash conocido → aplica todo automático sin pasos extra
-      _applyWithCash(savedCash);
-    } else {
-      // Primera vez → pide el cash
-      const cashRow  = document.getElementById('qr-cash-row');
-      const stocksEl = document.getElementById('qr-stocks-value');
-      if (stocksEl) stocksEl.textContent = `$${stocksValue.toFixed(2)}`;
-      if (cashRow)   cashRow.style.display = 'block';
-    }
-  } catch (err) {
-    toast('Error al calcular precios: ' + err.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ Calcular y registrar'; }
-  }
-}
-
-function _updateCashHint(cash) {
-  const hint = document.getElementById('qr-cash-hint');
-  if (!hint) return;
-  if (cash > 0) {
-    hint.innerHTML = `Capital en efectivo guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary);">¿Cambió?</a>`;
-    hint.style.display = 'block';
-  } else {
-    hint.innerHTML = 'Sin capital guardado — ingrésalo una vez y quedará guardado.';
-    hint.style.display = 'block';
-  }
-}
-
-async function _saveCashCloud(amount) {
-  try {
-    await db.auth.updateUser({ data: { last_cash: amount > 0 ? amount : null } });
-  } catch { /* localStorage ya guardó, cloud es best-effort */ }
-}
-
-async function _loadCashCloud() {
-  try {
-    const { data: { user } } = await db.auth.getUser();
-    const cloud = user?.user_metadata?.last_cash;
-    if (cloud > 0) {
-      localStorage.setItem(CASH_KEY, String(cloud));
-      return cloud;
-    }
-  } catch { /* fallback a localStorage */ }
-  return parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
-}
-
-function clearSavedCash() {
-  localStorage.removeItem(CASH_KEY);
-  _saveCashCloud(0);
-  _updateCashHint(0);
-  const cashRow = document.getElementById('qr-cash-row');
-  if (cashRow) cashRow.style.display = 'none';
-  toast('Capital en efectivo borrado. Ingrésalo en el próximo cálculo.');
-}
-
-function _applyWithCash(cash) {
-  if (!_qrData) return;
-  const { stocksValue, rendimientosCalc } = _qrData;
-  if (cash > 0) { localStorage.setItem(CASH_KEY, cash.toFixed(2)); _saveCashCloud(cash); }
-
-  const total = stocksValue + cash;
-  const valorEl = document.getElementById('f-valor');
-  if (valorEl) { valorEl.value = total.toFixed(2); valorEl.dispatchEvent(new Event('input')); }
-
-  for (const [ticker, rend] of Object.entries(rendimientosCalc)) {
-    const inp = document.getElementById('inp-' + ticker);
-    if (inp) inp.value = rend;
-  }
-
-  const cashRow = document.getElementById('qr-cash-row');
-  if (cashRow) cashRow.style.display = 'none';
-  document.getElementById('qr-cash').value = '';
-  _qrData = null;
-  _updateCashHint(cash);
-  autoDesc();
-  toast(`✓ Listo — acciones $${stocksValue.toFixed(2)} + efectivo $${cash.toFixed(2)} = $${total.toFixed(2)}`);
-  document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function applyQuickRecord() {
-  const cash = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
-  _applyWithCash(cash);
-}
-function onRecordChange(e)  { Store.idx = +e.target.value; UI.all(); }
-function checkMenuBtn()     { const b = document.getElementById('menu-btn'); if (b) b.style.display = window.innerWidth <= 1024 ? 'flex' : 'none'; }
-
-function autoDesc() {
-  const fecha = document.getElementById('f-fecha')?.value;
-  const valor = parseFloat(document.getElementById('f-valor')?.value || '0');
-  if (!fecha || !valor) return;
-  const rend = {};
-  getAllAssets().forEach(({ ticker: t }) => { const v = document.getElementById('inp-' + t)?.value; rend[t] = (v === '' || v === undefined) ? null : +v; });
-  const desc = generateDescription({ fecha, valor_total_usd: valor, rendimientos: rend });
-  const ta = document.getElementById('f-fase');
-  if (ta) ta.value = desc;
-}
-
 // ── Custom assets ─────────────────────────────────────
-function openAddAsset() {
+export function openAddAsset() {
   let panel = document.getElementById('add-asset-panel');
   if (panel) { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; return; }
   panel = document.createElement('div');
@@ -357,7 +210,7 @@ function openAddAsset() {
   container?.insertAdjacentElement('afterend', panel);
 }
 
-async function confirmAddAsset() {
+export async function confirmAddAsset() {
   const inp = document.getElementById('new-asset-ticker');
   const msg = document.getElementById('add-asset-msg');
   const ticker = inp?.value.trim().toUpperCase();
@@ -384,7 +237,6 @@ async function confirmAddAsset() {
     if (inp) inp.value = '';
     if (msg) { msg.textContent = `✓ ${ticker} (${item.name ?? ''}) agregado`; msg.style.color = 'var(--success)'; }
     UI.returnInputs(); UI.prefill();
-    // Reinsert the panel after re-render
     const panel = document.getElementById('add-asset-panel');
     if (panel) document.getElementById('return-inputs')?.insertAdjacentElement('afterend', panel);
   } catch (err) {
@@ -392,7 +244,7 @@ async function confirmAddAsset() {
   }
 }
 
-function removeCustomAsset(ticker) {
+export function removeCustomAsset(ticker) {
   _removeCustomAsset(ticker);
   UI.returnInputs(); UI.prefill();
   const panel = document.getElementById('add-asset-panel');
@@ -417,7 +269,6 @@ async function _fetchTickerSuggestions(query) {
 function _attachAllTickerSearches() {
   const posTicker = document.getElementById('pos-ticker');
   if (posTicker) attachTickerSearch(posTicker, _fetchTickerSuggestions);
-
   document.querySelectorAll('.buy-ticker-input').forEach(input => {
     attachTickerSearch(input, _fetchTickerSuggestions);
   });
@@ -447,7 +298,7 @@ async function initApp(userId, email) {
 
   const fechaEl = document.getElementById('f-fecha');
   if (fechaEl) fechaEl.value = _todayStr();
-  _loadCashCloud().then(cash => _updateCashHint(cash));
+  refreshCashHint();
 
   fetchMarketData();
   loadBuySlots();
@@ -466,6 +317,9 @@ function showLogin() {
   document.getElementById('auth-overlay').classList.remove('hidden');
   setSyncState('err', 'Sin sesión');
 }
+
+export function onRecordChange(e) { Store.idx = +e.target.value; UI.all(); }
+export function checkMenuBtn()    { const b = document.getElementById('menu-btn'); if (b) b.style.display = window.innerWidth <= 1024 ? 'flex' : 'none'; }
 
 // ── Event listeners ───────────────────────────────────
 document.getElementById('record-form').addEventListener('submit', async e => {
@@ -510,48 +364,6 @@ db.auth.onAuthStateChange((_event, session) => {
   if (session?.user) startApp(session);
   else showLogin();
 });
-
-// ── Expose to HTML inline handlers ────────────────────
-window.goTo            = goTo;
-window.toggleSidebar   = toggleSidebar;
-window.closeSidebar    = closeSidebar;
-window.toggleExplain   = toggleExplain;
-window.checkBanner     = checkBanner;
-window.dismissBanner   = dismissBanner;
-window.refreshData     = refreshData;
-window.onRecordChange  = onRecordChange;
-window.checkMenuBtn    = checkMenuBtn;
-window.autoDesc        = autoDesc;
-window.fetchMarketData = fetchMarketData;
-window.refreshAi       = refreshAi;
-window.evaluateAllPer  = evaluateAllPer;
-window.analyzeTickerPer  = analyzeTickerPer;
-window.openAddAsset      = openAddAsset;
-window.confirmAddAsset   = confirmAddAsset;
-window.removeCustomAsset = removeCustomAsset;
-window.loginWithPassword = loginWithPassword;
-window.toggleAuthPwd     = toggleAuthPwd;
-window.showForgot        = showForgot;
-window.backToLogin       = backToLogin;
-window.showSignup        = showSignup;
-window.signUp            = signUp;
-window.toggleSignupPwd   = toggleSignupPwd;
-window.sendReset         = sendReset;
-window.showChangePwd   = showChangePwd;
-window.closePwdModal   = closePwdModal;
-window.changePassword  = changePassword;
-window.signOut         = signOut;
-window.analyzeBuy                = analyzeBuy;
-window.clearBuySlot              = clearBuySlot;
-window.refreshBuyRecommendations = refreshBuyRecommendations;
-window.toggleAddPosition         = toggleAddPosition;
-window.savePosition              = savePosition;
-window.removePurchaseEntry       = removePurchaseEntry;
-window.quickRecord               = quickRecord;
-window.applyQuickRecord          = applyQuickRecord;
-window.clearSavedCash            = clearSavedCash;
-window.calcPosShares             = calcPosShares;
-window.clearPosMonto             = clearPosMonto;
 
 // ── Bootstrap ─────────────────────────────────────────
 (async () => {
