@@ -419,7 +419,8 @@
             <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:11px;padding:13px;">
               <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">⚡ Registro rápido</div>
               <div style="font-size:11px;color:#6d28d9;margin-bottom:10px;line-height:1.5;">Calcula automáticamente desde tus posiciones registradas. Solo ingresa tu saldo en efectivo de XTB.</div>
-              <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;">Calcular desde mis posiciones</button>
+              <div id="qr-cash-hint" style="display:none;font-size:11px;color:var(--text-3);margin-bottom:8px;line-height:1.5;"></div>
+              <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;">⚡ Calcular y registrar</button>
               <div id="qr-cash-row" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #ddd6fe;">
                 <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">
                   Valor de tus acciones: <strong id="qr-stocks-value" style="color:var(--primary);">$0</strong>
@@ -431,7 +432,6 @@
                   </label>
                   <button type="button" onclick="applyQuickRecord()" class="btn btn-success btn-sm" style="align-self:flex-end;">Aplicar</button>
                 </div>
-                <div id="qr-cash-hint" style="display:none;font-size:11px;color:var(--text-3);margin-top:5px;"></div>
               </div>
             </div>
             <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">

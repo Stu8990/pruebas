@@ -56,7 +56,10 @@ function goTo(id, btn) {
   if (id === 'history')     UI.history();
   if (id === 'per')         renderWatchlist();
   if (id === 'ai')          triggerAiAnalysis();
-  if (id === 'record')      { const f = document.getElementById('f-fecha'); if (f) f.value = _todayStr(); }
+  if (id === 'record') {
+    const f = document.getElementById('f-fecha'); if (f) f.value = _todayStr();
+    _updateCashHint(parseFloat(localStorage.getItem(CASH_KEY) || '') || 0);
+  }
 }
 
 function toggleSidebar() {
@@ -203,58 +206,51 @@ async function quickRecord() {
     const positions = getPositions();
     const tickers   = Object.keys(positions);
 
-    // Map position tickers to Yahoo Finance tickers (e.g. VISA → V)
-    const toYf      = {};
-    const fromYf    = {};
+    const toYf = {}, fromYf = {};
     for (const t of tickers) {
       const yf = ASSET_META[t]?.yfTicker ?? t;
-      toYf[t]  = yf;
-      fromYf[yf] = t;
+      toYf[t] = yf; fromYf[yf] = t;
     }
-    const yfTickers = tickers.map(t => toYf[t]);
 
     const { data: { session } } = await db.auth.getSession();
     const res = await fetch(`${EDGE_BASE}/market-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({ tickers: yfTickers }),
+      body: JSON.stringify({ tickers: tickers.map(t => toYf[t]) }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const items = await res.json();
-    // Re-key response by position ticker (un-maps V → VISA, etc.)
-    const byTicker = Object.fromEntries(
-      items.map(i => [fromYf[i.ticker] ?? i.ticker, i])
-    );
+    const byTicker = Object.fromEntries(items.map(i => [fromYf[i.ticker] ?? i.ticker, i]));
 
     let stocksValue = 0;
     const rendimientosCalc = {};
-
     for (const ticker of tickers) {
       const market = byTicker[ticker];
       if (!market?.currentPrice) continue;
-      const avgPrice    = getAvgPrice(ticker);
-      const totalShares = getTotalShares(ticker);
+      const avgPrice = getAvgPrice(ticker), totalShares = getTotalShares(ticker);
       if (!avgPrice || !totalShares) continue;
-      const rend = ((market.currentPrice - avgPrice) / avgPrice) * 100;
       stocksValue += totalShares * market.currentPrice;
-      rendimientosCalc[ticker] = +rend.toFixed(2);
+      rendimientosCalc[ticker] = +( ((market.currentPrice - avgPrice) / avgPrice) * 100 ).toFixed(2);
     }
 
     _qrData = { stocksValue, rendimientosCalc };
 
-    const cashRow   = document.getElementById('qr-cash-row');
-    const stocksEl  = document.getElementById('qr-stocks-value');
-    if (stocksEl) stocksEl.textContent = `$${stocksValue.toFixed(2)}`;
-    if (cashRow)  cashRow.style.display = 'block';
-
     const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
-    const cashInput = document.getElementById('qr-cash');
-    if (cashInput && savedCash > 0) cashInput.value = savedCash.toFixed(2);
-    _updateCashHint(savedCash);
+
+    if (savedCash > 0) {
+      // Cash conocido → aplica todo automático sin pasos extra
+      _applyWithCash(savedCash);
+    } else {
+      // Primera vez → pide el cash
+      const cashRow  = document.getElementById('qr-cash-row');
+      const stocksEl = document.getElementById('qr-stocks-value');
+      if (stocksEl) stocksEl.textContent = `$${stocksValue.toFixed(2)}`;
+      if (cashRow)   cashRow.style.display = 'block';
+    }
   } catch (err) {
     toast('Error al calcular precios: ' + err.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Calcular desde mis posiciones'; }
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Calcular y registrar'; }
   }
 }
 
@@ -262,27 +258,28 @@ function _updateCashHint(cash) {
   const hint = document.getElementById('qr-cash-hint');
   if (!hint) return;
   if (cash > 0) {
-    hint.innerHTML = `Guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary);">Cambió mi capital</a>`;
+    hint.innerHTML = `Capital en efectivo guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary);">¿Cambió?</a>`;
     hint.style.display = 'block';
   } else {
-    hint.style.display = 'none';
+    hint.innerHTML = 'Sin capital guardado — ingrésalo una vez y quedará guardado.';
+    hint.style.display = 'block';
   }
 }
 
 function clearSavedCash() {
   localStorage.removeItem(CASH_KEY);
-  const inp = document.getElementById('qr-cash');
-  if (inp) inp.value = '';
   _updateCashHint(0);
+  const cashRow = document.getElementById('qr-cash-row');
+  if (cashRow) cashRow.style.display = 'none';
+  toast('Capital en efectivo borrado. Ingrésalo en el próximo cálculo.');
 }
 
-function applyQuickRecord() {
+function _applyWithCash(cash) {
   if (!_qrData) return;
   const { stocksValue, rendimientosCalc } = _qrData;
-  const cash  = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
   if (cash > 0) localStorage.setItem(CASH_KEY, cash.toFixed(2));
-  const total = stocksValue + cash;
 
+  const total = stocksValue + cash;
   const valorEl = document.getElementById('f-valor');
   if (valorEl) { valorEl.value = total.toFixed(2); valorEl.dispatchEvent(new Event('input')); }
 
@@ -291,12 +288,19 @@ function applyQuickRecord() {
     if (inp) inp.value = rend;
   }
 
-  autoDesc();
-  document.getElementById('qr-cash-row').style.display = 'none';
+  const cashRow = document.getElementById('qr-cash-row');
+  if (cashRow) cashRow.style.display = 'none';
   document.getElementById('qr-cash').value = '';
   _qrData = null;
-  toast('✓ Formulario pre-llenado. Revisa los datos y guarda.');
+  _updateCashHint(cash);
+  autoDesc();
+  toast(`✓ Listo — acciones $${stocksValue.toFixed(2)} + efectivo $${cash.toFixed(2)} = $${total.toFixed(2)}`);
   document.getElementById('record-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function applyQuickRecord() {
+  const cash = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
+  _applyWithCash(cash);
 }
 function onRecordChange(e)  { Store.idx = +e.target.value; UI.all(); }
 function checkMenuBtn()     { const b = document.getElementById('menu-btn'); if (b) b.style.display = window.innerWidth <= 1024 ? 'flex' : 'none'; }
