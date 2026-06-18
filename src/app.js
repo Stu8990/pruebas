@@ -189,6 +189,7 @@ function removePurchaseEntry(ticker, idx) {
 
 // ── Quick record ──────────────────────────────────────
 let _qrData = null;
+const CASH_KEY = 'investsmart-last-cash';
 
 async function quickRecord() {
   if (!hasPositions()) {
@@ -241,10 +242,15 @@ async function quickRecord() {
 
     _qrData = { stocksValue, rendimientosCalc };
 
-    const cashRow  = document.getElementById('qr-cash-row');
-    const stocksEl = document.getElementById('qr-stocks-value');
+    const cashRow   = document.getElementById('qr-cash-row');
+    const stocksEl  = document.getElementById('qr-stocks-value');
     if (stocksEl) stocksEl.textContent = `$${stocksValue.toFixed(2)}`;
     if (cashRow)  cashRow.style.display = 'block';
+
+    const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
+    const cashInput = document.getElementById('qr-cash');
+    if (cashInput && savedCash > 0) cashInput.value = savedCash.toFixed(2);
+    _updateCashHint(savedCash);
   } catch (err) {
     toast('Error al calcular precios: ' + err.message);
   } finally {
@@ -252,10 +258,29 @@ async function quickRecord() {
   }
 }
 
+function _updateCashHint(cash) {
+  const hint = document.getElementById('qr-cash-hint');
+  if (!hint) return;
+  if (cash > 0) {
+    hint.innerHTML = `Guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary);">Cambió mi capital</a>`;
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+function clearSavedCash() {
+  localStorage.removeItem(CASH_KEY);
+  const inp = document.getElementById('qr-cash');
+  if (inp) inp.value = '';
+  _updateCashHint(0);
+}
+
 function applyQuickRecord() {
   if (!_qrData) return;
   const { stocksValue, rendimientosCalc } = _qrData;
   const cash  = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
+  if (cash > 0) localStorage.setItem(CASH_KEY, cash.toFixed(2));
   const total = stocksValue + cash;
 
   const valorEl = document.getElementById('f-valor');
@@ -500,6 +525,7 @@ window.savePosition              = savePosition;
 window.removePurchaseEntry       = removePurchaseEntry;
 window.quickRecord               = quickRecord;
 window.applyQuickRecord          = applyQuickRecord;
+window.clearSavedCash            = clearSavedCash;
 window.calcPosShares             = calcPosShares;
 window.clearPosMonto             = clearPosMonto;
 

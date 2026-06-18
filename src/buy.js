@@ -52,29 +52,30 @@ async function _fetchBuyAnalysis(ticker, marketData, portfolio) {
   return res.json();
 }
 
-function _buildPortfolioContext(ticker) {
-  const cur = Store.cur();
+function _dominantSector() {
+  const cur    = Store.cur();
   const assets = getAllAssets();
-  const existingReturn = cur?.rendimientos?.[ticker] ?? null;
-
-  const sectorMap = {};
+  const map    = {};
   assets.forEach(a => {
     const r = cur?.rendimientos?.[a.ticker];
     if (r !== null && r !== undefined && !isNaN(r)) {
-      if (!sectorMap[a.sector]) sectorMap[a.sector] = [];
-      sectorMap[a.sector].push(r);
+      if (!map[a.sector]) map[a.sector] = 0;
+      map[a.sector]++;
     }
   });
-  const dominantSector = Object.entries(sectorMap)
-    .map(([s, vals]) => ({ sector: s, count: vals.length }))
-    .sort((a, b) => b.count - a.count)[0];
+  const top = Object.entries(map).sort((a, b) => b[1] - a[1])[0];
+  return top ? `${top[0]} (${top[1]} activos)` : null;
+}
 
+function _buildPortfolioContext(ticker) {
+  const cur = Store.cur();
+  const existingReturn = cur?.rendimientos?.[ticker] ?? null;
   return {
-    valorActual: cur?.valor_total_usd ?? null,
-    riskScore: Learn.s.riskScore,
-    sesiones: Store.history.length,
+    valorActual:        cur?.valor_total_usd ?? null,
+    riskScore:          Learn.s.riskScore,
+    sesiones:           Store.history.length,
     existingReturn,
-    dominantSector: dominantSector ? `${dominantSector.sector} (${dominantSector.count} activos)` : null,
+    dominantSector:     _dominantSector(),
     tickerIsInPortfolio: existingReturn !== null,
   };
 }
@@ -260,27 +261,13 @@ export function loadBuySlots() {
 }
 
 function _buildSuggestContext() {
-  const cur    = Store.cur();
-  const assets = getAllAssets();
-
-  const sectorMap = {};
-  assets.forEach(a => {
-    const r = cur?.rendimientos?.[a.ticker];
-    if (r !== null && r !== undefined && !isNaN(r)) {
-      if (!sectorMap[a.sector]) sectorMap[a.sector] = [];
-      sectorMap[a.sector].push(r);
-    }
-  });
-  const dominant = Object.entries(sectorMap)
-    .map(([s, vals]) => ({ sector: s, count: vals.length }))
-    .sort((a, b) => b.count - a.count)[0];
-
+  const cur = Store.cur();
   return {
     valorActual:    cur?.valor_total_usd ?? null,
     riskScore:      Learn.s.riskScore,
     sesiones:       Store.history.length,
-    currentTickers: assets.map(a => a.ticker),
-    dominantSector: dominant ? `${dominant.sector} (${dominant.count} activos)` : null,
+    currentTickers: getAllAssets().map(a => a.ticker),
+    dominantSector: _dominantSector(),
   };
 }
 

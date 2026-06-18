@@ -56,6 +56,32 @@ interface SuggestPortfolio {
   dominantSector: string | null;
 }
 
+// ── Input sanitization (prevent prompt injection) ───────
+function sanitizeSuggestPortfolio(p: unknown): SuggestPortfolio {
+  const raw = (p ?? {}) as Record<string, unknown>;
+  return {
+    valorActual:    typeof raw.valorActual === 'number' ? raw.valorActual : null,
+    riskScore:      Math.max(0, Math.min(1, Number(raw.riskScore) || 0)),
+    sesiones:       Math.max(0, Math.floor(Number(raw.sesiones) || 0)),
+    currentTickers: Array.isArray(raw.currentTickers)
+      ? raw.currentTickers.map(t => String(t).slice(0, 10).replace(/[^A-Z0-9.\-]/g, '')).filter(Boolean).slice(0, 30)
+      : [],
+    dominantSector: raw.dominantSector ? String(raw.dominantSector).slice(0, 60).replace(/[^\w\s()áéíóúñ]/gi, '') : null,
+  };
+}
+
+function sanitizeBuyPortfolio(p: unknown): BuyPortfolio {
+  const raw = (p ?? {}) as Record<string, unknown>;
+  return {
+    valorActual:        typeof raw.valorActual === 'number' ? raw.valorActual : null,
+    riskScore:          Math.max(0, Math.min(1, Number(raw.riskScore) || 0)),
+    sesiones:           Math.max(0, Math.floor(Number(raw.sesiones) || 0)),
+    existingReturn:     typeof raw.existingReturn === 'number' ? raw.existingReturn : null,
+    dominantSector:     raw.dominantSector ? String(raw.dominantSector).slice(0, 60).replace(/[^\w\s()áéíóúñ]/gi, '') : null,
+    tickerIsInPortfolio: !!raw.tickerIsInPortfolio,
+  };
+}
+
 // ── Suggest prompt ──────────────────────────────────────
 function buildSuggestPrompt(portfolio: SuggestPortfolio): string {
   const riskLabel = portfolio.riskScore > 0.7 ? 'alta' : portfolio.riskScore > 0.5 ? 'moderada' : 'conservadora';
@@ -229,12 +255,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Suggest mode: recommend 2 tickers ─────────────────
     if (body.mode === 'suggest') {
-      const { portfolio } = body as { portfolio: SuggestPortfolio };
-      if (!portfolio) {
-        return new Response(JSON.stringify({ error: 'Missing portfolio' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      const portfolio = sanitizeSuggestPortfolio(body.portfolio);
       const prompt = buildSuggestPrompt(portfolio);
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -259,19 +280,17 @@ Deno.serve(async (req: Request) => {
 
     // ── Buy analysis mode ──────────────────────────────────
     if (body.mode === 'buy') {
-      const { ticker, marketData, portfolio } = body as {
-        ticker: string;
-        marketData: MarketItem;
-        portfolio: BuyPortfolio;
-      };
+      const rawTicker = String(body.ticker ?? '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 10);
+      const marketData = body.marketData as MarketItem;
 
-      if (!ticker || !marketData) {
+      if (!rawTicker || !marketData) {
         return new Response(JSON.stringify({ error: 'Missing ticker or marketData' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const prompt = buildBuyPrompt(ticker, marketData, portfolio);
+      const portfolio = sanitizeBuyPortfolio(body.portfolio);
+      const prompt = buildBuyPrompt(rawTicker, marketData, portfolio);
 
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
