@@ -249,6 +249,83 @@ export const UI = {
   },
 };
 
+export function kpiLive(data) {
+  const dotEl    = document.getElementById('kpi-live-dot');
+  const statusEl = document.getElementById('kpi-live-status');
+  const bannerEl = document.getElementById('kpi-unsync-banner');
+  const diffEl   = document.getElementById('kpi-unsync-diff');
+
+  if (!data) {
+    if (dotEl) { dotEl.style.background = 'var(--text-3)'; dotEl.style.animation = ''; }
+    if (statusEl) { statusEl.textContent = 'Capital en USD'; statusEl.style.color = 'var(--text-3)'; }
+    if (bannerEl) bannerEl.style.display = 'none';
+    return;
+  }
+
+  const { total, rendimientosCalc, timestamp } = data;
+  const saved = Store.cur()?.valor_total_usd ?? 0;
+
+  // kpi-value — live total
+  const kpiEl = document.getElementById('kpi-value');
+  if (kpiEl) kpiEl.textContent = `$${total.toFixed(2)}`;
+
+  // kpi-delta — live change vs yesterday's record (not today's, which would be near-zero)
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const baseline = Store.history.slice().reverse().find(r => r.fecha !== todayStr);
+  if (baseline) {
+    const deltaPct = ((total - baseline.valor_total_usd) / baseline.valor_total_usd) * 100;
+    const sign     = deltaPct >= 0 ? '+' : '';
+    const color    = deltaPct >= 0 ? 'var(--success)' : 'var(--danger)';
+    const deltaEl  = document.getElementById('kpi-delta');
+    if (deltaEl) { deltaEl.textContent = `${sign}${deltaPct.toFixed(2)}%`; deltaEl.style.color = color; }
+  }
+
+  // kpi-best — asset with highest live rendimiento
+  if (rendimientosCalc) {
+    const entries = Object.entries(rendimientosCalc).filter(([, v]) => v != null);
+    if (entries.length) {
+      const [bestTicker, bestVal] = entries.reduce((a, b) => b[1] > a[1] ? b : a);
+      const bestEl = document.getElementById('kpi-best');
+      if (bestEl) bestEl.textContent = `${bestTicker} ${bestVal >= 0 ? '+' : ''}${bestVal.toFixed(2)}%`;
+    }
+  }
+
+  // kpi-tech — live average of NVDA / MSFT / AMZN
+  if (rendimientosCalc) {
+    const techVals = ['NVDA', 'MSFT', 'AMZN'].map(t => rendimientosCalc[t]).filter(v => v != null);
+    if (techVals.length) {
+      const avg    = techVals.reduce((a, b) => a + b, 0) / techVals.length;
+      const techEl = document.getElementById('kpi-tech');
+      if (techEl) { techEl.textContent = `${avg >= 0 ? '+' : ''}${avg.toFixed(2)}%`; techEl.style.color = avg >= 0 ? 'var(--success)' : 'var(--danger)'; }
+    }
+  }
+
+  // dot + status
+  if (dotEl) { dotEl.style.background = '#10b981'; dotEl.style.animation = 'pulse-dot 2s ease infinite'; }
+  if (statusEl) {
+    const mins = Math.round((Date.now() - timestamp) / 60000);
+    statusEl.textContent = mins === 0 ? 'en vivo · ahora mismo' : `en vivo · hace ${mins} min`;
+    statusEl.style.color = '#10b981';
+  }
+
+  // unsync banner — show whenever today has no saved record
+  if (bannerEl && diffEl) {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const hasTodayRecord = Store.history.some(r => r.fecha === today);
+    if (!hasTodayRecord) {
+      const diff = total - saved;
+      const sign = diff >= 0 ? '+' : '';
+      diffEl.textContent = saved > 0
+        ? `En vivo: $${total.toFixed(2)} · último guardado: $${saved.toFixed(2)} (${sign}$${diff.toFixed(2)})`
+        : `En vivo: $${total.toFixed(2)} · sin registro guardado hoy`;
+      bannerEl.style.display = 'block';
+    } else {
+      bannerEl.style.display = 'none';
+    }
+  }
+}
+
 export function renderPositionsPanel() {
   const el = document.getElementById('positions-list');
   if (!el) return;

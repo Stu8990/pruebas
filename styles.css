@@ -132,6 +132,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .explain-body.open { display: block; }
 
 @keyframes pulse-skeleton { 0%,100%{opacity:.4} 50%{opacity:.15} }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }

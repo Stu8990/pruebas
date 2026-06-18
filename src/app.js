@@ -3,7 +3,7 @@ import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset }
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
-import { UI, renderPositionsPanel } from './ui.js';
+import { UI, renderPositionsPanel, kpiLive } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
@@ -12,7 +12,7 @@ import { set, toast, attachTickerSearch } from './utils.js';
 import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, loadPositions } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
-import { quickRecord, applyQuickRecord, clearSavedCash, autoDesc, refreshCashHint } from './record.js';
+import { quickRecord, applyQuickRecord, clearSavedCash, autoDesc, refreshCashHint, autoRecord, fetchLiveValue, syncLiveNow } from './record.js';
 import {
   db,
   loginWithPassword,
@@ -131,6 +131,25 @@ function _aiSkeleton() {
 }
 
 export function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
+
+// ── Live value refresh ────────────────────────────────
+let _liveInterval = null;
+
+async function _refreshLiveValue() {
+  const btn = document.getElementById('btn-live-refresh');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳'; }
+  const data = await fetchLiveValue();
+  kpiLive(data);
+  if (btn) { btn.disabled = false; btn.textContent = '↻'; }
+}
+
+function _startLiveRefresh() {
+  _refreshLiveValue();
+  _liveInterval = setInterval(_refreshLiveValue, 5 * 60 * 1000);
+}
+
+export async function refreshLiveValue() { await _refreshLiveValue(); }
+export { syncLiveNow };
 
 // ── Positions form handlers ───────────────────────────
 export function toggleAddPosition() {
@@ -290,10 +309,15 @@ async function initApp(userId, email) {
   checkBanner();
   checkMenuBtn();
 
+  document.addEventListener('autorecord:done', () => {
+    Learn.train(Store.history); UI.prefill(); UI.all();
+  }, { once: false });
+
   Store._syncCloud().then(changed => {
     if (changed) { Learn.train(Store.history); UI.prefill(); UI.all(); }
     if (Store.history.length === 0 && !isOnboardingDone()) showOnboarding();
     autoRecommend();
+    autoRecord();
   });
 
   const fechaEl = document.getElementById('f-fecha');
@@ -302,7 +326,7 @@ async function initApp(userId, email) {
 
   fetchMarketData();
   loadBuySlots();
-  loadPositions().then(() => renderPositionsPanel());
+  loadPositions().then(() => { renderPositionsPanel(); _startLiveRefresh(); });
   _attachAllTickerSearches();
 }
 

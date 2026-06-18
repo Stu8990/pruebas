@@ -4,7 +4,7 @@
 import {
   goTo, toggleSidebar, closeSidebar, toggleExplain,
   checkBanner, dismissBanner, refreshData, onRecordChange, checkMenuBtn,
-  openAddAsset, confirmAddAsset, removeCustomAsset, refreshAi,
+  openAddAsset, confirmAddAsset, removeCustomAsset, refreshAi, refreshLiveValue, syncLiveNow,
   toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto,
 } from './app.js';
 
@@ -22,7 +22,7 @@ import { quickRecord, applyQuickRecord, clearSavedCash, autoDesc } from './recor
 Object.assign(window, {
   // Navegación
   goTo, toggleSidebar, closeSidebar, toggleExplain,
-  checkBanner, dismissBanner, refreshData, onRecordChange, checkMenuBtn,
+  checkBanner, dismissBanner, refreshData, onRecordChange, checkMenuBtn, refreshLiveValue, syncLiveNow,
   // Registro rápido y cash
   quickRecord, applyQuickRecord, clearSavedCash, autoDesc,
   // Posiciones

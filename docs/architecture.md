@@ -1,12 +1,12 @@
 # InvestSmart — Architecture Document
 
-> Última actualización: v3 (2026-06-18)
+> Última actualización: v5 (2026-06-18)
 
 ---
 
 ## 1. Resumen ejecutivo
 
-InvestSmart es una SPA estática (sin build step) desplegada en GitHub Pages. Usa Vanilla JS ES Modules como frontend, Supabase como backend (auth + DB + Edge Functions) y Yahoo Finance + Groq como servicios externos. El código es funcional y bien estructurado en sus módulos hoja, pero **`app.js` es un god module** que concentra demasiada responsabilidad y representa el principal riesgo de mantenibilidad a futuro.
+InvestSmart es una SPA estática (sin build step) desplegada en GitHub Pages. Usa Vanilla JS ES Modules como frontend, Supabase como backend (auth + DB + Edge Functions) y Yahoo Finance + Groq como servicios externos. El código está bien estructurado con separación de responsabilidades clara tras las refactorizaciones v4 y v5.
 
 ---
 
@@ -21,7 +21,7 @@ InvestSmart es una SPA estática (sin build step) desplegada en GitHub Pages. Us
 | AI | Groq API — `llama-3.3-70b-versatile` vía Edge Function |
 | Styling | CSS custom properties — sin framework |
 | Deploy | GitHub Pages (static) + `npx serve` local |
-| Cache offline | Service Worker stale-while-revalidate (cache: `investsmart-v6`) |
+| Cache offline | Service Worker stale-while-revalidate (cache: `investsmart-v9`) |
 
 ---
 
@@ -35,21 +35,24 @@ auth.js         — db (único Supabase client), login, signup, signOut, changeP
     ↓
 repository.js   — SessionRepo: queries Supabase para sessions
 assets.js       — getAllAssets(), addCustomAsset(), removeCustomAsset()
-positions.js    — getPositions(), addPurchase(), removePurchase(), loadPositions(), renderPositionsPanel()
+positions.js    — getPositions(), addPurchase(), removePurchase(), loadPositions() [solo data]
     ↓
 store.js        — Store singleton: history[], _syncCloud(), add(), reset()
     ↓
 learn.js        — Learn singleton: train(), riskScore, recommendations
     ↓
 charts.js       — Charts: value(), returns(), sector() — Chart.js wrappers
-ui.js           — UI: kpis(), table(), returnInputs(), history(), recs()
+ui.js           — UI: kpis(), table(), recs() + renderPositionsPanel() + kpiLive()
 per.js          — renderWatchlist(), analyzeTickerPer(), evaluateAllPer()
 ai.js           — fetchAiAnalysis(), renderAiPage(), clearAiCache()
 buy.js          — analyzeBuy(), loadBuySlots(), clearBuySlot(), autoRecommend()
-market.js/prices.js — fetchMarketData() — live prices sidebar
+prices.js       — fetchMarketData() — live prices sidebar
 onboarding.js   — showOnboarding(), isOnboardingDone() — wizard 3 pasos
+record.js       — quickRecord(), autoRecord(), fetchLiveValue(), syncLiveNow() [v4/v5]
     ↓
-app.js          — ENTRY POINT: importa todo, expone window.*, bootstrap
+app.js          — lifecycle, navegación, bootstrap (~330 líneas tras v4)
+    ↓
+bindings.js     — ENTRY POINT: solo window.* assignments, sin lógica [v4]
 ```
 
 ### DAG de dependencias (sin ciclos — correcto)
@@ -58,31 +61,36 @@ app.js          — ENTRY POINT: importa todo, expone window.*, bootstrap
 flowchart TD
     config["config.js"] --> auth
     config --> assets
+    config --> record
     utils["utils.js"] --> auth
     utils --> app
     sync["sync.js"] --> store
     auth["auth.js"] --> repository
     auth --> positions
-    auth --> market
+    auth --> prices
     auth --> onboarding
+    auth --> record
     repository["repository.js"] --> store
     assets["assets.js"] --> store
-    assets --> app
+    assets --> record
     positions["positions.js"] --> app
+    positions --> record
     store["store.js"] --> learn
-    store --> app
+    store --> record
     learn["learn.js"] --> charts
     learn --> ui
     learn --> buy
-    learn --> app
+    learn --> record
     charts["charts.js"] --> app
     ui["ui.js"] --> app
     per["per.js"] --> app
     ai["ai.js"] --> app
     buy["buy.js"] --> app
-    market["market.js"] --> app
+    prices["prices.js"] --> app
     onboarding["onboarding.js"] --> app
-    app["app.js 🚨 GOD MODULE"]
+    record["record.js ✅ v4/v5"] --> app
+    app["app.js (~330 líneas)"] --> bindings
+    bindings["bindings.js — entry point"]
 ```
 
 ---
@@ -92,7 +100,7 @@ flowchart TD
 ```
 Browser load
     → sw.js (cache hit si disponible)
-    → index.html + ES Modules
+    → index.html + ES Modules → bindings.js (entry point desde v4)
     → app.js bootstrap IIFE
         → db.auth.getSession()
         → startApp(session)
@@ -100,10 +108,14 @@ Browser load
             → Learn.train(history)
             → UI.all()                  — render inmediato desde cache
             → Store._syncCloud()        — async: fetch Supabase
+                → autoRecord()          — v5: graba hoy si no hay registro
                 → Learn.train() again
                 → UI.all() again
             → fetchMarketData()         — Edge Function market-data
             → loadPositions()           — Edge Function → user_positions
+                → renderPositionsPanel()
+                → _startLiveRefresh()   — v5: fetchLiveValue() cada 5 min
+                    → kpiLive(data)     — actualiza los 4 KPIs en vivo
             → loadBuySlots()            — localStorage restore
 ```
 
@@ -181,30 +193,16 @@ api_usage (
 - ✅ **Sanitización de prompt** server-side (anti prompt injection en Groq)
 - ✅ **Offline-first** — localStorage como cache, Supabase como source of truth
 - ✅ **Cross-device** — positions y cash sync vía Supabase
+- ✅ **SRP mejorado (v4)** — record.js encapsula todo el flujo de registro; bindings.js centraliza window.*
+- ✅ **Live portfolio (v5)** — fetchLiveValue() cada 5 min, kpiLive() actualiza los 4 KPIs; syncLiveNow() sincroniza sin navegar
 
 ---
 
 ## 8. Debilidades y riesgos
 
-### 🔴 Crítico — app.js god module
+### 🟡 Medio — app.js aún mezcla navegación + lifecycle
 
-`app.js` tiene ~570 líneas y mezcla 7 responsabilidades distintas:
-
-| Responsabilidad | Debería estar en |
-|---|---|
-| Navegación (`goTo`, sidebar) | `src/router.js` |
-| Quick record flow | `src/record.js` |
-| Position form handlers | `src/positions.js` |
-| Custom asset form | `src/assets.js` |
-| AI trigger logic | `src/ai.js` |
-| Window bindings (~30) | `src/bindings.js` |
-| App lifecycle + bootstrap | `src/app.js` (solo esto) |
-
-**Riesgo:** Cualquier feature nueva termina en app.js. Ya tiene race condition potencial en `_qrData`.
-
-### 🔴 Crítico — `renderPositionsPanel()` en positions.js
-
-Violación SRP: un módulo de datos contiene lógica de render con HTML/CSS inline. Hace imposible testear la data layer sin el DOM.
+`app.js` bajó de ~570 a ~330 líneas en v4. Record flow → `record.js`, bindings → `bindings.js`, renderPositionsPanel → `ui.js`. Sigue siendo el módulo más grande pero ya no es un god module crítico. Responsabilidad pendiente de extraer: navegación (`goTo`, sidebar).
 
 ### 🟡 Medio — `window.*` coupling fuerte
 
@@ -233,45 +231,28 @@ HTML generado en positions.js usa `style=""` inline extensivo. Difícil de mante
 
 ## 9. Roadmap de mejoras (priorizado)
 
-### v4 — Separación de responsabilidades (sin cambiar comportamiento)
+### ✅ v4 — Separación de responsabilidades (IMPLEMENTADO)
 
-**Paso 1:** Extraer `src/bindings.js`
-```javascript
-// bindings.js — solo asignaciones, sin lógica
-import { goTo, toggleSidebar, ... } from './app.js';
-import { analyzeBuy, ... } from './buy.js';
-window.goTo = goTo;
-window.analyzeBuy = analyzeBuy;
-// ...
-```
-Beneficio: app.js pierde 40 líneas, los bindings quedan en un solo lugar auditaable.
+- `src/record.js` extraído: encapsula todo el flujo de quick record + `autoRecord()` + `fetchLiveValue()` + `syncLiveNow()`
+- `src/bindings.js` extraído: entry point, solo `window.X = modulo.X`, sin lógica
+- `renderPositionsPanel()` movida de `positions.js` → `ui.js` (SRP correcto)
+- app.js: ~570 → ~330 líneas
 
-**Paso 2:** Mover `renderPositionsPanel()` a `ui.js`
-```javascript
-// ui.js
-export function positionsPanel() { /* HTML render */ }
-```
-```javascript
-// positions.js — solo data, sin DOM
-export function getPositions() { ... }
-export async function addPurchase() { ... }
-```
+### ✅ v5 — Live portfolio value (IMPLEMENTADO)
 
-**Paso 3:** Extraer `src/record.js`
-```javascript
-// record.js — quick record flow completo
-export async function quickRecord() { ... }
-export function applyQuickRecord() { ... }
-export function clearSavedCash() { ... }
-// _qrData encapsulado aquí, no en app.js
-```
+- `autoRecord()` en `record.js`: graba automáticamente al login si hoy no tiene registro
+- `fetchLiveValue()`: llama Edge Function, devuelve `{ total, rendimientosCalc, dailyChanges, timestamp }`; cachea en `_lastLiveData`
+- `_startLiveRefresh()` en app.js: fetch inmediato + `setInterval(5 min)`
+- `kpiLive(data)` en ui.js: actualiza los **4 KPIs** con datos en vivo (valor total, delta vs ayer, mejor acción, tech avg)
+- Banner de desincronización: aparece cuando hoy no tiene registro guardado; desaparece al sincronizar
+- `syncLiveNow()`: usa `_lastLiveData` para guardar directo en Supabase sin navegar a la página de registro
 
-### v5 — Robustez y calidad
+### v6 — Calidad pendiente
 
 - Validar shape de datos en `loadPositions()` antes de guardar en localStorage
-- Reemplazar `console.error` restantes con logging controlado (o eliminar)
-- Reemplazar inline CSS en renderPositionsPanel con clases CSS de `styles.css`
-- Añadir `btn.disabled` guard en `savePosition()` para evitar doble submit
+- Reemplazar `console.error` restantes con logging controlado
+- Reemplazar inline CSS en `renderPositionsPanel` con clases CSS de `styles.css`
+- Extraer navegación (`goTo`, sidebar) de app.js a `src/router.js`
 
 ### v6 — Testing
 
@@ -285,7 +266,7 @@ export function clearSavedCash() { ... }
 
 | Principio | Estado | Detalle |
 |---|---|---|
-| SRP | ⚠️ Violado | app.js, positions.js (render + data) |
+| SRP | 🟡 Parcial | app.js mejorado (v4), positions.js limpio (v4), app.js aún mezcla nav + lifecycle |
 | OCP | ✅ OK | Edge Functions usan `mode` para extender sin modificar flujo base |
 | LSP | ✅ N/A | Sin herencia en el proyecto |
 | ISP | ✅ OK | Módulos hoja tienen interfaces pequeñas y enfocadas |

@@ -210,7 +210,10 @@
             Mi dinero total <span class="help-icon" data-tip="Suma de todo lo que tienes invertido ahora mismo, en dólares.">?</span>
           </div>
           <div id="kpi-value" class="num-hero mono">$0.00</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:6px;">Capital en USD</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+            <span id="kpi-live-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text-3);flex-shrink:0;transition:background .4s;"></span>
+            <span id="kpi-live-status" style="font-size:11px;color:var(--text-3);">Capital en USD</span>
+          </div>
         </div>
         <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:#10b981;">
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
@@ -232,6 +235,23 @@
           </div>
           <div id="kpi-tech" class="num-large mono" style="font-size:22px;">—</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:6px;">NVDA · MSFT · AMZN</div>
+        </div>
+      </div>
+
+      <!-- Unsync banner — aparece cuando el valor en vivo difiere del último registro -->
+      <div id="kpi-unsync-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">⚠️</span>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#78350f;">Valor en vivo no sincronizado con el historial</div>
+              <div id="kpi-unsync-diff" style="font-size:11px;color:#92400e;">—</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button onclick="refreshLiveValue()" id="btn-live-refresh" class="btn btn-ghost btn-sm" style="padding:5px 10px;font-size:14px;" title="Actualizar precios">↻</button>
+            <button onclick="syncLiveNow()" class="btn btn-sm" style="background:#f59e0b;color:white;border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">Sincronizar</button>
+          </div>
         </div>
       </div>
 

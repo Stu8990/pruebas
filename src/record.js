@@ -3,11 +3,60 @@ import { ASSET_META, EDGE_BASE } from './config.js';
 import { getPositions, getAvgPrice, getTotalShares, hasPositions } from './positions.js';
 import { getAllAssets } from './assets.js';
 import { generateDescription } from './learn.js';
+import { Store } from './store.js';
 import { toast } from './utils.js';
 
 const CASH_KEY = 'investsmart-last-cash';
 let _qrData = null;
+let _lastLiveData = null;
 
+function _todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Shared fetch helper — used by quickRecord, autoRecord and fetchLiveValue
+async function _fetchPositionPrices() {
+  const positions = getPositions();
+  const tickers   = Object.keys(positions);
+  if (!tickers.length) return null;
+
+  const toYf = {}, fromYf = {};
+  for (const t of tickers) {
+    const yf = ASSET_META[t]?.yfTicker ?? t;
+    toYf[t] = yf; fromYf[yf] = t;
+  }
+
+  const { data: { session } } = await db.auth.getSession();
+  const res = await fetch(`${EDGE_BASE}/market-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+    body: JSON.stringify({ tickers: tickers.map(t => toYf[t]) }),
+  });
+  if (!res.ok) return null;
+  const items = await res.json();
+  if (!Array.isArray(items)) return null;
+
+  const byTicker = Object.fromEntries(items.map(i => [fromYf[i.ticker] ?? i.ticker, i]));
+
+  let stocksValue = 0;
+  const rendimientosCalc = {};
+  const dailyChanges     = {};
+
+  for (const ticker of tickers) {
+    const market = byTicker[ticker];
+    if (!market?.currentPrice) continue;
+    const avgPrice = getAvgPrice(ticker), totalShares = getTotalShares(ticker);
+    if (!avgPrice || !totalShares) continue;
+    stocksValue += totalShares * market.currentPrice;
+    rendimientosCalc[ticker] = +( ((market.currentPrice - avgPrice) / avgPrice) * 100 ).toFixed(2);
+    dailyChanges[ticker] = market.changePercent ?? null;
+  }
+
+  return { stocksValue, rendimientosCalc, dailyChanges };
+}
+
+// ── Manual quick record ───────────────────────────────
 export async function quickRecord() {
   if (!hasPositions()) {
     toast('Agrega tus posiciones primero en la sección "Mis posiciones"');
@@ -17,36 +66,9 @@ export async function quickRecord() {
   if (btn) { btn.disabled = true; btn.textContent = 'Calculando…'; }
 
   try {
-    const positions = getPositions();
-    const tickers   = Object.keys(positions);
-
-    const toYf = {}, fromYf = {};
-    for (const t of tickers) {
-      const yf = ASSET_META[t]?.yfTicker ?? t;
-      toYf[t] = yf; fromYf[yf] = t;
-    }
-
-    const { data: { session } } = await db.auth.getSession();
-    const res = await fetch(`${EDGE_BASE}/market-data`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({ tickers: tickers.map(t => toYf[t]) }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const items = await res.json();
-    const byTicker = Object.fromEntries(items.map(i => [fromYf[i.ticker] ?? i.ticker, i]));
-
-    let stocksValue = 0;
-    const rendimientosCalc = {};
-    for (const ticker of tickers) {
-      const market = byTicker[ticker];
-      if (!market?.currentPrice) continue;
-      const avgPrice = getAvgPrice(ticker), totalShares = getTotalShares(ticker);
-      if (!avgPrice || !totalShares) continue;
-      stocksValue += totalShares * market.currentPrice;
-      rendimientosCalc[ticker] = +( ((market.currentPrice - avgPrice) / avgPrice) * 100 ).toFixed(2);
-    }
-
+    const prices = await _fetchPositionPrices();
+    if (!prices) throw new Error('No se pudieron obtener precios');
+    const { stocksValue, rendimientosCalc } = prices;
     _qrData = { stocksValue, rendimientosCalc };
 
     const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
@@ -65,6 +87,73 @@ export async function quickRecord() {
   }
 }
 
+// ── Auto-record (on login if today missing) ───────────
+export async function autoRecord() {
+  if (!hasPositions()) return false;
+  const today = _todayStr();
+  if (Store.history.find(r => r.fecha === today)) return false; // ya existe
+
+  try {
+    const prices = await _fetchPositionPrices();
+    if (!prices) return false;
+    const { stocksValue, rendimientosCalc } = prices;
+
+    const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
+    const total = stocksValue + savedCash;
+    if (total <= 0) return false;
+
+    const fase = generateDescription({ fecha: today, valor_total_usd: total, rendimientos: rendimientosCalc });
+    const ok = await Store.add({ fecha: today, fase, valor_total_usd: total, rendimientos: rendimientosCalc });
+
+    if (ok) {
+      toast('✓ Registro del día creado automáticamente');
+      document.dispatchEvent(new CustomEvent('autorecord:done'));
+    }
+    return ok;
+  } catch { return false; }
+}
+
+// ── Live value fetch (no save) ────────────────────────
+export async function fetchLiveValue() {
+  if (!hasPositions()) return null;
+  try {
+    const prices = await _fetchPositionPrices();
+    if (!prices) return null;
+    const { stocksValue, rendimientosCalc, dailyChanges } = prices;
+    const savedCash = parseFloat(localStorage.getItem(CASH_KEY) || '') || 0;
+    _lastLiveData = {
+      stocksValue,
+      cashValue:        savedCash,
+      total:            stocksValue + savedCash,
+      rendimientosCalc,
+      dailyChanges,
+      timestamp:        Date.now(),
+    };
+    return _lastLiveData;
+  } catch { return null; }
+}
+
+// ── Direct sync: save live snapshot without navigating ─
+export async function syncLiveNow() {
+  if (!_lastLiveData) {
+    toast('Actualizando precios…');
+    const data = await fetchLiveValue();
+    if (!data) { toast('⚠️ No se pudo obtener precios para sincronizar'); return; }
+  }
+  const { total, rendimientosCalc } = _lastLiveData;
+  const today = _todayStr();
+  const fase = generateDescription({ fecha: today, valor_total_usd: total, rendimientos: rendimientosCalc });
+  const ok = await Store.add({ fecha: today, fase, valor_total_usd: total, rendimientos: rendimientosCalc });
+  if (ok) {
+    toast('✓ Registro sincronizado con el historial');
+    _lastLiveData = null;
+    document.dispatchEvent(new CustomEvent('autorecord:done'));
+  } else {
+    toast('⚠️ Error al sincronizar. Intenta de nuevo.');
+  }
+}
+
+// ── Cash form helpers ─────────────────────────────────
 export function applyQuickRecord() {
   const cash = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
   _applyWithCash(cash);
