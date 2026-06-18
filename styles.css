@@ -329,3 +329,11 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .verdict-avoid { background: #fef2f2; color: #7f1d1d; font-weight: 800; font-size: 13px; padding: 3px 12px; border-radius: 20px; white-space: nowrap; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Ticker autocomplete dropdown */
+.ticker-dropdown { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.13); overflow: hidden; max-height: 230px; overflow-y: auto; }
+.ticker-dropdown-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; transition: background .1s; }
+.ticker-dropdown-item:hover, .ticker-dropdown-item.tdi-active { background: rgba(124,58,237,.07); }
+.tdi-ticker { font-size: 13px; font-weight: 700; color: var(--text-1); min-width: 54px; letter-spacing: .03em; }
+.tdi-name   { font-size: 12px; color: var(--text-2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tdi-exch   { font-size: 10px; color: var(--text-3); background: var(--bg); border-radius: 4px; padding: 1px 5px; flex-shrink: 0; }

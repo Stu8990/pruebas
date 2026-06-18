@@ -1,4 +1,4 @@
-import { BK, ASSETS, EDGE_BASE } from './config.js';
+import { BK, ASSETS, ASSET_META, EDGE_BASE } from './config.js';
 import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset } from './assets.js';
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
@@ -8,7 +8,7 @@ import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, perZone, analyzeTickerPer, renderWatchlist } from './per.js';
-import { set, toast } from './utils.js';
+import { set, toast, attachTickerSearch } from './utils.js';
 import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, renderPositionsPanel } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
@@ -38,6 +38,11 @@ const PAGE_TITLES = {
   per:       '¿Está cara mi acción? · Análisis PER',
 };
 
+function _todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function goTo(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
@@ -51,6 +56,7 @@ function goTo(id, btn) {
   if (id === 'history')     UI.history();
   if (id === 'per')         renderWatchlist();
   if (id === 'ai')          triggerAiAnalysis();
+  if (id === 'record')      { const f = document.getElementById('f-fecha'); if (f) f.value = _todayStr(); }
 }
 
 function toggleSidebar() {
@@ -195,15 +201,29 @@ async function quickRecord() {
   try {
     const positions = getPositions();
     const tickers   = Object.keys(positions);
+
+    // Map position tickers to Yahoo Finance tickers (e.g. VISA → V)
+    const toYf      = {};
+    const fromYf    = {};
+    for (const t of tickers) {
+      const yf = ASSET_META[t]?.yfTicker ?? t;
+      toYf[t]  = yf;
+      fromYf[yf] = t;
+    }
+    const yfTickers = tickers.map(t => toYf[t]);
+
     const { data: { session } } = await db.auth.getSession();
     const res = await fetch(`${EDGE_BASE}/market-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({ tickers }),
+      body: JSON.stringify({ tickers: yfTickers }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const items = await res.json();
-    const byTicker = Object.fromEntries(items.map(i => [i.ticker, i]));
+    // Re-key response by position ticker (un-maps V → VISA, etc.)
+    const byTicker = Object.fromEntries(
+      items.map(i => [fromYf[i.ticker] ?? i.ticker, i])
+    );
 
     let stocksValue = 0;
     const rendimientosCalc = {};
@@ -237,11 +257,6 @@ function applyQuickRecord() {
   const { stocksValue, rendimientosCalc } = _qrData;
   const cash  = parseFloat(document.getElementById('qr-cash')?.value || '0') || 0;
   const total = stocksValue + cash;
-
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const fechaEl = document.getElementById('f-fecha');
-  if (fechaEl && !fechaEl.value) fechaEl.value = dateStr;
 
   const valorEl = document.getElementById('f-valor');
   if (valorEl) { valorEl.value = total.toFixed(2); valorEl.dispatchEvent(new Event('input')); }
@@ -337,6 +352,29 @@ function removeCustomAsset(ticker) {
   toast(`✓ ${ticker} eliminado`);
 }
 
+// ── Ticker search autocomplete ────────────────────────
+async function _fetchTickerSuggestions(query) {
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const res = await fetch(`${EDGE_BASE}/market-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ search: query }),
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
+}
+
+function _attachAllTickerSearches() {
+  const posTicker = document.getElementById('pos-ticker');
+  if (posTicker) attachTickerSearch(posTicker, _fetchTickerSuggestions);
+
+  document.querySelectorAll('.buy-ticker-input').forEach(input => {
+    attachTickerSearch(input, _fetchTickerSuggestions);
+  });
+}
+
 // ── App lifecycle ─────────────────────────────────────
 let _appReady = false;
 
@@ -359,9 +397,13 @@ async function initApp(userId, email) {
     autoRecommend();
   });
 
+  const fechaEl = document.getElementById('f-fecha');
+  if (fechaEl) fechaEl.value = _todayStr();
+
   fetchMarketData();
   loadBuySlots();
   renderPositionsPanel();
+  _attachAllTickerSearches();
 }
 
 async function startApp(session) {
