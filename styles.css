@@ -270,6 +270,8 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
   /* Recommendation cards: smaller padding */
   .rec { padding: 10px 12px; margin-bottom: 7px; }
   .rec > div > span:first-child { font-size: 15px !important; }
+  .rec2-body { padding: 11px 12px; }
+  .rec2-icon { width: 32px; height: 32px; font-size: 15px; border-radius: 8px; }
 
   /* Page section titles */
   [style*="font-size:14px"][style*="font-weight:700"] { font-size: 13px !important; }
@@ -303,6 +305,97 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 
 /* Scrollbar track: transparent */
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Recommendation cards v2 ─────────────────────── */
+.rec2 { display:flex; border-radius:13px; overflow:hidden; border:1px solid; margin-bottom:10px; transition:transform .15s,box-shadow .15s; }
+.rec2:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,.09); }
+.rec2-bar { width:4px; flex-shrink:0; }
+.rec2-body { padding:15px 16px; flex:1; }
+.rec2-head { display:flex; align-items:flex-start; gap:11px; margin-bottom:9px; }
+.rec2-icon { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.rec2-meta { flex:1; min-width:0; }
+.rec2-title { font-size:13px; font-weight:700; line-height:1.3; margin-bottom:5px; font-family:'Space Grotesk',sans-serif; }
+.rec2-conf-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; }
+.rec2-text { font-size:12px; line-height:1.8; margin:0 0 11px; }
+.rec2-footer { display:flex; align-items:center; gap:8px; }
+.rec2-footer .cbar { flex:1; }
+
+.rec2-green  { background:#f0fdf4; border-color:#bbf7d0; }
+.rec2-green  .rec2-bar  { background:#10b981; }
+.rec2-green  .rec2-icon { background:#dcfce7; }
+.rec2-green  .rec2-title { color:#065f46; }
+.rec2-green  .rec2-text  { color:#047857; }
+.rec2-green  .rec2-conf-pill { background:#dcfce7; color:#059669; }
+
+.rec2-red    { background:#fef2f2; border-color:#fecaca; }
+.rec2-red    .rec2-bar  { background:#dc2626; }
+.rec2-red    .rec2-icon { background:#fee2e2; }
+.rec2-red    .rec2-title { color:#7f1d1d; }
+.rec2-red    .rec2-text  { color:#b91c1c; }
+.rec2-red    .rec2-conf-pill { background:#fee2e2; color:#dc2626; }
+
+.rec2-blue   { background:#f0f9ff; border-color:#bae6fd; }
+.rec2-blue   .rec2-bar  { background:#0ea5e9; }
+.rec2-blue   .rec2-icon { background:#e0f2fe; }
+.rec2-blue   .rec2-title { color:#0c4a6e; }
+.rec2-blue   .rec2-text  { color:#0369a1; }
+.rec2-blue   .rec2-conf-pill { background:#e0f2fe; color:#0284c7; }
+
+.rec2-amber  { background:#fffbeb; border-color:#fde68a; }
+.rec2-amber  .rec2-bar  { background:#f59e0b; }
+.rec2-amber  .rec2-icon { background:#fef3c7; }
+.rec2-amber  .rec2-title { color:#78350f; }
+.rec2-amber  .rec2-text  { color:#92400e; }
+.rec2-amber  .rec2-conf-pill { background:#fef3c7; color:#d97706; }
+
+.rec2-purple { background:#f5f3ff; border-color:#ddd6fe; }
+.rec2-purple .rec2-bar  { background:#7c3aed; }
+.rec2-purple .rec2-icon { background:#ede9fe; }
+.rec2-purple .rec2-title { color:#4c1d95; }
+.rec2-purple .rec2-text  { color:#5b21b6; }
+.rec2-purple .rec2-conf-pill { background:#ede9fe; color:#6d28d9; }
+
+/* ── Pulse market cards ─────────────────────────── */
+.pulse-card { background:white; border:1px solid var(--border); border-radius:12px; padding:14px 14px 12px; position:relative; overflow:hidden; }
+.pulse-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.pulse-card--up::before   { background:linear-gradient(90deg,#10b981,#34d399); }
+.pulse-card--down::before { background:linear-gradient(90deg,#ef4444,#f87171); }
+.pulse-card__label { font-size:10px; color:var(--text-3); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:7px; }
+.pulse-card__value { font-size:22px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1; }
+.pulse-card--up   .pulse-card__value { color:var(--success); }
+.pulse-card--down .pulse-card__value { color:var(--danger); }
+.pulse-card__trend { position:absolute; top:16px; right:13px; font-size:12px; font-weight:800; }
+.pulse-card--up   .pulse-card__trend { color:#10b981; }
+.pulse-card--down .pulse-card__trend { color:#ef4444; }
+.pulse-card__desc { font-size:10px; color:var(--text-3); margin-top:5px; line-height:1.4; }
+
+/* ── Learning profile stat cards ─────────────────── */
+.profile-stat { background:white; border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:3px; transition:box-shadow .15s,transform .15s; }
+.profile-stat:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); transform:translateY(-1px); }
+.profile-stat__icon { font-size:22px; margin-bottom:4px; }
+.profile-stat__label { font-size:10px; color:var(--text-3); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.profile-stat__val { font-size:24px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.15; }
+.profile-stat__desc { font-size:11px; color:var(--text-3); margin-top:3px; line-height:1.4; }
+
+@media (max-width:480px) {
+  .rec2 { margin-bottom:8px; }
+  .rec2-icon { width:34px; height:34px; font-size:16px; }
+  .rec2-body { padding:12px 13px; }
+  .pulse-card__value { font-size:18px; }
+  .profile-stat__val { font-size:20px; }
+}
+
+/* ── Record form ─────────────────────────────────── */
+.form-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:.07em; }
+.form-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.rend-inp { transition:border-color .14s, background .14s, color .14s; }
+.rend-inp.rend-pos { border-color:#10b981 !important; background:#f0fdf4 !important; color:#065f46; }
+.rend-inp.rend-neg { border-color:#dc2626 !important; background:#fef2f2 !important; color:#7f1d1d; }
+
+/* XTB step guide */
+.xtb-step { display:flex; align-items:flex-start; gap:10px; font-size:12px; color:var(--text-2); line-height:1.55; }
+.xtb-num { width:22px; height:22px; border-radius:50%; background:var(--primary-light); color:var(--primary-mid); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
 ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
 
 /* Safe area padding on bottom nav for notched phones */

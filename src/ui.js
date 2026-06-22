@@ -93,21 +93,24 @@ export const UI = {
 
   recs(cur, prv) {
     const el = document.getElementById('recommendations'); if (!el) return;
-    const cfg = { green:{bg:'rec-green',tc:'#065f46'}, red:{bg:'rec-red',tc:'#7f1d1d'}, blue:{bg:'rec-blue',tc:'#0c4a6e'}, amber:{bg:'rec-amber',tc:'#78350f'}, purple:{bg:'rec-purple',tc:'#4c1d95'} };
-    el.innerHTML = Learn.recommendations(cur, prv).map(r => {
-      const c = cfg[r.type] || cfg.blue;
-      return `<div class="rec ${c.bg}"><div style="display:flex;gap:10px;align-items:flex-start;">
-        <span style="font-size:18px;flex-shrink:0;">${r.icon}</span>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:${c.tc};margin-bottom:4px;">${r.title}</div>
-          <p style="font-size:12px;color:${c.tc};opacity:.9;line-height:1.7;margin:0;">${r.body}</p>
-          <div style="display:flex;align-items:center;gap:7px;margin-top:8px;">
-            <div class="cbar" style="width:70px;"><div class="cbar-fill" style="width:${r.conf}%;"></div></div>
-            <span style="font-size:10px;font-weight:600;color:var(--primary);">Confianza ${r.conf.toFixed(0)}%</span>
+    el.innerHTML = Learn.recommendations(cur, prv).map(r =>
+      `<div class="rec2 rec2-${r.type}">
+        <div class="rec2-bar"></div>
+        <div class="rec2-body">
+          <div class="rec2-head">
+            <div class="rec2-icon">${r.icon}</div>
+            <div class="rec2-meta">
+              <div class="rec2-title">${r.title}</div>
+              <span class="rec2-conf-pill">✦ ${r.conf.toFixed(0)}% confianza</span>
+            </div>
+          </div>
+          <p class="rec2-text">${r.body}</p>
+          <div class="rec2-footer">
+            <div class="cbar"><div class="cbar-fill" style="width:${r.conf}%;"></div></div>
           </div>
         </div>
-      </div></div>`;
-    }).join('');
+      </div>`
+    ).join('');
   },
 
   pulse() {
@@ -115,10 +118,11 @@ export const UI = {
     const d  = document.getElementById('pulse-date');
     if (d) d.textContent = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
     el.innerHTML = Learn.pulse().map(p =>
-      `<div style="background:white;border:1px solid var(--border);border-radius:10px;padding:12px;">
-        <div style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">${p.label}</div>
-        <div class="mono" style="font-size:18px;font-weight:700;color:${p.up?'var(--success)':'var(--danger)'};">${p.value}</div>
-        <div style="font-size:10px;color:var(--text-3);margin-top:3px;">${p.desc}</div>
+      `<div class="pulse-card pulse-card--${p.up ? 'up' : 'down'}">
+        <div class="pulse-card__label">${p.label}</div>
+        <div class="pulse-card__value mono">${p.value}</div>
+        <div class="pulse-card__trend">${p.up ? '▲' : '▼'}</div>
+        <div class="pulse-card__desc">${p.desc}</div>
       </div>`
     ).join('');
   },
@@ -206,16 +210,17 @@ export const UI = {
     const riskDesc  = s.riskScore > 0.7 ? 'No te asustas con caídas' : s.riskScore > 0.5 ? 'Equilibras riesgo y tranquilidad' : 'Prefieres seguridad sobre rendimiento';
     const top = Object.entries(s.assetScores).sort(([,a],[,b]) => b.score - a.score)[0];
     const cards = [
-      { lbl:'Tu perfil de inversor',      val:riskLbl,  color:riskColor, desc:riskDesc },
-      { lbl:'Tu acción más rentable',     val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : '#a8a29e', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más datos' },
-      { lbl:'Veces que aumentaste capital', val:s.injections.length, color:'var(--primary)', desc:'Cada inyección mejora el algoritmo' },
-      { lbl:'Sesiones analizadas',         val:Store.history.length, color:'#8b5cf6',        desc:`${s.phases.filter(p=>p.type==='up').length} positivas · ${s.phases.filter(p=>p.type==='down').length} negativas` },
+      { icon:'🧠', lbl:'Tu perfil de inversor',      val:riskLbl,  color:riskColor, desc:riskDesc },
+      { icon:'🏆', lbl:'Tu acción más rentable',     val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : '#a8a29e', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más datos' },
+      { icon:'💰', lbl:'Veces que aumentaste capital', val:s.injections.length, color:'var(--primary)', desc:'Cada inyección mejora el algoritmo' },
+      { icon:'📅', lbl:'Sesiones analizadas',         val:Store.history.length, color:'#8b5cf6',        desc:`${s.phases.filter(p=>p.type==='up').length} positivas · ${s.phases.filter(p=>p.type==='down').length} negativas` },
     ];
     el.innerHTML = cards.map(c =>
-      `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:11px;padding:14px;">
-        <div style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${c.lbl}</div>
-        <div class="mono" style="font-size:22px;font-weight:800;color:${c.color};font-family:'Space Grotesk',sans-serif;">${c.val}</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:3px;">${c.desc}</div>
+      `<div class="profile-stat">
+        <div class="profile-stat__icon">${c.icon}</div>
+        <div class="profile-stat__label">${c.lbl}</div>
+        <div class="profile-stat__val" style="color:${c.color};">${c.val}</div>
+        <div class="profile-stat__desc">${c.desc}</div>
       </div>`
     ).join('');
   },
@@ -232,7 +237,7 @@ export const UI = {
           </div>
           ${a.isCustom ? `<button type="button" onclick="removeCustomAsset('${esc(a.ticker)}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:#a8a29e;font-size:13px;padding:0;line-height:1;">✕</button>` : ''}
         </div>
-        <input id="inp-${esc(a.ticker)}" type="number" step="0.01" placeholder="0.00" oninput="autoDesc()" />
+        <input id="inp-${esc(a.ticker)}" type="number" step="0.01" placeholder="0.00" class="rend-inp" oninput="autoDesc();this.className='rend-inp'+(+this.value>0?' rend-pos':+this.value<0?' rend-neg':'')" />
       </label>`
     ).join('') +
     `<button type="button" onclick="openAddAsset()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;border-style:dashed;color:var(--primary);">+ Agregar activo o ETF</button>`;

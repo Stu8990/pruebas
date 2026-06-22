@@ -446,9 +446,16 @@
     <div id="page-record" class="page">
       <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div class="card" style="padding:22px;">
-          <div style="font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:4px;">Registrar mi portafolio de hoy</div>
-          <div style="font-size:12px;color:var(--text-3);margin-bottom:18px;">Completa los números del día. La descripción se genera sola.</div>
-          <form id="record-form" style="display:flex;flex-direction:column;gap:13px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,#059669,#10b981);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+            </div>
+            <div>
+              <div style="font-size:15px;font-weight:800;font-family:'Space Grotesk',sans-serif;">Registrar sesión de hoy</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">La descripción se genera automáticamente al completar</div>
+            </div>
+          </div>
+          <form id="record-form" style="display:flex;flex-direction:column;gap:14px;">
             <!-- ⚡ Registro rápido -->
             <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:11px;padding:13px;">
               <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">⚡ Registro rápido</div>
@@ -471,6 +478,7 @@
                 </div>
               </div>
             </div>
+            <div class="form-section-label">① Datos del día</div>
             <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <label><span class="lbl">Fecha *</span><input id="f-fecha" type="date" required /></label>
               <label>
@@ -481,18 +489,19 @@
               </label>
             </div>
             <div>
-              <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px;">
-                Rendimiento de cada acción (%)
-                <span class="help-icon" data-tip="En XTB: abre cada posición y copia el % de ganancia/pérdida. Puede ser positivo (+) o negativo (–).">?</span>
+              <div class="form-section-label" style="margin-bottom:10px;">② Rendimiento de cada acción (%)
+                <span class="help-icon" data-tip="En XTB: abre cada posición y copia el % de ganancia/pérdida. Positivo (+) = ganas, negativo (–) = pierdes." style="font-weight:400;text-transform:none;letter-spacing:0;">?</span>
               </div>
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:9px;line-height:1.5;">Verde = ganancia · Rojo = pérdida. Valores acumulados desde tu compra.</div>
               <div id="return-inputs" style="display:grid;grid-template-columns:1fr 1fr;gap:9px;"></div>
             </div>
+            <div class="form-section-label">③ Revisar y guardar</div>
             <label>
               <span class="lbl">Descripción <span style="font-size:11px;color:var(--text-3);font-weight:400;">(se genera automáticamente)</span></span>
               <textarea id="f-fase" rows="2" placeholder="Se calculará sola al completar los rendimientos…" style="resize:none;"></textarea>
               <div class="field-help">Puedes editarla o dejarla como está.</div>
             </label>
-            <button type="submit" class="btn btn-success" style="width:100%;padding:11px;" id="btn-save-record">
+            <button type="submit" class="btn btn-success" style="width:100%;padding:12px;font-size:14px;" id="btn-save-record">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
               Guardar en la nube
             </button>
@@ -500,18 +509,29 @@
         </div>
 
         <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="card" style="padding:18px;background:#fffbeb;border-color:#fde68a;">
-            <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;">📖 ¿Dónde encuentro estos datos en XTB?</div>
-            <div style="font-size:12px;color:#78350f;line-height:1.8;">
-              <p>1. Abre la app o web de XTB</p>
-              <p>2. Ve a <strong>Mi Portafolio</strong></p>
-              <p>3. El <strong>valor total</strong> lo ves arriba en grande</p>
-              <p>4. El <strong>rendimiento %</strong> de cada acción aparece al lado de cada posición (ej: NVDA +8.65%)</p>
-              <p style="margin-top:8px;color:#b45309;">Los rendimientos son acumulados desde que compraste, no el cambio de hoy.</p>
+          <div class="card" style="padding:18px;border-top:3px solid #f59e0b;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:34px;height:34px;background:#fffbeb;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📖</div>
+              <div>
+                <div style="font-size:13px;font-weight:700;">¿Dónde encuentro estos datos?</div>
+                <div style="font-size:11px;color:var(--text-3);">Guía rápida XTB</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div class="xtb-step"><div class="xtb-num">1</div><span>Abre la <strong>app o web</strong> de XTB</span></div>
+              <div class="xtb-step"><div class="xtb-num">2</div><span>Ve a <strong>Mi Portafolio</strong></span></div>
+              <div class="xtb-step"><div class="xtb-num">3</div><span>Anota el <strong>valor total</strong> — aparece arriba en grande</span></div>
+              <div class="xtb-step"><div class="xtb-num">4</div><span>El <strong>% de cada acción</strong> aparece al lado (ej: NVDA +8.65%)</span></div>
+            </div>
+            <div style="margin-top:12px;padding:10px 12px;background:#fffbeb;border-radius:9px;font-size:11px;color:#92400e;line-height:1.55;border:1px solid #fde68a;">
+              ⚠️ Los rendimientos son <strong>acumulados desde que compraste</strong>, no solo el cambio de hoy.
             </div>
           </div>
           <div class="card" style="padding:18px;">
-            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Gestión de datos</div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+              <div style="width:30px;height:30px;background:#f5f5f4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⚙️</div>
+              <div style="font-size:13px;font-weight:700;">Gestión de datos</div>
+            </div>
             <div style="display:flex;flex-direction:column;gap:8px;">
               <button id="btn-export" class="btn btn-ghost" style="width:100%;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
