@@ -3,7 +3,7 @@ import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset }
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
-import { UI, renderPositionsPanel, kpiLive, renderSetupChecklist } from './ui.js';
+import { UI, renderPositionsPanel, renderPortfolioKPI, kpiLive, renderSetupChecklist } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
@@ -328,9 +328,9 @@ async function initApp(userId, email) {
   if (fechaEl) fechaEl.value = _todayStr();
   refreshCashHint();
 
-  fetchMarketData();
+  fetchMarketData().then(() => { renderPositionsPanel(); renderPortfolioKPI(); });
   loadBuySlots();
-  loadPositions().then(() => { renderPositionsPanel(); renderSetupChecklist(); _startLiveRefresh(); });
+  loadPositions().then(() => { renderPositionsPanel(); renderPortfolioKPI(); renderSetupChecklist(); _startLiveRefresh(); });
   _attachAllTickerSearches();
 }
 

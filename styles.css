@@ -407,11 +407,25 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pos-card__ticker { font-size:13px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
 .pos-card__name { font-size:10px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pos-card__stats { text-align:right; flex-shrink:0; }
-.pos-card__live { font-size:13px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
+.pos-card__pnl { font-size:17px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
+.pos-card__live { font-size:11px; font-weight:600; margin-top:2px; line-height:1.3; }
 .pos-card__avg { font-size:10px; color:var(--text-3); margin-top:2px; }
 .pos-card__buys { display:flex; flex-wrap:wrap; gap:6px; }
 .pos-buy-chip { display:inline-flex; align-items:center; gap:5px; background:#fafaf9; border:1px solid var(--border); border-radius:20px; padding:3px 7px 3px 10px; font-size:11px; color:var(--text-2); }
 .pos-buy-chip span strong { color:var(--text); }
+.pos-card--warn { border-color:#fca5a5 !important; background:#fff8f8; }
+.pos-card--good { border-color:#6ee7b7 !important; background:#f0fdf9; }
+.pos-card__alert-row { margin-bottom:8px; }
+.pos-alert { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:700; padding:2px 9px; border-radius:20px; }
+.pos-alert--warn { background:#fee2e2; color:#991b1b; }
+.pos-alert--good { background:#d1fae5; color:#065f46; }
+/* ── Portfolio KPI banner ─────────────────────────── */
+.portfolio-kpi-banner { display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,#f5f3ff,#faf5ff); border:1.5px solid #ddd6fe; border-radius:14px; padding:14px 16px; margin-bottom:14px; gap:4px; }
+.pkpi-item { flex:1; text-align:center; min-width:0; }
+.pkpi-label { font-size:9px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.pkpi-value { font-size:14px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pkpi-pct { font-size:11px; font-weight:700; margin-top:2px; }
+.pkpi-sep { font-size:12px; color:var(--text-3); flex-shrink:0; padding:0 2px; }
 .pos-buy-chip button { background:none; border:none; cursor:pointer; color:var(--danger); font-size:12px; line-height:1; padding:1px 2px; opacity:.5; font-family:inherit; }
 .pos-buy-chip button:hover { opacity:1; }
 ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }

@@ -1,12 +1,15 @@
 import { ASSETS, ASSET_META, EDGE_BASE } from './config.js';
 import { toast, esc } from './utils.js';
 import { db } from './auth.js';
+import { getPositions } from './positions.js';
 
 const safeUrl = url => /^https?:\/\//.test(url ?? '') ? url : '#';
 
 // Map internal ticker keys → Yahoo Finance symbols (e.g. VISA → V)
 const _yfTickers  = ASSETS.map(a => ASSET_META[a].yfTicker ?? a);
 const _reverseMap = Object.fromEntries(ASSETS.map(a => [ASSET_META[a].yfTicker ?? a, a]));
+
+export const priceCache = new Map();
 
 export async function fetchMarketData() {
   const loadingEl  = document.getElementById('market-loading');
@@ -17,6 +20,12 @@ export async function fetchMarketData() {
   if (loadingEl) loadingEl.style.display = 'block';
   gridEl.innerHTML = '';
 
+  const _posKeys      = Object.keys(getPositions());
+  const _posYfTickers = _posKeys.map(t => ASSET_META[t]?.yfTicker ?? t);
+  const _allYfTickers = [...new Set([..._yfTickers, ..._posYfTickers])];
+  const _localRevMap  = { ..._reverseMap };
+  _posKeys.forEach(t => { const yf = ASSET_META[t]?.yfTicker ?? t; if (!_localRevMap[yf]) _localRevMap[yf] = t; });
+
   try {
     const { data: { session } } = await db.auth.getSession();
     const res = await fetch(`${EDGE_BASE}/market-data`, {
@@ -25,15 +34,16 @@ export async function fetchMarketData() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ tickers: _yfTickers }),
+      body: JSON.stringify({ tickers: _allYfTickers }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw   = await res.json();
-    // Restore original ticker keys (e.g. V → VISA)
-    const items = raw.map(item => ({ ...item, ticker: _reverseMap[item.ticker] ?? item.ticker }));
+    const items = raw.map(item => ({ ...item, ticker: _localRevMap[item.ticker] ?? item.ticker }));
+    items.forEach(item => { if (item.currentPrice != null && !item.error) priceCache.set(item.ticker, item.currentPrice); });
     if (loadingEl) loadingEl.style.display = 'none';
 
-    gridEl.innerHTML = items.map(item => {
+    const baseItems = items.filter(item => ASSETS.includes(item.ticker));
+    gridEl.innerHTML = baseItems.map(item => {
       if (item.error) return `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;opacity:.5;"><div style="font-weight:700;font-size:13px;">${item.ticker}</div><div style="font-size:11px;color:var(--text-3);">Sin datos</div></div>`;
       const chgColor = (item.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
       const chgSign  = (item.changePercent ?? 0) >= 0 ? '+' : '';

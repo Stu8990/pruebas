@@ -5,6 +5,7 @@ import { Learn } from './learn.js';
 import { Charts } from './charts.js';
 import { pct, pp, $f, set, val, shortLabel, esc } from './utils.js';
 import { getPositions, getAvgPrice, getTotalShares, hasPositions } from './positions.js';
+import { priceCache } from './prices.js';
 
 export const UI = {
   all() {
@@ -390,7 +391,7 @@ export function renderPositionsPanel() {
 
   const allAssets = getAllAssets();
 
-  el.innerHTML = `<div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">${
     tickers.map(ticker => {
       const avg    = getAvgPrice(ticker);
       const shares = getTotalShares(ticker);
@@ -400,16 +401,21 @@ export function renderPositionsPanel() {
       const full   = meta?.full  || ticker;
 
       const costBasis = shares * (avg ?? 0);
-      const mktEl     = document.querySelector(`#market-grid [data-ticker="${ticker}"]`);
-      const mktPrice  = mktEl ? parseFloat(mktEl.dataset.price || '0') || null : null;
-      const curValue  = mktPrice ? shares * mktPrice : null;
+      const mktPrice  = priceCache.get(ticker) ?? null;
+      const curValue  = mktPrice != null ? shares * mktPrice : null;
+      const gainUSD   = curValue != null ? curValue - costBasis : null;
       const gainPct   = (mktPrice && avg) ? ((mktPrice - avg) / avg * 100) : null;
 
-      const valueHtml = curValue !== null && gainPct !== null
-        ? `<div class="pos-card__live" style="color:${gainPct >= 0 ? 'var(--success)' : 'var(--danger)'};">
-            $${curValue.toFixed(2)} <span style="font-weight:600;">(${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</span>
-           </div>`
-        : `<div class="pos-card__live" style="color:var(--text-3);">$${costBasis.toFixed(2)}</div>`;
+      const liveColor = gainPct == null ? 'var(--text-3)' : gainPct >= 0 ? 'var(--success)' : 'var(--danger)';
+
+      let alertBadge = '';
+      if (gainPct != null && gainPct <= -5)  alertBadge = `<span class="pos-alert pos-alert--warn">⚠ Bajo presión</span>`;
+      if (gainPct != null && gainPct >= 15)  alertBadge = `<span class="pos-alert pos-alert--good">↑ Considera tomar ganancia</span>`;
+
+      const valueHtml = gainUSD != null && gainPct != null
+        ? `<div class="pos-card__pnl" style="color:${liveColor};">${gainUSD >= 0 ? '+' : ''}$${gainUSD.toFixed(2)}</div>
+           <div class="pos-card__live" style="color:${liveColor};">$${curValue.toFixed(2)} · ${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%</div>`
+        : `<div class="pos-card__live" style="color:var(--text-3);">$${costBasis.toFixed(2)} invertido</div>`;
 
       const chips = buys.map((b, i) =>
         `<div class="pos-buy-chip">
@@ -418,7 +424,12 @@ export function renderPositionsPanel() {
         </div>`
       ).join('');
 
-      return `<div class="pos-card">
+      const cardClass = gainPct != null && gainPct <= -5 ? 'pos-card pos-card--warn'
+                      : gainPct != null && gainPct >= 15 ? 'pos-card pos-card--good'
+                      : 'pos-card';
+
+      return `<div class="${cardClass}" style="border-left:3px solid ${color};">
+        ${alertBadge ? `<div class="pos-card__alert-row">${alertBadge}</div>` : ''}
         <div class="pos-card__head">
           <div class="pos-card__dot" style="background:${color};"></div>
           <div class="pos-card__info">
@@ -434,6 +445,50 @@ export function renderPositionsPanel() {
       </div>`;
     }).join('')
   }</div>`;
+}
+
+export function renderPortfolioKPI() {
+  const el = document.getElementById('portfolio-kpi');
+  if (!el) return;
+
+  const pos = getPositions();
+  const tickers = Object.keys(pos);
+  if (!tickers.length) { el.innerHTML = ''; return; }
+
+  let totalInvested = 0, totalValue = 0, hasLive = false;
+  tickers.forEach(ticker => {
+    const avg    = getAvgPrice(ticker);
+    const shares = getTotalShares(ticker);
+    totalInvested += shares * (avg ?? 0);
+    const livePrice = priceCache.get(ticker);
+    if (livePrice != null) { totalValue += shares * livePrice; hasLive = true; }
+  });
+
+  if (!hasLive || totalInvested === 0) { el.innerHTML = ''; return; }
+
+  const gainUSD = totalValue - totalInvested;
+  const gainPct = (gainUSD / totalInvested) * 100;
+  const color   = gainUSD >= 0 ? 'var(--success)' : 'var(--danger)';
+  const sign    = gainUSD >= 0 ? '+' : '';
+
+  el.innerHTML = `
+    <div class="portfolio-kpi-banner">
+      <div class="pkpi-item">
+        <div class="pkpi-label">Invertido</div>
+        <div class="pkpi-value mono">$${totalInvested.toFixed(2)}</div>
+      </div>
+      <div class="pkpi-sep">→</div>
+      <div class="pkpi-item">
+        <div class="pkpi-label">Valor actual</div>
+        <div class="pkpi-value mono">$${totalValue.toFixed(2)}</div>
+      </div>
+      <div class="pkpi-sep" style="color:${color};font-size:16px;font-weight:800;">${gainUSD >= 0 ? '↑' : '↓'}</div>
+      <div class="pkpi-item">
+        <div class="pkpi-label" style="color:${color};">P&amp;L Total</div>
+        <div class="pkpi-value mono" style="color:${color};">${sign}$${Math.abs(gainUSD).toFixed(2)}</div>
+        <div class="pkpi-pct" style="color:${color};">${sign}${gainPct.toFixed(1)}%</div>
+      </div>
+    </div>`;
 }
 
 // ── Setup checklist ───────────────────────────────────
