@@ -122,10 +122,13 @@ async function triggerAiAnalysis(force = false) {
 
 function _aiSkeleton() {
   return Array(3).fill(0).map(() =>
-    `<div class="rec rec-blue" style="opacity:.4;animation:pulse-skeleton 1.4s ease infinite;">
-      <div style="height:12px;background:#bae6fd;border-radius:6px;width:60%;margin-bottom:8px;"></div>
-      <div style="height:10px;background:#bae6fd;border-radius:6px;width:90%;margin-bottom:5px;"></div>
-      <div style="height:10px;background:#bae6fd;border-radius:6px;width:75%;"></div>
+    `<div class="rec2 rec2-blue" style="opacity:.35;animation:pulse-skeleton 1.4s ease infinite;">
+      <div class="rec2-bar"></div>
+      <div class="rec2-body">
+        <div style="height:13px;background:#bae6fd;border-radius:6px;width:55%;margin-bottom:12px;"></div>
+        <div style="height:10px;background:#bae6fd;border-radius:6px;width:90%;margin-bottom:6px;"></div>
+        <div style="height:10px;background:#bae6fd;border-radius:6px;width:75%;"></div>
+      </div>
     </div>`
   ).join('');
 }

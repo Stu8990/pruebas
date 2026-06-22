@@ -224,31 +224,35 @@ function buildPrompt(history: Session[], market: MarketItem[]): string {
   const rising  = changes.filter(c => c.delta > 1).map(c => `${c.ticker} (+${c.delta.toFixed(1)}pp)`).join(', ');
   const falling = changes.filter(c => c.delta < -1).map(c => `${c.ticker} (${c.delta.toFixed(1)}pp)`).join(', ');
 
-  return `Eres un asesor de inversiones senior experto en bolsa americana. Analiza el portafolio del usuario y responde EXCLUSIVAMENTE en JSON válido con esta estructura exacta:
+  return `Eres un asesor de inversiones senior experto en bolsa americana. Tu usuario es NUEVO en inversiones, puede asustarse con números en rojo y no entiende términos técnicos. Analiza el portafolio y responde EXCLUSIVAMENTE en JSON válido con esta estructura exacta:
 
 {
-  "insight": "string — 2-3 oraciones claras sobre qué está pasando hoy en el portafolio",
+  "insight": "string — 2-3 oraciones simples y tranquilizadoras sobre qué está pasando hoy",
   "recommendations": [
     {
       "type": "green|red|amber|blue|purple",
       "icon": "emoji",
-      "title": "string corto",
-      "body": "string — análisis concreto con números reales del portafolio",
+      "title": "string corto y claro",
+      "body": "string — explica en lenguaje simple qué está pasando y POR QUÉ, con números reales. Si hay rojo, normaliza: ¿es una caída temporal? ¿cuánto es normal en este activo?",
+      "action": "string de máximo 10 palabras con el paso exacto a seguir ahora",
       "conf": número_entre_50_y_99
     }
   ],
   "pulse": [
-    { "label": "string", "value": "string", "up": boolean, "desc": "string" }
+    { "label": "string", "value": "string", "up": boolean, "desc": "string corta de contexto" }
   ]
 }
 
-REGLAS:
+REGLAS CRÍTICAS:
 - Máximo 4 recommendations, mínimo 2
 - Máximo 4 pulse cards
-- Usa los datos reales del portafolio, no inventes números
-- Sé directo, práctico y en español
-- "conf" refleja cuánta certeza tienes basado en datos disponibles
-- Para "type": green=positivo, red=alerta, amber=neutral/precaución, blue=educativo, purple=insight profundo
+- Usa datos reales del portafolio, NO inventes números
+- NUNCA uses "investiga", "evalúa por tu cuenta" o "considera" como acción — da la recomendación directa
+- "action" debe ser una instrucción concreta: "No vendas, mantén 30 días más", "Espera, no hagas nada hoy", "Compra más solo si baja de $X"
+- Para type "red" o "amber": siempre tranquiliza primero — explica si la caída es normal, temporal o preocupante en contexto
+- Lenguaje sencillo: evita jerga financiera sin explicarla, habla como un amigo experto
+- "conf" refleja cuánta certeza tienes según datos disponibles
+- Para "type": green=buena noticia, red=atención/caída, amber=precaución, blue=tip educativo, purple=insight profundo
 - NO incluyas texto fuera del JSON
 
 DATOS DEL PORTAFOLIO:

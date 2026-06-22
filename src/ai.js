@@ -81,25 +81,25 @@ function _renderInsight(data) {
 function _renderRecommendations(recs) {
   const el = document.getElementById('recommendations');
   if (!el) return;
-  const cfg = {
-    green:  { bg:'rec-green',  tc:'#065f46' },
-    red:    { bg:'rec-red',    tc:'#7f1d1d' },
-    blue:   { bg:'rec-blue',   tc:'#0c4a6e' },
-    amber:  { bg:'rec-amber',  tc:'#78350f' },
-    purple: { bg:'rec-purple', tc:'#4c1d95' },
-  };
   el.innerHTML = recs.map(r => {
-    const c = cfg[r.type] || cfg.blue;
-    return `<div class="rec ${c.bg}">
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <span style="font-size:18px;flex-shrink:0;">${esc(r.icon ?? '📊')}</span>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:${c.tc};margin-bottom:4px;">${esc(r.title)}</div>
-          <p style="font-size:12px;color:${c.tc};opacity:.9;line-height:1.7;margin:0;">${esc(r.body)}</p>
-          <div style="display:flex;align-items:center;gap:7px;margin-top:8px;">
-            <div class="cbar" style="width:70px;"><div class="cbar-fill" style="width:${r.conf ?? 80}%;"></div></div>
-            <span style="font-size:10px;font-weight:600;color:var(--primary);">Confianza ${(r.conf ?? 80).toFixed(0)}%</span>
+    const conf = r.conf ?? 80;
+    const actionHtml = r.action
+      ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(0,0,0,.06);border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.01em;">→ ${esc(r.action)}</div>`
+      : '';
+    return `<div class="rec2 rec2-${r.type ?? 'blue'}">
+      <div class="rec2-bar"></div>
+      <div class="rec2-body">
+        <div class="rec2-head">
+          <div class="rec2-icon">${esc(r.icon ?? '📊')}</div>
+          <div class="rec2-meta">
+            <div class="rec2-title">${esc(r.title)}</div>
+            <span class="rec2-conf-pill">✦ ${conf.toFixed(0)}% confianza</span>
           </div>
+        </div>
+        <p class="rec2-text">${esc(r.body)}</p>
+        ${actionHtml}
+        <div class="rec2-footer">
+          <div class="cbar"><div class="cbar-fill" style="width:${conf}%;"></div></div>
         </div>
       </div>
     </div>`;
@@ -110,10 +110,11 @@ function _renderPulse(pulse) {
   const el = document.getElementById('pulse-cards');
   if (!el || !pulse.length) return;
   el.innerHTML = pulse.map(p =>
-    `<div style="background:white;border:1px solid var(--border);border-radius:10px;padding:12px;">
-      <div style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">${esc(p.label)}</div>
-      <div class="mono" style="font-size:18px;font-weight:700;color:${p.up ? 'var(--success)' : 'var(--danger)'};">${esc(p.value)}</div>
-      <div style="font-size:10px;color:var(--text-3);margin-top:3px;">${esc(p.desc ?? '')}</div>
+    `<div class="pulse-card pulse-card--${p.up ? 'up' : 'down'}">
+      <div class="pulse-card__label">${esc(p.label)}</div>
+      <div class="pulse-card__value mono">${esc(p.value)}</div>
+      <div class="pulse-card__trend">${p.up ? '▲' : '▼'}</div>
+      <div class="pulse-card__desc">${esc(p.desc ?? '')}</div>
     </div>`
   ).join('');
 }
