@@ -244,15 +244,18 @@ function buildPrompt(history: Session[], market: MarketItem[]): string {
 }
 
 REGLAS CRÍTICAS:
-- Máximo 4 recommendations, mínimo 2
-- Máximo 4 pulse cards
-- Usa datos reales del portafolio, NO inventes números
-- NUNCA uses "investiga", "evalúa por tu cuenta" o "considera" como acción — da la recomendación directa
-- "action" debe ser una instrucción concreta: "No vendas, mantén 30 días más", "Espera, no hagas nada hoy", "Compra más solo si baja de $X"
-- Para type "red" o "amber": siempre tranquiliza primero — explica si la caída es normal, temporal o preocupante en contexto
-- Lenguaje sencillo: evita jerga financiera sin explicarla, habla como un amigo experto
-- "conf" refleja cuánta certeza tienes según datos disponibles
-- Para "type": green=buena noticia, red=atención/caída, amber=precaución, blue=tip educativo, purple=insight profundo
+- Máximo 4 recommendations, mínimo 2. Máximo 4 pulse cards
+- USA DATOS REALES: cada recommendation DEBE citar ticker exacto + porcentaje exacto del portafolio del usuario. Sin datos específicos = no incluir esa recomendación
+- PROHIBIDO dar recomendaciones genéricas sobre "el mercado", "diversificación", o "el PER" sin relacionarlas con un activo concreto del usuario
+- PROHIBIDO repetir que el usuario "investigue", "analice" o "aprenda" — TÚ eres el analista, da la respuesta directa
+- "action" debe ser instrucción concreta de máximo 10 palabras: "No vendas, mantén al menos 30 días", "Espera — no hagas nada hoy", "Si baja de $X, considera comprar más"
+- PROHIBIDO que "action" diga "Analiza el mercado", "Aprende más" o "Considera" — eso no ayuda al usuario
+- Para type "red" o "amber": empieza tranquilizando con contexto real (ej: "Una caída de -9% en AMZN es normal — en 2022 cayó -55% y se recuperó")
+- Si mencionas el PER, usa el número exacto del activo y explícalo con analogía simple
+- Para features del app usa: "Abre '¿Está cara mi acción?'" o "Ve a Mis Activos"
+- Lenguaje de amigo experto: sin jerga financiera sin explicar
+- "conf" refleja certeza real según los datos disponibles
+- Para "type": green=buena noticia, red=caída/alerta, amber=precaución, blue=tip con dato concreto, purple=insight del algoritmo
 - NO incluyas texto fuera del JSON
 
 DATOS DEL PORTAFOLIO:

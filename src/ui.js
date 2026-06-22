@@ -209,11 +209,22 @@ export const UI = {
     const riskColor = s.riskScore > 0.7 ? 'var(--danger)' : s.riskScore > 0.5 ? 'var(--warning)' : 'var(--success)';
     const riskDesc  = s.riskScore > 0.7 ? 'No te asustas con caídas' : s.riskScore > 0.5 ? 'Equilibras riesgo y tranquilidad' : 'Prefieres seguridad sobre rendimiento';
     const top = Object.entries(s.assetScores).sort(([,a],[,b]) => b.score - a.score)[0];
+    const n = Store.history.length;
+    const posCount = s.phases.filter(p=>p.type==='up').length;
+    const negCount = s.phases.filter(p=>p.type==='down').length;
     const cards = [
-      { icon:'🧠', lbl:'Tu perfil de inversor',      val:riskLbl,  color:riskColor, desc:riskDesc },
-      { icon:'🏆', lbl:'Tu acción más rentable',     val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : '#a8a29e', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más datos' },
-      { icon:'💰', lbl:'Veces que aumentaste capital', val:s.injections.length, color:'var(--primary)', desc:'Cada inyección mejora el algoritmo' },
-      { icon:'📅', lbl:'Sesiones analizadas',         val:Store.history.length, color:'#8b5cf6',        desc:`${s.phases.filter(p=>p.type==='up').length} positivas · ${s.phases.filter(p=>p.type==='down').length} negativas` },
+      { icon:'🧠', lbl:'Tu perfil de inversor', val:riskLbl, color:riskColor, desc:riskDesc,
+        tip: s.riskScore > 0.7 ? 'Ventaja: puedes mantener posiciones en caídas sin pánico.' :
+             s.riskScore > 0.5 ? 'Consejo: combina acciones growth con ETFs como VOO para equilibrar.' :
+             'Consejo: prioriza ETFs diversificados; reduce acciones individuales volátiles.' },
+      { icon:'🏆', lbl:'Tu acción más rentable', val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : '#a8a29e', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más sesiones',
+        tip: top ? 'Analiza qué sector es este activo para buscar activos parecidos.' : 'Aparecerá cuando tengas más de 3 sesiones registradas.' },
+      { icon:'💰', lbl:'Aumentos de capital', val:s.injections.length, color:'var(--primary)', desc:'Inyecciones detectadas por el algoritmo',
+        tip: s.injections.length === 0 ? 'Tip: agregar capital en caídas baja tu precio promedio — estrategia DCA.' : 'Bien. Inyectar capital en caídas mejora tu rendimiento a largo plazo.' },
+      { icon:'📅', lbl:'Sesiones analizadas', val:n, color:'#8b5cf6', desc:`${posCount} positivas · ${negCount} negativas`,
+        tip: n < 10 ? 'Necesitas ~20 sesiones para análisis confiables. ¡Sigue registrando!' :
+             n < 20 ? 'Buen avance. Las predicciones mejoran con cada sesión.' :
+             'Suficientes datos. El algoritmo ya detecta tus patrones de inversión.' },
     ];
     el.innerHTML = cards.map(c =>
       `<div class="profile-stat">
@@ -221,6 +232,7 @@ export const UI = {
         <div class="profile-stat__label">${c.lbl}</div>
         <div class="profile-stat__val" style="color:${c.color};">${c.val}</div>
         <div class="profile-stat__desc">${c.desc}</div>
+        <div class="profile-stat__tip">${c.tip}</div>
       </div>`
     ).join('');
   },
