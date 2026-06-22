@@ -396,6 +396,23 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 /* XTB step guide */
 .xtb-step { display:flex; align-items:flex-start; gap:10px; font-size:12px; color:var(--text-2); line-height:1.55; }
 .xtb-num { width:22px; height:22px; border-radius:50%; background:var(--primary-light); color:var(--primary-mid); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+
+/* ── Position cards ──────────────────────────────── */
+.pos-card { background:white; border:1px solid var(--border); border-radius:12px; padding:13px 14px; transition:box-shadow .15s; }
+.pos-card:hover { box-shadow:0 3px 12px rgba(0,0,0,.07); }
+.pos-card__head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.pos-card__dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.pos-card__info { flex:1; min-width:0; }
+.pos-card__ticker { font-size:13px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
+.pos-card__name { font-size:10px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pos-card__stats { text-align:right; flex-shrink:0; }
+.pos-card__shares { font-size:12px; font-weight:700; color:var(--primary); font-family:'Space Grotesk',sans-serif; }
+.pos-card__avg { font-size:10px; color:var(--text-3); margin-top:2px; }
+.pos-card__buys { display:flex; flex-wrap:wrap; gap:6px; }
+.pos-buy-chip { display:inline-flex; align-items:center; gap:5px; background:#fafaf9; border:1px solid var(--border); border-radius:20px; padding:3px 7px 3px 10px; font-size:11px; color:var(--text-2); }
+.pos-buy-chip span strong { color:var(--text); }
+.pos-buy-chip button { background:none; border:none; cursor:pointer; color:var(--danger); font-size:12px; line-height:1; padding:1px 2px; opacity:.5; font-family:inherit; }
+.pos-buy-chip button:hover { opacity:1; }
 ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
 
 /* Safe area padding on bottom nav for notched phones */

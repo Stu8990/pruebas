@@ -376,34 +376,40 @@ export function renderPositionsPanel() {
   }
   if (hintEl) hintEl.style.display = 'none';
 
-  el.innerHTML = tickers.map(ticker => {
-    const avg    = getAvgPrice(ticker);
-    const shares = getTotalShares(ticker);
-    const buys   = pos[ticker].purchases;
+  const allAssets = getAllAssets();
 
-    const buyRows = buys.map((b, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0 5px 12px;border-left:2px solid var(--border);">
-        <div style="flex:1;font-size:11px;color:var(--text-3);">
-          ${b.shares.toFixed(4)} vol. @ <strong style="color:var(--text-2);">$${(+b.price).toFixed(2)}</strong>
-        </div>
-        <button onclick="removePurchaseEntry('${esc(ticker)}',${i})" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px;color:var(--danger);">✕</button>
-      </div>`
-    ).join('');
+  el.innerHTML = `<div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${
+    tickers.map(ticker => {
+      const avg    = getAvgPrice(ticker);
+      const shares = getTotalShares(ticker);
+      const buys   = pos[ticker].purchases;
+      const meta   = allAssets.find(a => a.ticker === ticker);
+      const color  = meta?.color || '#7c3aed';
+      const full   = meta?.full  || ticker;
 
-    return `
-      <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <div style="width:32px;height:32px;background:#f5f3ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <span style="font-size:11px;font-weight:800;color:var(--primary);">${esc(ticker.slice(0,3))}</span>
+      const chips = buys.map((b, i) =>
+        `<div class="pos-buy-chip">
+          <span>${b.shares.toFixed(4)} <span style="color:var(--text-3);">@</span> <strong>$${(+b.price).toFixed(2)}</strong></span>
+          <button onclick="removePurchaseEntry('${esc(ticker)}',${i})" title="Eliminar">✕</button>
+        </div>`
+      ).join('');
+
+      return `<div class="pos-card">
+        <div class="pos-card__head">
+          <div class="pos-card__dot" style="background:${color};"></div>
+          <div class="pos-card__info">
+            <div class="pos-card__ticker">${esc(ticker)}</div>
+            <div class="pos-card__name">${esc(full)}</div>
           </div>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:700;">${esc(ticker)}</div>
-            <div style="font-size:11px;color:var(--text-3);">${shares.toFixed(4)} acc. · avg $${avg?.toFixed(2) ?? '—'}</div>
+          <div class="pos-card__stats">
+            <div class="pos-card__shares">${shares.toFixed(4)} acc.</div>
+            <div class="pos-card__avg">avg $${avg?.toFixed(2) ?? '—'}</div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:2px;">${buyRows}</div>
+        <div class="pos-card__buys">${chips}</div>
       </div>`;
-  }).join('');
+    }).join('')
+  }</div>`;
 }
 
 // ── Setup checklist ───────────────────────────────────
