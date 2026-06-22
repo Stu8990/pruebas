@@ -2,6 +2,7 @@ import { EDGE_BASE } from './config.js';
 import { Store } from './store.js';
 import { db } from './auth.js';
 import { esc } from './utils.js';
+import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
 
 const CACHE_KEY = 'investsmart-ai-cache';
 const CACHE_TTL = 60 * 60 * 1000; // 1 hora
@@ -20,6 +21,16 @@ function saveCache(data) {
 
 export function clearAiCache() {
   localStorage.removeItem(CACHE_KEY);
+}
+
+// Build cost-basis breakdown from saved positions
+function getPositionValues() {
+  const pos = getPositions();
+  return Object.keys(pos).map(ticker => {
+    const shares   = getTotalShares(ticker);
+    const avgPrice = getAvgPrice(ticker) ?? 0;
+    return { ticker, shares: +shares.toFixed(6), avgPrice: +avgPrice.toFixed(2), costBasis: +(shares * avgPrice).toFixed(2) };
+  });
 }
 
 // Collect current market data already rendered in the DOM
@@ -53,7 +64,7 @@ export async function fetchAiAnalysis(forceRefresh = false) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session?.access_token ?? ''}`,
     },
-    body: JSON.stringify({ history: history.slice(-20), market: getMarketSnapshot() }),
+    body: JSON.stringify({ history: history.slice(-20), market: getMarketSnapshot(), positions: getPositionValues() }),
   });
 
   if (!res.ok) throw new Error(`ai-analysis HTTP ${res.status}`);

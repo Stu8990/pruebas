@@ -60,6 +60,13 @@ interface Session {
   rendimientos: Record<string, number | null>;
 }
 
+interface PositionItem {
+  ticker: string;
+  shares: number;
+  avgPrice: number;
+  costBasis: number;
+}
+
 interface MarketItem {
   ticker: string;
   name: string;
@@ -190,7 +197,7 @@ ${portfolioSection}`;
 }
 
 // ── Portfolio analysis prompt ────────────────────────────
-function buildPrompt(history: Session[], market: MarketItem[]): string {
+function buildPrompt(history: Session[], market: MarketItem[], positions: PositionItem[] = []): string {
   const last    = history.at(-1)!;
   const first   = history[0]!;
   const growth  = ((last.valor_total_usd - first.valor_total_usd) / first.valor_total_usd * 100).toFixed(1);
@@ -263,6 +270,13 @@ DATOS DEL PORTAFOLIO:
 - Capital inicial: $${first.valor_total_usd.toFixed(2)} (${first.fecha})
 - Capital actual: $${last.valor_total_usd.toFixed(2)} (${last.fecha})
 - Crecimiento total: ${growth}%
+${positions.length ? (() => {
+  const total = positions.reduce((s, p) => s + p.costBasis, 0) || 1;
+  const sorted = [...positions].sort((a, b) => b.costBasis - a.costBasis);
+  return `\nDISTRIBUCIÓN REAL (costo base por activo):\n` + sorted.map(p =>
+    `  ${p.ticker}: $${p.costBasis.toFixed(2)} (${(p.costBasis/total*100).toFixed(1)}% del portafolio) — ${p.shares.toFixed(4)} acc. @ avg $${p.avgPrice.toFixed(2)}`
+  ).join('\n');
+})() : ''}
 
 ÚLTIMAS 5 SESIONES:
 ${recent}
@@ -378,7 +392,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Portfolio analysis mode (original) ─────────────────
-    const { history, market } = body as { history: Session[]; market: MarketItem[] };
+    const { history, market, positions } = body as { history: Session[]; market: MarketItem[]; positions: PositionItem[] };
 
     if (!history?.length) {
       return new Response(JSON.stringify({ error: 'No history provided' }), {
@@ -386,7 +400,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const prompt = buildPrompt(history, market ?? []);
+    const prompt = buildPrompt(history, market ?? [], positions ?? []);
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',

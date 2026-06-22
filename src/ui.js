@@ -399,6 +399,18 @@ export function renderPositionsPanel() {
       const color  = meta?.color || '#7c3aed';
       const full   = meta?.full  || ticker;
 
+      const costBasis = shares * (avg ?? 0);
+      const mktEl     = document.querySelector(`#market-grid [data-ticker="${ticker}"]`);
+      const mktPrice  = mktEl ? parseFloat(mktEl.dataset.price || '0') || null : null;
+      const curValue  = mktPrice ? shares * mktPrice : null;
+      const gainPct   = (mktPrice && avg) ? ((mktPrice - avg) / avg * 100) : null;
+
+      const valueHtml = curValue !== null && gainPct !== null
+        ? `<div class="pos-card__live" style="color:${gainPct >= 0 ? 'var(--success)' : 'var(--danger)'};">
+            $${curValue.toFixed(2)} <span style="font-weight:600;">(${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)</span>
+           </div>`
+        : `<div class="pos-card__live" style="color:var(--text-3);">$${costBasis.toFixed(2)}</div>`;
+
       const chips = buys.map((b, i) =>
         `<div class="pos-buy-chip">
           <span>${b.shares.toFixed(4)} <span style="color:var(--text-3);">@</span> <strong>$${(+b.price).toFixed(2)}</strong></span>
@@ -414,8 +426,8 @@ export function renderPositionsPanel() {
             <div class="pos-card__name">${esc(full)}</div>
           </div>
           <div class="pos-card__stats">
-            <div class="pos-card__shares">${shares.toFixed(4)} acc.</div>
-            <div class="pos-card__avg">avg $${avg?.toFixed(2) ?? '—'}</div>
+            ${valueHtml}
+            <div class="pos-card__avg">avg $${avg?.toFixed(2) ?? '—'} · ${shares.toFixed(4)} acc.</div>
           </div>
         </div>
         <div class="pos-card__buys">${chips}</div>

@@ -407,7 +407,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pos-card__ticker { font-size:13px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
 .pos-card__name { font-size:10px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pos-card__stats { text-align:right; flex-shrink:0; }
-.pos-card__shares { font-size:12px; font-weight:700; color:var(--primary); font-family:'Space Grotesk',sans-serif; }
+.pos-card__live { font-size:13px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
 .pos-card__avg { font-size:10px; color:var(--text-3); margin-top:2px; }
 .pos-card__buys { display:flex; flex-wrap:wrap; gap:6px; }
 .pos-buy-chip { display:inline-flex; align-items:center; gap:5px; background:#fafaf9; border:1px solid var(--border); border-radius:20px; padding:3px 7px 3px 10px; font-size:11px; color:var(--text-2); }
