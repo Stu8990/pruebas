@@ -609,10 +609,11 @@ export function renderDashSectors() {
   const assets = getAllAssets();
   const sectorMap = {};
   assets.forEach(a => {
-    const mkt = marketCache.get(a.ticker);
-    if (!mkt || mkt.changePercent == null) return;
-    if (!sectorMap[a.sector]) sectorMap[a.sector] = [];
-    sectorMap[a.sector].push(mkt.changePercent);
+    const mkt    = marketCache.get(a.ticker);
+    const sector = a.sector ?? ASSET_META[a.ticker]?.sector;
+    if (!mkt || mkt.changePercent == null || !sector) return;
+    if (!sectorMap[sector]) sectorMap[sector] = [];
+    sectorMap[sector].push(mkt.changePercent);
   });
 
   const sectors = Object.entries(sectorMap)
