@@ -407,13 +407,20 @@ Deno.serve(async (req: Request) => {
 
       const rawPositions = Array.isArray(body.positions)
         ? (body.positions as Record<string, unknown>[]).slice(0, 30).map(p => ({
-            ticker:       String(p.ticker ?? '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 10),
-            shares:       Math.max(0, Number(p.shares)    || 0),
-            avgPrice:     Math.max(0, Number(p.avgPrice)  || 0),
-            costBasis:    Math.max(0, Number(p.costBasis) || 0),
-            currentPrice: typeof p.currentPrice === 'number' ? p.currentPrice : null,
-            pnlUSD:       typeof p.pnlUSD === 'number' ? p.pnlUSD : null,
-            pnlPct:       typeof p.pnlPct === 'number' ? p.pnlPct : null,
+            ticker:        String(p.ticker ?? '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 10),
+            shares:        Math.max(0, Number(p.shares)    || 0),
+            avgPrice:      Math.max(0, Number(p.avgPrice)  || 0),
+            costBasis:     Math.max(0, Number(p.costBasis) || 0),
+            currentPrice:  typeof p.currentPrice  === 'number' ? p.currentPrice  : null,
+            pnlUSD:        typeof p.pnlUSD        === 'number' ? p.pnlUSD        : null,
+            pnlPct:        typeof p.pnlPct        === 'number' ? p.pnlPct        : null,
+            changeToday:   typeof p.changeToday   === 'number' ? p.changeToday   : null,
+            pe:            typeof p.pe            === 'number' ? p.pe            : null,
+            forwardPe:     typeof p.forwardPe     === 'number' ? p.forwardPe     : null,
+            analystRating: typeof p.analystRating === 'string' ? p.analystRating : null,
+            week52High:    typeof p.week52High    === 'number' ? p.week52High    : null,
+            week52Low:     typeof p.week52Low     === 'number' ? p.week52Low     : null,
+            rangePct:      typeof p.rangePct      === 'number' ? p.rangePct      : null,
           }))
         : [];
 
@@ -433,30 +440,47 @@ Deno.serve(async (req: Request) => {
 
       const pnl    = portfolio.totalValue != null ? portfolio.totalValue - portfolio.totalInvested : null;
       const pnlPct = pnl != null && portfolio.totalInvested > 0 ? (pnl / portfolio.totalInvested * 100).toFixed(1) : null;
+
       const posLines = rawPositions.length
         ? rawPositions.map(p => {
-            const pnlStr = p.pnlUSD != null
-              ? `P&L: ${p.pnlUSD >= 0 ? '+' : ''}$${p.pnlUSD.toFixed(2)} (${p.pnlPct != null ? (p.pnlPct >= 0 ? '+' : '') + p.pnlPct.toFixed(1) + '%' : 'N/D'})`
-              : '(sin precio en vivo)';
-            return `  ${p.ticker}: ${p.shares} acc. @ $${p.avgPrice} avg | ${p.currentPrice ? `$${p.currentPrice}` : 'N/D'} | ${pnlStr}`;
+            const pnlStr    = p.pnlUSD != null
+              ? `P&L ${p.pnlUSD >= 0 ? '+' : ''}$${p.pnlUSD.toFixed(2)} (${p.pnlPct != null ? (p.pnlPct >= 0 ? '+' : '') + p.pnlPct.toFixed(1) + '%' : 'N/D'})`
+              : 'sin precio en vivo';
+            const todayStr  = p.changeToday != null ? ` | Hoy ${p.changeToday >= 0 ? '+' : ''}${p.changeToday.toFixed(2)}%` : '';
+            const peStr     = p.pe != null ? ` | PER ${p.pe.toFixed(1)}x${p.forwardPe ? ` (futuro ${p.forwardPe.toFixed(1)}x)` : ''}` : '';
+            const ratingStr = p.analystRating ? ` | Analistas: ${p.analystRating}` : '';
+            const rangeStr  = p.rangePct != null && p.week52Low != null && p.week52High != null
+              ? ` | Rango 52s: $${p.week52Low}–$${p.week52High} (posición ${p.rangePct}%)`
+              : '';
+            return `  ${p.ticker}: ${p.shares} acc. @ $${p.avgPrice} avg → $${p.currentPrice ?? 'N/D'} | ${pnlStr}${todayStr}${peStr}${ratingStr}${rangeStr}`;
           }).join('\n')
         : '  (sin posiciones registradas)';
+
       const histStr = histSummary
-        ? `${histSummary.sessions} sesiones. Desde $${histSummary.firstValue.toFixed(2)} → $${histSummary.lastValue.toFixed(2)} (${histSummary.growth}%)`
-        : 'Sin historial.';
+        ? `${histSummary.sessions} sesiones. Capital: $${histSummary.firstValue.toFixed(2)} → $${histSummary.lastValue.toFixed(2)} (${histSummary.growth >= '0' ? '+' : ''}${histSummary.growth}%)`
+        : 'Sin historial registrado aún.';
 
-      const advisorPrompt = `Eres el asesor personal de inversiones de este usuario. Analiza su portafolio real y responde su pregunta directo, como amigo experto en finanzas.
+      const advisorPrompt = `Eres el asesor personal de inversiones de este usuario. Tienes acceso a sus datos REALES de portafolio incluyendo fundamentales de mercado.
 
-POSICIONES:
+POSICIONES CON DATOS DE MERCADO:
 ${posLines}
 
-TOTAL: invertido $${portfolio.totalInvested.toFixed(2)}${pnl != null ? ` | actual $${portfolio.totalValue?.toFixed(2)} | P&L ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)} (${pnl >= 0 ? '+' : ''}${pnlPct}%)` : ''}
+PORTAFOLIO TOTAL: invertido $${portfolio.totalInvested.toFixed(2)}${pnl != null ? ` | valor actual $${portfolio.totalValue?.toFixed(2)} | P&L ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)} (${pnl >= 0 ? '+' : ''}${pnlPct}%)` : ' (sin precios en vivo)'}
 HISTORIAL: ${histStr}
 
-PREGUNTA: ${question}
+PREGUNTA DEL USUARIO: ${question}
 
-Responde SOLO en JSON: { "answer": "string" }
-REGLAS: máx 200 palabras · español latinoamericano · usa datos reales · no digas "consulta un asesor" — tú eres el asesor · si faltan datos dilo brevemente`;
+Responde EXCLUSIVAMENTE en JSON: { "answer": "string" }
+
+REGLAS CRÍTICAS:
+- SOLO el JSON, sin markdown ni texto extra
+- Máximo 220 palabras
+- SIEMPRE cita datos concretos del portafolio (ticker + número exacto)
+- Si hay PER, rating de analistas o posición en rango 52 semanas, úsalos para fundamentar
+- Español latinoamericano natural, como amigo experto
+- NO digas "consulta a un profesional" — tú eres el asesor, da tu postura directa
+- Si faltan datos para responder con precisión, dilo en 1 oración y da la mejor respuesta posible con lo que tienes
+- Para preguntas de venta/compra: usa el P&L real, el rating de analistas y el PER para dar una recomendación concreta`;
 
       const groqAdv = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',

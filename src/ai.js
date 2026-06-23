@@ -3,7 +3,7 @@ import { Store } from './store.js';
 import { db } from './auth.js';
 import { esc } from './utils.js';
 import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
-import { priceCache } from './prices.js';
+import { priceCache, marketCache } from './prices.js';
 
 const CACHE_KEY = 'investsmart-ai-cache';
 const CACHE_TTL = 60 * 60 * 1000; // 1 hora
@@ -85,19 +85,31 @@ export async function askAdvisor(question) {
     const avg       = getAvgPrice(ticker) ?? 0;
     const costBasis = shares * avg;
     const live      = priceCache.get(ticker);
+    const mkt       = marketCache.get(ticker);
     const curValue  = live != null ? shares * live : null;
     const pnlUSD    = curValue != null ? curValue - costBasis : null;
     const pnlPct    = pnlUSD != null && costBasis > 0 ? (pnlUSD / costBasis * 100) : null;
+    let rangePct = null;
+    if (mkt?.week52High && mkt?.week52Low && live) {
+      rangePct = +((live - mkt.week52Low) / (mkt.week52High - mkt.week52Low) * 100).toFixed(0);
+    }
     totalInvested += costBasis;
     if (curValue != null) totalValue += curValue;
     return {
       ticker,
-      shares:       +shares.toFixed(4),
-      avgPrice:     +avg.toFixed(2),
-      costBasis:    +costBasis.toFixed(2),
-      currentPrice: live != null ? +live.toFixed(2) : null,
-      pnlUSD:       pnlUSD != null ? +pnlUSD.toFixed(2)  : null,
-      pnlPct:       pnlPct != null ? +pnlPct.toFixed(2)  : null,
+      shares:         +shares.toFixed(4),
+      avgPrice:       +avg.toFixed(2),
+      costBasis:      +costBasis.toFixed(2),
+      currentPrice:   live != null ? +live.toFixed(2) : null,
+      pnlUSD:         pnlUSD != null ? +pnlUSD.toFixed(2)  : null,
+      pnlPct:         pnlPct != null ? +pnlPct.toFixed(2)  : null,
+      changeToday:    mkt?.changePercent != null ? +mkt.changePercent.toFixed(2) : null,
+      pe:             mkt?.pe != null ? +mkt.pe.toFixed(1) : null,
+      forwardPe:      mkt?.forwardPe != null ? +mkt.forwardPe.toFixed(1) : null,
+      analystRating:  mkt?.analystRating ?? null,
+      week52High:     mkt?.week52High != null ? +mkt.week52High.toFixed(2) : null,
+      week52Low:      mkt?.week52Low  != null ? +mkt.week52Low.toFixed(2)  : null,
+      rangePct,
     };
   });
 

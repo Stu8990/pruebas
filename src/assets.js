@@ -13,7 +13,7 @@ export function saveCustomAssets(list) {
 
 export function getAllAssets() {
   return [
-    ...ASSETS.map(t => ({ ticker: t, full: ASSET_META[t].full, role: ASSET_META[t].role, color: ASSET_META[t].color, isCustom: false })),
+    ...ASSETS.map(t => ({ ticker: t, full: ASSET_META[t].full, role: ASSET_META[t].role, color: ASSET_META[t].color, sector: ASSET_META[t].sector, isCustom: false })),
     ...getCustomAssets().map(c => ({ ...c, isCustom: true })),
   ];
 }
