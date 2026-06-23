@@ -12,6 +12,7 @@ export const UI = {
     const cur = Store.cur(), prv = Store.prev();
     Learn.train(Store.history);
     this.selector(); this.history();
+    this.dashLive();
 
     const marketCard = document.getElementById('market-prices-card');
     const emptyState = document.getElementById('portfolio-empty-state');
@@ -294,6 +295,76 @@ export const UI = {
 
     // Restore saved values
     myTickers.forEach(t => { if (saved[t]) { const inp = document.getElementById('per-inp-' + t); if (inp) inp.value = saved[t]; } });
+  },
+
+  dashLive() {
+    const el = document.getElementById('dash-live-block');
+    if (!el) return;
+
+    const pos     = getPositions();
+    const tickers = Object.keys(pos);
+    if (!tickers.length) { el.innerHTML = ''; return; }
+
+    const allAssets = getAllAssets();
+    let totalInvested = 0, totalValue = 0, hasLive = false;
+
+    const rows = tickers.map(ticker => {
+      const avg    = getAvgPrice(ticker);
+      const shares = getTotalShares(ticker);
+      const meta   = allAssets.find(a => a.ticker === ticker);
+      const color  = meta?.color || '#7c3aed';
+      const cost   = shares * (avg ?? 0);
+      const live   = priceCache.get(ticker) ?? null;
+      const curVal = live != null ? shares * live : null;
+      const gainUSD = curVal != null ? curVal - cost : null;
+      const gainPct = (live && avg) ? ((live - avg) / avg * 100) : null;
+      totalInvested += cost;
+      if (curVal != null) { totalValue += curVal; hasLive = true; }
+      return { ticker, color, gainUSD, gainPct };
+    });
+
+    const totalGain = hasLive ? totalValue - totalInvested : null;
+    const totalPct  = hasLive && totalInvested > 0 ? (totalGain / totalInvested * 100) : null;
+    const heroColor = totalGain == null ? 'var(--text-3)' : totalGain >= 0 ? 'var(--success)' : 'var(--danger)';
+
+    const heroHtml = hasLive
+      ? `<div class="dlive-pnl" style="color:${heroColor};">${totalGain >= 0 ? '+' : ''}$${totalGain.toFixed(2)}</div>
+         <div class="dlive-sub" style="color:${heroColor};">$${totalValue.toFixed(2)} · ${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(1)}%</div>
+         <div class="dlive-base">vs. $${totalInvested.toFixed(2)} invertido</div>`
+      : `<div class="dlive-base" style="font-size:14px;color:var(--text-2);">$${totalInvested.toFixed(2)} invertido</div>
+         <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Cargando precios en vivo…</div>`;
+
+    const posRows = rows.map(({ ticker, color, gainUSD, gainPct }) => {
+      const c = gainPct == null ? 'var(--text-3)' : gainPct >= 0 ? 'var(--success)' : 'var(--danger)';
+      return `<div class="dlive-row">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></div>
+          <span class="dlive-ticker">${esc(ticker)}</span>
+          ${gainPct != null && gainPct <= -5 ? '<span style="font-size:10px;color:#dc2626;font-weight:700;">⚠</span>' : ''}
+        </div>
+        <div style="text-align:right;">
+          ${gainUSD != null
+            ? `<div class="dlive-pos-pnl" style="color:${c};">${gainUSD >= 0 ? '+' : ''}$${gainUSD.toFixed(2)}</div>
+               <div class="dlive-pos-pct" style="color:${c};">${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%</div>`
+            : `<div class="dlive-pos-pct" style="color:var(--text-3);">—</div>`}
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="dlive-card">
+        <div class="dlive-header">
+          <div>
+            <div class="dlive-title">Portafolio en vivo</div>
+            <div class="dlive-subtitle">${tickers.length} posición${tickers.length !== 1 ? 'es' : ''} · Yahoo Finance</div>
+          </div>
+          <span class="dlive-dot${hasLive ? ' dlive-dot--on' : ''}"></span>
+        </div>
+        <div class="dlive-hero">${heroHtml}</div>
+        <div class="dlive-divider"></div>
+        <div class="dlive-positions">${posRows}</div>
+        <button onclick="goTo('record')" class="dlive-btn">Ver posiciones →</button>
+      </div>`;
   },
 };
 

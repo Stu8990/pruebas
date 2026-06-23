@@ -332,12 +332,14 @@ async function initApp(userId, email) {
   loadPositions().then(() => {
     renderPositionsPanel();
     renderPortfolioKPI();
+    UI.dashLive();
     renderSetupChecklist();
     _startLiveRefresh();
     return fetchMarketData();
   }).then(() => {
     renderPositionsPanel();
     renderPortfolioKPI();
+    UI.dashLive();
   });
   _attachAllTickerSearches();
 }

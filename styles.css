@@ -426,6 +426,25 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pkpi-value { font-size:14px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pkpi-pct { font-size:11px; font-weight:700; margin-top:2px; }
 .pkpi-sep { font-size:12px; color:var(--text-3); flex-shrink:0; padding:0 2px; }
+
+/* ── Dashboard live block ─────────────────────────── */
+.dlive-card { background:white; border:1.5px solid #ddd6fe; border-radius:16px; padding:18px; }
+.dlive-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.dlive-title { font-size:14px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+.dlive-subtitle { font-size:10px; color:var(--text-3); margin-top:2px; }
+.dlive-dot { width:8px; height:8px; border-radius:50%; background:var(--text-3); display:inline-block; flex-shrink:0; }
+.dlive-dot--on { background:#10b981; box-shadow:0 0 0 3px #d1fae5; }
+.dlive-hero { margin-bottom:14px; }
+.dlive-pnl { font-size:30px; font-weight:800; font-family:'Space Grotesk',sans-serif; line-height:1; margin-bottom:4px; }
+.dlive-sub { font-size:13px; font-weight:600; margin-bottom:3px; }
+.dlive-base { font-size:11px; color:var(--text-3); }
+.dlive-divider { height:1px; background:var(--border); margin-bottom:12px; }
+.dlive-positions { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.dlive-row { display:flex; justify-content:space-between; align-items:center; min-height:44px; }
+.dlive-ticker { font-size:13px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
+.dlive-pos-pnl { font-size:13px; font-weight:700; font-family:'Space Grotesk',sans-serif; line-height:1.1; }
+.dlive-pos-pct { font-size:10px; font-weight:600; margin-top:1px; }
+.dlive-btn { width:100%; padding:11px; background:var(--primary-light); color:var(--primary); border:none; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Space Grotesk',sans-serif; touch-action:manipulation; }
 .pos-buy-chip button { background:none; border:none; cursor:pointer; color:var(--danger); font-size:12px; line-height:1; padding:1px 2px; opacity:.5; font-family:inherit; }
 .pos-buy-chip button:hover { opacity:1; }
 ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
