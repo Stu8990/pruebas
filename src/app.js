@@ -328,9 +328,17 @@ async function initApp(userId, email) {
   if (fechaEl) fechaEl.value = _todayStr();
   refreshCashHint();
 
-  fetchMarketData().then(() => { renderPositionsPanel(); renderPortfolioKPI(); });
   loadBuySlots();
-  loadPositions().then(() => { renderPositionsPanel(); renderPortfolioKPI(); renderSetupChecklist(); _startLiveRefresh(); });
+  loadPositions().then(() => {
+    renderPositionsPanel();
+    renderPortfolioKPI();
+    renderSetupChecklist();
+    _startLiveRefresh();
+    return fetchMarketData();
+  }).then(() => {
+    renderPositionsPanel();
+    renderPortfolioKPI();
+  });
   _attachAllTickerSearches();
 }
 
