@@ -5,7 +5,40 @@ import { Learn } from './learn.js';
 import { Charts } from './charts.js';
 import { pct, pp, $f, set, val, shortLabel, esc } from './utils.js';
 import { getPositions, getAvgPrice, getTotalShares, hasPositions } from './positions.js';
-import { priceCache } from './prices.js';
+import { priceCache, marketCache } from './prices.js';
+
+function _smartAlert(ticker, gainPct) {
+  const mkt = marketCache.get(ticker);
+  if (!mkt) {
+    if (gainPct != null && gainPct <= -10)
+      return { cls: 'pos-alert--warn', text: '⚠ Caída >10% desde tu entrada' };
+    return null;
+  }
+  const { analystRating, pe, week52High, currentPrice, changePercent } = mkt;
+
+  if (analystRating === 'VENDER')
+    return { cls: 'pos-alert--warn', text: '⚠ Analistas recomiendan vender' };
+
+  if (changePercent != null && changePercent <= -5)
+    return { cls: 'pos-alert--warn', text: `⚠ ${Math.abs(changePercent).toFixed(1)}% caída hoy · revisa noticias` };
+
+  if (week52High && currentPrice && pe) {
+    const distToHigh = ((week52High - currentPrice) / week52High) * 100;
+    if (distToHigh < 3 && pe > 30)
+      return { cls: 'pos-alert--caution', text: `PER ${pe.toFixed(0)}x · cerca del máximo anual` };
+  }
+
+  if (analystRating === 'COMPRAR' && gainPct != null && gainPct < -8)
+    return { cls: 'pos-alert--good', text: '↑ Analistas bullish · caída puede ser oportunidad' };
+
+  if (pe != null && pe > 0 && pe < 12)
+    return { cls: 'pos-alert--good', text: `PER ${pe.toFixed(0)}x · valuación históricamente baja` };
+
+  if (pe != null && pe > 45)
+    return { cls: 'pos-alert--caution', text: `PER ${pe.toFixed(0)}x · valuación elevada, monitorea` };
+
+  return null;
+}
 
 export const UI = {
   all() {
@@ -336,11 +369,16 @@ export const UI = {
 
     const posRows = rows.map(({ ticker, color, gainUSD, gainPct }) => {
       const c = gainPct == null ? 'var(--text-3)' : gainPct >= 0 ? 'var(--success)' : 'var(--danger)';
+      const da = _smartAlert(ticker, gainPct);
+      const alertDot = da?.cls === 'pos-alert--warn'    ? '<span style="font-size:10px;color:#dc2626;font-weight:700;">⚠</span>'
+                     : da?.cls === 'pos-alert--caution' ? '<span style="font-size:10px;color:#d97706;font-weight:700;">!</span>'
+                     : da?.cls === 'pos-alert--good'    ? '<span style="font-size:10px;color:#059669;font-weight:700;">↑</span>'
+                     : '';
       return `<div class="dlive-row">
         <div style="display:flex;align-items:center;gap:7px;">
           <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></div>
           <span class="dlive-ticker">${esc(ticker)}</span>
-          ${gainPct != null && gainPct <= -5 ? '<span style="font-size:10px;color:#dc2626;font-weight:700;">⚠</span>' : ''}
+          ${alertDot}
         </div>
         <div style="text-align:right;">
           ${gainUSD != null
@@ -479,9 +517,8 @@ export function renderPositionsPanel() {
 
       const liveColor = gainPct == null ? 'var(--text-3)' : gainPct >= 0 ? 'var(--success)' : 'var(--danger)';
 
-      let alertBadge = '';
-      if (gainPct != null && gainPct <= -5)  alertBadge = `<span class="pos-alert pos-alert--warn">⚠ Bajo presión</span>`;
-      if (gainPct != null && gainPct >= 15)  alertBadge = `<span class="pos-alert pos-alert--good">↑ Considera tomar ganancia</span>`;
+      const _alert = _smartAlert(ticker, gainPct);
+      const alertBadge = _alert ? `<span class="pos-alert ${_alert.cls}">${esc(_alert.text)}</span>` : '';
 
       const valueHtml = gainUSD != null && gainPct != null
         ? `<div class="pos-card__pnl" style="color:${liveColor};">${gainUSD >= 0 ? '+' : ''}$${gainUSD.toFixed(2)}</div>
@@ -495,8 +532,9 @@ export function renderPositionsPanel() {
         </div>`
       ).join('');
 
-      const cardClass = gainPct != null && gainPct <= -5 ? 'pos-card pos-card--warn'
-                      : gainPct != null && gainPct >= 15 ? 'pos-card pos-card--good'
+      const cardClass = _alert?.cls === 'pos-alert--warn'    ? 'pos-card pos-card--warn'
+                      : _alert?.cls === 'pos-alert--good'    ? 'pos-card pos-card--good'
+                      : _alert?.cls === 'pos-alert--caution' ? 'pos-card pos-card--caution'
                       : 'pos-card';
 
       return `<div class="${cardClass}" style="border-left:3px solid ${color};">

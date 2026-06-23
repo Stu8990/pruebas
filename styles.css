@@ -417,8 +417,10 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pos-card--good { border-color:#6ee7b7 !important; background:#f0fdf9; }
 .pos-card__alert-row { margin-bottom:8px; }
 .pos-alert { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:700; padding:2px 9px; border-radius:20px; }
-.pos-alert--warn { background:#fee2e2; color:#991b1b; }
-.pos-alert--good { background:#d1fae5; color:#065f46; }
+.pos-alert--warn    { background:#fee2e2; color:#991b1b; }
+.pos-alert--good    { background:#d1fae5; color:#065f46; }
+.pos-alert--caution { background:#fef3c7; color:#92400e; }
+.pos-card--caution  { border-color:#fde68a !important; background:#fffbeb; }
 /* ── Portfolio KPI banner ─────────────────────────── */
 .portfolio-kpi-banner { display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,#f5f3ff,#faf5ff); border:1.5px solid #ddd6fe; border-radius:14px; padding:14px 16px; margin-bottom:14px; gap:4px; }
 .pkpi-item { flex:1; text-align:center; min-width:0; }

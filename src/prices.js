@@ -9,7 +9,8 @@ const safeUrl = url => /^https?:\/\//.test(url ?? '') ? url : '#';
 const _yfTickers  = ASSETS.map(a => ASSET_META[a].yfTicker ?? a);
 const _reverseMap = Object.fromEntries(ASSETS.map(a => [ASSET_META[a].yfTicker ?? a, a]));
 
-export const priceCache = new Map();
+export const priceCache  = new Map();
+export const marketCache = new Map();
 
 export async function fetchMarketData() {
   const loadingEl  = document.getElementById('market-loading');
@@ -39,7 +40,19 @@ export async function fetchMarketData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw   = await res.json();
     const items = raw.map(item => ({ ...item, ticker: _localRevMap[item.ticker] ?? item.ticker }));
-    items.forEach(item => { if (item.currentPrice != null && !item.error) priceCache.set(item.ticker, item.currentPrice); });
+    items.forEach(item => {
+      if (item.error || item.currentPrice == null) return;
+      priceCache.set(item.ticker, item.currentPrice);
+      marketCache.set(item.ticker, {
+        price: item.currentPrice,
+        changePercent: item.changePercent ?? null,
+        pe: item.pe ?? null,
+        forwardPe: item.forwardPe ?? null,
+        week52High: item.week52High ?? null,
+        week52Low:  item.week52Low  ?? null,
+        analystRating: item.analystRating ?? null,
+      });
+    });
     if (loadingEl) loadingEl.style.display = 'none';
 
     const baseItems = items.filter(item => ASSETS.includes(item.ticker));
