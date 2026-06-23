@@ -46,6 +46,7 @@ export const UI = {
     Learn.train(Store.history);
     this.selector(); this.history();
     this.dashLive();
+    renderDashSectors();
 
     const marketCard = document.getElementById('market-prices-card');
     const emptyState = document.getElementById('portfolio-empty-state');
@@ -596,6 +597,59 @@ export function renderPortfolioKPI() {
         <div class="pkpi-label" style="color:${color};">P&amp;L Total</div>
         <div class="pkpi-value mono" style="color:${color};">${sign}$${Math.abs(gainUSD).toFixed(2)}</div>
         <div class="pkpi-pct" style="color:${color};">${sign}${gainPct.toFixed(1)}%</div>
+      </div>
+    </div>`;
+}
+
+// ── Sector performance widget ─────────────────────────
+export function renderDashSectors() {
+  const el = document.getElementById('dash-sectors');
+  if (!el) return;
+
+  const assets = getAllAssets();
+  const sectorMap = {};
+  assets.forEach(a => {
+    const mkt = marketCache.get(a.ticker);
+    if (!mkt || mkt.changePercent == null) return;
+    if (!sectorMap[a.sector]) sectorMap[a.sector] = [];
+    sectorMap[a.sector].push(mkt.changePercent);
+  });
+
+  const sectors = Object.entries(sectorMap)
+    .filter(([, vals]) => vals.length > 0)
+    .map(([name, vals]) => ({
+      name,
+      avg: vals.reduce((s, v) => s + v, 0) / vals.length,
+    }))
+    .sort((a, b) => b.avg - a.avg);
+
+  if (!sectors.length) { el.innerHTML = ''; return; }
+
+  const best  = sectors[0];
+  const worst = sectors.at(-1);
+
+  el.innerHTML = `
+    <div class="card dash-sectors-card">
+      <div class="dash-sectors-header">
+        <span class="dash-sectors-title">Sectores hoy</span>
+        <span class="dash-sectors-source">Yahoo Finance</span>
+      </div>
+      <div class="dash-sectors-list">
+        ${sectors.map(s => {
+          const pos   = s.avg >= 0;
+          const color = pos ? 'var(--success)' : 'var(--danger)';
+          const icon  = pos ? '↑' : '↓';
+          const isTop = s === best && s.avg > 0;
+          const isLow = s === worst && s.avg < 0;
+          return `<div class="dash-sector-row">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <span class="dash-sector-name">${esc(s.name)}</span>
+              ${isTop ? '<span class="dash-sector-badge dash-sector-badge--top">liderando</span>' : ''}
+              ${isLow ? '<span class="dash-sector-badge dash-sector-badge--low">débil</span>'    : ''}
+            </div>
+            <span class="dash-sector-val" style="color:${color};">${icon} ${pos ? '+' : ''}${s.avg.toFixed(2)}%</span>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 }

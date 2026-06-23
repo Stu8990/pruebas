@@ -6,6 +6,7 @@ import {
   checkBanner, dismissBanner, refreshData, onRecordChange, checkMenuBtn,
   openAddAsset, confirmAddAsset, removeCustomAsset, refreshAi, refreshLiveValue, syncLiveNow,
   toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto,
+  submitAdvisor, askAdvisorChip,
 } from './app.js';
 
 import {
@@ -31,6 +32,7 @@ Object.assign(window, {
   openAddAsset, confirmAddAsset, removeCustomAsset,
   // IA y análisis
   refreshAi, analyzeBuy, clearBuySlot, refreshBuyRecommendations,
+  submitAdvisor, askAdvisorChip,
   // PER
   evaluateAllPer, analyzeTickerPer,
   // Precios de mercado

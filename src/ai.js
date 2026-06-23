@@ -3,6 +3,7 @@ import { Store } from './store.js';
 import { db } from './auth.js';
 import { esc } from './utils.js';
 import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
+import { priceCache } from './prices.js';
 
 const CACHE_KEY = 'investsmart-ai-cache';
 const CACHE_TTL = 60 * 60 * 1000; // 1 hora
@@ -72,6 +73,65 @@ export async function fetchAiAnalysis(forceRefresh = false) {
   if (data.error) throw new Error(data.error);
   saveCache(data);
   return data;
+}
+
+export async function askAdvisor(question) {
+  const pos     = getPositions();
+  const tickers = Object.keys(pos);
+
+  let totalInvested = 0, totalValue = 0;
+  const positionData = tickers.map(ticker => {
+    const shares    = getTotalShares(ticker);
+    const avg       = getAvgPrice(ticker) ?? 0;
+    const costBasis = shares * avg;
+    const live      = priceCache.get(ticker);
+    const curValue  = live != null ? shares * live : null;
+    const pnlUSD    = curValue != null ? curValue - costBasis : null;
+    const pnlPct    = pnlUSD != null && costBasis > 0 ? (pnlUSD / costBasis * 100) : null;
+    totalInvested += costBasis;
+    if (curValue != null) totalValue += curValue;
+    return {
+      ticker,
+      shares:       +shares.toFixed(4),
+      avgPrice:     +avg.toFixed(2),
+      costBasis:    +costBasis.toFixed(2),
+      currentPrice: live != null ? +live.toFixed(2) : null,
+      pnlUSD:       pnlUSD != null ? +pnlUSD.toFixed(2)  : null,
+      pnlPct:       pnlPct != null ? +pnlPct.toFixed(2)  : null,
+    };
+  });
+
+  const history = Store.history;
+  const histSummary = history.length >= 2 ? {
+    sessions:   history.length,
+    firstValue: history[0].valor_total_usd,
+    lastValue:  history.at(-1).valor_total_usd,
+    growth:     ((history.at(-1).valor_total_usd - history[0].valor_total_usd) / history[0].valor_total_usd * 100).toFixed(1),
+  } : null;
+
+  const { data: { session } } = await db.auth.getSession();
+  const res = await fetch(`${EDGE_BASE}/ai-analysis`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({
+      mode: 'advisor',
+      question,
+      positions: positionData,
+      portfolio: {
+        totalInvested: +totalInvested.toFixed(2),
+        totalValue:    totalValue > 0 ? +totalValue.toFixed(2) : null,
+      },
+      history: histSummary,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`ai-analysis HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.answer;
 }
 
 export function renderAiPage(data) {

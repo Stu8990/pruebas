@@ -209,7 +209,7 @@
       <div id="dash-live-block" style="margin-bottom:16px;"></div>
 
       <!-- KPIs -->
-      <div class="g4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
         <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:#7c3aed;">
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
             Mi dinero total <span class="help-icon" data-tip="Suma de todo lo que tienes invertido ahora mismo, en dólares.">?</span>
@@ -227,21 +227,14 @@
           <div id="kpi-delta" class="num-hero mono" style="color:var(--success);">—</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:6px;">vs sesión anterior</div>
         </div>
-        <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:#a78bfa;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-            Mi mejor acción <span class="help-icon" data-tip="La acción con mayor % de ganancia desde que la compraste.">?</span>
-          </div>
-          <div id="kpi-best" class="num-large" style="color:#7c3aed;">—</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:6px;">Mayor rendimiento</div>
-        </div>
-        <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:#f59e0b;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-            Tecnología hoy <span class="help-icon" data-tip="Promedio de NVDA, MSFT y AMZN.">?</span>
-          </div>
-          <div id="kpi-tech" class="num-large mono" style="font-size:22px;">—</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:6px;">NVDA · MSFT · AMZN</div>
-        </div>
       </div>
+
+      <!-- Sectores hoy -->
+      <div id="dash-sectors" style="margin-bottom:16px;"></div>
+
+      <!-- hidden ids kept for JS compat -->
+      <span id="kpi-best" style="display:none;"></span>
+      <span id="kpi-tech" style="display:none;"></span>
 
       <!-- Setup checklist — visible hasta completar los 3 pasos, luego desaparece -->
       <div id="setup-checklist" style="margin-bottom:12px;"></div>
@@ -263,25 +256,20 @@
         </div>
       </div>
 
-      <!-- Charts -->
-      <div class="g2" style="display:grid;grid-template-columns:1.35fr .65fr;gap:12px;margin-bottom:16px;">
-        <div class="card" style="padding:18px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
-            <div>
-              <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Evolución de mi portafolio</div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Valor en USD · Cada punto = una sesión de bolsa (L–V)</div>
-            </div>
-            <span id="date-badge" class="badge b-pri">—</span>
+      <!-- Evolución -->
+      <div class="card" style="padding:18px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Evolución de mi portafolio</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Valor en USD · Cada punto = una sesión registrada</div>
           </div>
-          <div style="position:relative;height:240px;"><canvas id="value-chart"></canvas></div>
+          <span id="date-badge" class="badge b-pri">—</span>
         </div>
-        <div class="card" style="padding:18px;">
-          <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:2px;">Por sector</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">Distribución del rendimiento</div>
-          <div style="position:relative;height:170px;"><canvas id="sector-chart"></canvas></div>
-          <div id="sector-legend" style="margin-top:10px;display:flex;flex-direction:column;gap:5px;"></div>
-        </div>
+        <div style="position:relative;height:220px;"><canvas id="value-chart"></canvas></div>
       </div>
+      <!-- hidden canvas kept so Charts.init() doesn't throw if referenced -->
+      <canvas id="sector-chart" style="display:none;"></canvas>
+      <div id="sector-legend" style="display:none;"></div>
 
       <!-- AI insight -->
       <div class="card" style="padding:18px;border-top:3px solid var(--primary);">
@@ -398,6 +386,30 @@
           </button>
         </div>
         <div id="recommendations"></div>
+      </div>
+
+      <!-- ── Asesor personal ── -->
+      <div class="card" style="padding:18px;margin-bottom:14px;border-top:3px solid #7c3aed;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:34px;height:34px;background:var(--primary-light);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Pregúntale a tu asesor</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:1px;">Analiza tu portafolio real · Groq + tus datos</div>
+          </div>
+        </div>
+        <div class="advisor-chips">
+          <button class="advisor-chip" onclick="askAdvisorChip('¿Debo vender algo ahora?')">¿Debo vender algo?</button>
+          <button class="advisor-chip" onclick="askAdvisorChip('¿Cuál es mi mayor riesgo ahora mismo?')">¿Mi mayor riesgo?</button>
+          <button class="advisor-chip" onclick="askAdvisorChip('¿Dónde debería reinvertir mis ganancias?')">¿Dónde reinvertir?</button>
+          <button class="advisor-chip" onclick="askAdvisorChip('¿Cómo está mi portafolio vs el mercado?')">¿Cómo estoy vs el mercado?</button>
+        </div>
+        <div class="advisor-input-row">
+          <input id="advisor-input" type="text" class="advisor-input" placeholder="Pregunta lo que quieras sobre tu portafolio…" onkeydown="if(event.key==='Enter')submitAdvisor()" />
+          <button onclick="submitAdvisor()" class="btn btn-primary" style="flex-shrink:0;min-width:88px;">Preguntar</button>
+        </div>
+        <div id="advisor-response"></div>
       </div>
 
       <!-- ── ¿Compro? — Análisis de compra ── -->

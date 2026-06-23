@@ -429,6 +429,33 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pkpi-pct { font-size:11px; font-weight:700; margin-top:2px; }
 .pkpi-sep { font-size:12px; color:var(--text-3); flex-shrink:0; padding:0 2px; }
 
+/* ── Dashboard sectors widget ────────────────────── */
+.dash-sectors-card { padding:14px 16px; }
+.dash-sectors-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.dash-sectors-title { font-size:12px; font-weight:700; font-family:'Space Grotesk',sans-serif; color:var(--text-1); }
+.dash-sectors-source { font-size:10px; color:var(--text-3); }
+.dash-sectors-list { display:flex; flex-direction:column; gap:6px; }
+.dash-sector-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
+.dash-sector-row:last-child { border-bottom:none; padding-bottom:0; }
+.dash-sector-name { font-size:13px; font-weight:600; color:var(--text-1); }
+.dash-sector-val { font-size:13px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
+.dash-sector-badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:20px; text-transform:uppercase; letter-spacing:.03em; }
+.dash-sector-badge--top { background:#d1fae5; color:#065f46; }
+.dash-sector-badge--low { background:#fee2e2; color:#991b1b; }
+
+/* ── AI Advisor ──────────────────────────────────── */
+.advisor-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.advisor-chip { font-size:12px; font-weight:600; color:#7c3aed; background:var(--primary-light); border:1.5px solid #ddd6fe; border-radius:20px; padding:6px 13px; cursor:pointer; transition:background .15s,border-color .15s; touch-action:manipulation; }
+.advisor-chip:hover { background:#ede9fe; border-color:#a78bfa; }
+.advisor-input-row { display:flex; gap:10px; margin-bottom:12px; }
+.advisor-input { flex:1; border:1.5px solid var(--border); border-radius:10px; padding:10px 13px; font-size:13px; font-family:inherit; color:var(--text-1); background:white; outline:none; }
+.advisor-input:focus { border-color:#7c3aed; }
+.advisor-loading { font-size:12px; color:var(--text-3); padding:12px 0; text-align:center; }
+.advisor-answer { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:14px 16px; margin-top:4px; }
+.advisor-question-label { font-size:11px; font-weight:700; color:#7c3aed; margin-bottom:8px; }
+.advisor-text { font-size:13px; color:var(--text-1); line-height:1.7; margin:0; white-space:pre-line; }
+.advisor-error { font-size:12px; color:var(--danger); padding:10px 0; }
+
 /* ── Dashboard live block ─────────────────────────── */
 .dlive-card { background:white; border:1.5px solid #ddd6fe; border-radius:16px; padding:18px; }
 .dlive-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }

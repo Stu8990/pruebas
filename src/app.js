@@ -3,12 +3,12 @@ import { getAllAssets, addCustomAsset, removeCustomAsset as _removeCustomAsset }
 import { Store } from './store.js';
 import { Learn, generateDescription } from './learn.js';
 import { Charts } from './charts.js';
-import { UI, renderPositionsPanel, renderPortfolioKPI, kpiLive, renderSetupChecklist } from './ui.js';
+import { UI, renderPositionsPanel, renderPortfolioKPI, renderDashSectors, kpiLive, renderSetupChecklist } from './ui.js';
 import { fetchMarketData } from './prices.js';
-import { fetchAiAnalysis, renderAiPage, clearAiCache } from './ai.js';
+import { fetchAiAnalysis, renderAiPage, clearAiCache, askAdvisor } from './ai.js';
 import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, analyzeTickerPer, renderWatchlist } from './per.js';
-import { set, toast, attachTickerSearch } from './utils.js';
+import { set, toast, attachTickerSearch, esc } from './utils.js';
 import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, loadPositions } from './positions.js';
 import { setSyncState } from './sync.js';
 import { showOnboarding, isOnboardingDone } from './onboarding.js';
@@ -134,6 +134,37 @@ function _aiSkeleton() {
 }
 
 export function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
+
+export async function submitAdvisor() {
+  const input = document.getElementById('advisor-input');
+  const question = (input?.value ?? '').trim();
+  if (!question) return;
+  input.value = '';
+  await _runAdvisor(question);
+}
+
+export async function askAdvisorChip(question) {
+  await _runAdvisor(question);
+}
+
+async function _runAdvisor(question) {
+  const el = document.getElementById('advisor-response');
+  if (!el) return;
+  el.innerHTML = `<div class="advisor-loading">Analizando tu portafolio…</div>`;
+  try {
+    const answer = await askAdvisor(question);
+    el.innerHTML = `
+      <div class="advisor-answer">
+        <div class="advisor-question-label">${esc(question)}</div>
+        <p class="advisor-text">${esc(answer)}</p>
+      </div>`;
+  } catch (err) {
+    const msg = (err.message ?? '').includes('429')
+      ? 'Límite de consultas alcanzado. Intenta en unos minutos.'
+      : (err.message ?? 'Error desconocido');
+    el.innerHTML = `<div class="advisor-error">No pude responder: ${esc(msg)}</div>`;
+  }
+}
 
 // ── Live value refresh ────────────────────────────────
 let _liveInterval = null;
@@ -340,6 +371,7 @@ async function initApp(userId, email) {
     renderPositionsPanel();
     renderPortfolioKPI();
     UI.dashLive();
+    renderDashSectors();
   });
   _attachAllTickerSearches();
 }

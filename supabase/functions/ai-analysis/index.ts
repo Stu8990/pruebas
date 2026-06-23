@@ -391,6 +391,94 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // ── Advisor mode: free-form Q&A ────────────────────────
+    if (body.mode === 'advisor') {
+      const rawQ = body.question;
+      if (typeof rawQ !== 'string' || !rawQ.trim()) {
+        return new Response(JSON.stringify({ error: 'Pregunta no válida' }), {
+          status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
+        });
+      }
+      const question = rawQ
+        .slice(0, 400)
+        .replace(/[<>{}\\]/g, '')
+        .replace(/\b(ignore|forget|system:|pretend|jailbreak|bypass)\b/gi, '')
+        .trim();
+
+      const rawPositions = Array.isArray(body.positions)
+        ? (body.positions as Record<string, unknown>[]).slice(0, 30).map(p => ({
+            ticker:       String(p.ticker ?? '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 10),
+            shares:       Math.max(0, Number(p.shares)    || 0),
+            avgPrice:     Math.max(0, Number(p.avgPrice)  || 0),
+            costBasis:    Math.max(0, Number(p.costBasis) || 0),
+            currentPrice: typeof p.currentPrice === 'number' ? p.currentPrice : null,
+            pnlUSD:       typeof p.pnlUSD === 'number' ? p.pnlUSD : null,
+            pnlPct:       typeof p.pnlPct === 'number' ? p.pnlPct : null,
+          }))
+        : [];
+
+      const rawPort = (body.portfolio ?? {}) as Record<string, unknown>;
+      const portfolio = {
+        totalInvested: Math.max(0, Number(rawPort.totalInvested) || 0),
+        totalValue:    typeof rawPort.totalValue === 'number' ? rawPort.totalValue : null,
+      };
+
+      const rawHist = body.history as Record<string, unknown> | null;
+      const histSummary = rawHist ? {
+        sessions:   Math.max(0, Math.floor(Number(rawHist.sessions)   || 0)),
+        firstValue: Math.max(0, Number(rawHist.firstValue) || 0),
+        lastValue:  Math.max(0, Number(rawHist.lastValue)  || 0),
+        growth:     String(rawHist.growth ?? '0').slice(0, 10).replace(/[^0-9.\-+]/g, ''),
+      } : null;
+
+      const pnl    = portfolio.totalValue != null ? portfolio.totalValue - portfolio.totalInvested : null;
+      const pnlPct = pnl != null && portfolio.totalInvested > 0 ? (pnl / portfolio.totalInvested * 100).toFixed(1) : null;
+      const posLines = rawPositions.length
+        ? rawPositions.map(p => {
+            const pnlStr = p.pnlUSD != null
+              ? `P&L: ${p.pnlUSD >= 0 ? '+' : ''}$${p.pnlUSD.toFixed(2)} (${p.pnlPct != null ? (p.pnlPct >= 0 ? '+' : '') + p.pnlPct.toFixed(1) + '%' : 'N/D'})`
+              : '(sin precio en vivo)';
+            return `  ${p.ticker}: ${p.shares} acc. @ $${p.avgPrice} avg | ${p.currentPrice ? `$${p.currentPrice}` : 'N/D'} | ${pnlStr}`;
+          }).join('\n')
+        : '  (sin posiciones registradas)';
+      const histStr = histSummary
+        ? `${histSummary.sessions} sesiones. Desde $${histSummary.firstValue.toFixed(2)} → $${histSummary.lastValue.toFixed(2)} (${histSummary.growth}%)`
+        : 'Sin historial.';
+
+      const advisorPrompt = `Eres el asesor personal de inversiones de este usuario. Analiza su portafolio real y responde su pregunta directo, como amigo experto en finanzas.
+
+POSICIONES:
+${posLines}
+
+TOTAL: invertido $${portfolio.totalInvested.toFixed(2)}${pnl != null ? ` | actual $${portfolio.totalValue?.toFixed(2)} | P&L ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)} (${pnl >= 0 ? '+' : ''}${pnlPct}%)` : ''}
+HISTORIAL: ${histStr}
+
+PREGUNTA: ${question}
+
+Responde SOLO en JSON: { "answer": "string" }
+REGLAS: máx 200 palabras · español latinoamericano · usa datos reales · no digas "consulta un asesor" — tú eres el asesor · si faltan datos dilo brevemente`;
+
+      const groqAdv = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: 'Eres un asesor de inversiones personal. Responde EXCLUSIVAMENTE en español latinoamericano. Responde SOLO con el JSON solicitado, sin markdown.' },
+            { role: 'user', content: advisorPrompt },
+          ],
+          temperature: 0.5,
+          max_tokens: 400,
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (!groqAdv.ok) throw new Error(`Groq ${groqAdv.status}: ${await groqAdv.text()}`);
+      const advJson  = await groqAdv.json();
+      const advContent = advJson.choices?.[0]?.message?.content;
+      if (!advContent) throw new Error('Empty response from Groq');
+      return new Response(advContent, { headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
     // ── Portfolio analysis mode (original) ─────────────────
     const { history, market, positions } = body as { history: Session[]; market: MarketItem[]; positions: PositionItem[] };
 
