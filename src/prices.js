@@ -17,9 +17,8 @@ export async function fetchMarketData() {
   const gridEl     = document.getElementById('market-grid');
   const newsEl     = document.getElementById('market-news');
   const newsListEl = document.getElementById('news-list');
-  if (!gridEl) return;
   if (loadingEl) loadingEl.style.display = 'block';
-  gridEl.innerHTML = '';
+  if (gridEl) gridEl.innerHTML = '';
 
   const _posKeys      = Object.keys(getPositions());
   const _posYfTickers = _posKeys.map(t => ASSET_META[t]?.yfTicker ?? t);
@@ -55,30 +54,32 @@ export async function fetchMarketData() {
     });
     if (loadingEl) loadingEl.style.display = 'none';
 
-    const baseItems = items.filter(item => ASSETS.includes(item.ticker));
-    gridEl.innerHTML = baseItems.map(item => {
-      if (item.error) return `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;opacity:.5;"><div style="font-weight:700;font-size:13px;">${item.ticker}</div><div style="font-size:11px;color:var(--text-3);">Sin datos</div></div>`;
-      const chgColor = (item.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
-      const chgSign  = (item.changePercent ?? 0) >= 0 ? '+' : '';
-      const ratingCfg = { 'COMPRAR':'#059669', 'MANTENER':'#d97706', 'VENDER':'#dc2626' };
-      const ratingColor = ratingCfg[item.analystRating ?? ''] ?? '#a8a29e';
-      let perDot = '';
-      if (item.pe) {
-        const dotColor = item.pe < 18 ? '#10b981' : item.pe > 25 ? '#dc2626' : '#f59e0b';
-        perDot = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:3px;"></span>`;
-      }
-      return `<div data-ticker="${esc(item.ticker)}" data-price="${item.currentPrice ?? ''}" data-change="${item.changePercent ?? ''}" data-pe="${item.pe ?? ''}" data-rating="${esc(item.analystRating ?? '')}"
-        style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
-          <div><div style="font-weight:700;font-size:13px;">${esc(item.ticker)}</div><div style="font-size:10px;color:var(--text-3);">${esc((item.name??'').split(' ').slice(0,3).join(' '))}</div></div>
-          ${item.analystRating ? `<span style="font-size:10px;font-weight:700;color:${ratingColor};background:${ratingColor}18;padding:2px 6px;border-radius:20px;">${item.analystRating}</span>` : ''}
-        </div>
-        <div class="mono" style="font-size:18px;font-weight:700;">$${item.currentPrice?.toFixed(2) ?? 'N/D'}</div>
-        <div class="mono" style="font-size:11px;color:${chgColor};margin-top:2px;">${chgSign}${item.changePercent?.toFixed(2) ?? '—'}% hoy</div>
-        ${item.pe ? `<div style="font-size:10px;color:var(--text-2);margin-top:5px;">${perDot}PER ${item.pe.toFixed(1)}x</div>` : ''}
-        ${item.week52High ? `<div style="font-size:10px;color:var(--text-3);margin-top:2px;">52s: $${item.week52Low?.toFixed(0)}–$${item.week52High?.toFixed(0)}</div>` : ''}
-      </div>`;
-    }).join('');
+    if (gridEl) {
+      const baseItems = items.filter(item => ASSETS.includes(item.ticker));
+      gridEl.innerHTML = baseItems.map(item => {
+        if (item.error) return `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;opacity:.5;"><div style="font-weight:700;font-size:13px;">${item.ticker}</div><div style="font-size:11px;color:var(--text-3);">Sin datos</div></div>`;
+        const chgColor = (item.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
+        const chgSign  = (item.changePercent ?? 0) >= 0 ? '+' : '';
+        const ratingCfg = { 'COMPRAR':'#059669', 'MANTENER':'#d97706', 'VENDER':'#dc2626' };
+        const ratingColor = ratingCfg[item.analystRating ?? ''] ?? '#a8a29e';
+        let perDot = '';
+        if (item.pe) {
+          const dotColor = item.pe < 18 ? '#10b981' : item.pe > 25 ? '#dc2626' : '#f59e0b';
+          perDot = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:3px;"></span>`;
+        }
+        return `<div data-ticker="${esc(item.ticker)}" data-price="${item.currentPrice ?? ''}" data-change="${item.changePercent ?? ''}" data-pe="${item.pe ?? ''}" data-rating="${esc(item.analystRating ?? '')}"
+          style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
+            <div><div style="font-weight:700;font-size:13px;">${esc(item.ticker)}</div><div style="font-size:10px;color:var(--text-3);">${esc((item.name??'').split(' ').slice(0,3).join(' '))}</div></div>
+            ${item.analystRating ? `<span style="font-size:10px;font-weight:700;color:${ratingColor};background:${ratingColor}18;padding:2px 6px;border-radius:20px;">${item.analystRating}</span>` : ''}
+          </div>
+          <div class="mono" style="font-size:18px;font-weight:700;">$${item.currentPrice?.toFixed(2) ?? 'N/D'}</div>
+          <div class="mono" style="font-size:11px;color:${chgColor};margin-top:2px;">${chgSign}${item.changePercent?.toFixed(2) ?? '—'}% hoy</div>
+          ${item.pe ? `<div style="font-size:10px;color:var(--text-2);margin-top:5px;">${perDot}PER ${item.pe.toFixed(1)}x</div>` : ''}
+          ${item.week52High ? `<div style="font-size:10px;color:var(--text-3);margin-top:2px;">52s: $${item.week52Low?.toFixed(0)}–$${item.week52High?.toFixed(0)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
 
     const newsItems = items.filter(i => i.latestNews);
     if (newsItems.length && newsEl && newsListEl) {
