@@ -413,11 +413,11 @@ document.getElementById('record-form').addEventListener('submit', async e => {
   getAllAssets().forEach(({ ticker: t }) => { const v = document.getElementById('inp-' + t)?.value; rend[t] = (v === '' || v === undefined) ? null : +v; });
   const fecha = document.getElementById('f-fecha').value;
   const valor = +document.getElementById('f-valor').value;
-  const capitalInjected = +(document.getElementById('f-capital').value || 0);
+  const capitalInjected = +(document.getElementById('f-capital')?.value || 0);
   if (capitalInjected > 0) rend._capitalInjected = capitalInjected;
   const fase  = document.getElementById('f-fase').value.trim() || generateDescription({ fecha, valor_total_usd: valor, rendimientos: rend });
   const ok = await Store.add({ fecha, fase, valor_total_usd: valor, rendimientos: rend });
-  if (ok) document.getElementById('f-capital').value = '';
+  if (ok) { const cap = document.getElementById('f-capital'); if (cap) cap.value = ''; }
   btn.disabled = false; btn.textContent = 'Guardar en la nube';
   if (ok) { UI.all(); toast('✓ Sesión guardada en la nube.'); goTo('dashboard', document.querySelector('.nav-item')); }
 });
