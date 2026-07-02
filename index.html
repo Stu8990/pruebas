@@ -503,6 +503,12 @@
                 <input id="f-valor" type="number" step="0.01" placeholder="80.00" required oninput="autoDesc()" />
               </label>
             </div>
+            <label>
+              <span class="lbl">¿Agregaste capital hoy? (opcional)
+                <span class="help-icon" data-tip="Si hoy metiste dinero nuevo a tu cuenta de XTB, indica el monto aquí. Así el sistema no lo confunde con ganancia de mercado.">?</span>
+              </span>
+              <input id="f-capital" type="number" step="0.01" min="0" placeholder="0.00" />
+            </label>
             <div>
               <div class="form-section-label" style="margin-bottom:10px;">② Rendimiento de cada acción (%)
                 <span class="help-icon" data-tip="En XTB: abre cada posición y copia el % de ganancia/pérdida. Positivo (+) = ganas, negativo (–) = pierdes." style="font-weight:400;text-transform:none;letter-spacing:0;">?</span>

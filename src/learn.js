@@ -41,6 +41,12 @@ export const Learn = {
   _injections(h) {
     this.s.injections = [];
     for (let i = 1; i < h.length; i++) {
+      const declared = h[i].rendimientos?._capitalInjected;
+      if (declared > 0) {
+        this.s.injections.push({ date: h[i].fecha, amount: declared, total: h[i].valor_total_usd });
+        continue;
+      }
+      // Fallback heuristic for older rows saved before capital tracking existed
       const d = h[i].valor_total_usd - h[i-1].valor_total_usd;
       if (d > h[i-1].valor_total_usd * 0.2)
         this.s.injections.push({ date: h[i].fecha, amount: d, total: h[i].valor_total_usd });
