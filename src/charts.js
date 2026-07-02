@@ -32,7 +32,13 @@ export const Charts = {
 
   value() {
     const ctx = document.getElementById('value-chart'); if (!ctx) return;
-    if (!Store.history.length) { if (this.vc) { this.vc.destroy(); this.vc = null; } return; }
+    const empty = document.getElementById('value-chart-empty');
+    if (!Store.history.length) {
+      if (this.vc) { this.vc.destroy(); this.vc = null; }
+      if (empty) empty.style.display = 'flex';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
     if (this.vc) this.vc.destroy();
     const mob = this._mob();
     const injDates = Learn.s.injections.map(i => i.date);
@@ -48,7 +54,13 @@ export const Charts = {
 
   returns() {
     const ctx = document.getElementById('returns-chart'); if (!ctx) return;
-    if (!Store.history.length) { if (this.rc) { this.rc.destroy(); this.rc = null; } return; }
+    const empty = document.getElementById('returns-chart-empty');
+    if (!Store.history.length) {
+      if (this.rc) { this.rc.destroy(); this.rc = null; }
+      if (empty) empty.style.display = 'flex';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
     if (this.rc) this.rc.destroy();
     const mob = this._mob();
     this.rc = new Chart(ctx, { type:'line', data: {

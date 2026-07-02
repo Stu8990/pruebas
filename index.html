@@ -180,7 +180,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Actualizar
       </button>
-      <select id="record-sel" style="font-size:12px;padding:7px 10px;max-width:200px;" onchange="onRecordChange(event)"></select>
+      <select id="record-sel" title="Selecciona una sesión para ver su detalle" style="font-size:12px;padding:7px 10px;max-width:200px;" onchange="onRecordChange(event)"></select>
     </div>
   </header>
 
@@ -224,7 +224,7 @@
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
             Hoy subió / bajó <span class="help-icon" data-tip="Cuánto cambió comparado con la sesión anterior.">?</span>
           </div>
-          <div id="kpi-delta" class="num-hero mono" style="color:var(--success);">—</div>
+          <div id="kpi-delta" class="num-hero mono" style="color:var(--text-3);">—</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:6px;">vs sesión anterior</div>
         </div>
       </div>
@@ -265,7 +265,10 @@
           </div>
           <span id="date-badge" class="badge b-pri">—</span>
         </div>
-        <div style="position:relative;height:220px;"><canvas id="value-chart"></canvas></div>
+        <div style="position:relative;height:220px;">
+          <canvas id="value-chart"></canvas>
+          <div id="value-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
+        </div>
       </div>
       <!-- hidden canvas kept so Charts.init() doesn't throw if referenced -->
       <canvas id="sector-chart" style="display:none;"></canvas>
@@ -326,11 +329,14 @@
         </div>
       </div>
 
-      <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="g2" id="portfolio-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
         <div class="card" style="padding:18px;">
           <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;">Rendimiento de cada acción</div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% de ganancia/pérdida desde que compraste</div>
-          <div style="position:relative;height:270px;"><canvas id="returns-chart"></canvas></div>
+          <div style="position:relative;height:270px;">
+            <canvas id="returns-chart"></canvas>
+            <div id="returns-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
+          </div>
         </div>
         <div class="card" style="padding:18px;">
           <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;">Estado actual</div>
@@ -348,7 +354,7 @@
           </div>
         </div>
       </div>
-      <div class="card" style="padding:18px;">
+      <div class="card" id="portfolio-journey-card" style="padding:18px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
           <div>
             <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Tu viaje inversor</div>
@@ -530,9 +536,9 @@
         </div>
 
         <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="card" style="padding:18px;border-top:3px solid #f59e0b;">
+          <div class="card" style="padding:18px;border-top:3px solid #3b82f6;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-              <div style="width:34px;height:34px;background:#fffbeb;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📖</div>
+              <div style="width:34px;height:34px;background:#eff6ff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📖</div>
               <div>
                 <div style="font-size:13px;font-weight:700;">¿Dónde encuentro estos datos?</div>
                 <div style="font-size:11px;color:var(--text-3);">Guía rápida XTB</div>
@@ -544,8 +550,8 @@
               <div class="xtb-step"><div class="xtb-num">3</div><span>Anota el <strong>valor total</strong> — aparece arriba en grande</span></div>
               <div class="xtb-step"><div class="xtb-num">4</div><span>El <strong>% de cada acción</strong> aparece al lado (ej: NVDA +8.65%)</span></div>
             </div>
-            <div style="margin-top:12px;padding:10px 12px;background:#fffbeb;border-radius:9px;font-size:11px;color:#92400e;line-height:1.55;border:1px solid #fde68a;">
-              ⚠️ Los rendimientos son <strong>acumulados desde que compraste</strong>, no solo el cambio de hoy.
+            <div style="margin-top:12px;padding:10px 12px;background:#eff6ff;border-radius:9px;font-size:11px;color:#1e3a8a;line-height:1.55;border:1px solid #bfdbfe;">
+              ℹ️ Los rendimientos son <strong>acumulados desde que compraste</strong>, no solo el cambio de hoy.
             </div>
           </div>
           <div class="card" style="padding:18px;">

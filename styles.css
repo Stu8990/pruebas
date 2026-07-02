@@ -10,6 +10,7 @@
   --border: #e7e5e4; --radius: 14px; --sw: 248px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-size: 12px; color: var(--text-3); }
 html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 
 #auth-overlay {

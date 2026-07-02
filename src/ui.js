@@ -48,19 +48,27 @@ export const UI = {
     this.dashLive();
     renderDashSectors();
 
-    const marketCard = document.getElementById('market-prices-card');
-    const emptyState = document.getElementById('portfolio-empty-state');
+    const marketCard   = document.getElementById('market-prices-card');
+    const emptyState   = document.getElementById('portfolio-empty-state');
+    const chartsRow    = document.getElementById('portfolio-charts-row');
+    const journeyCard  = document.getElementById('portfolio-journey-card');
 
     if (!cur) {
       document.getElementById('welcome-banner').style.display = 'block';
       // No sessions: show empty state on portfolio page unless user already has positions
       const showPrices = hasPositions();
-      if (marketCard) marketCard.style.display = showPrices ? '' : 'none';
-      if (emptyState) emptyState.style.display = showPrices ? 'none' : 'block';
+      if (marketCard)  marketCard.style.display  = showPrices ? '' : 'none';
+      if (emptyState)  emptyState.style.display  = showPrices ? 'none' : 'block';
+      if (chartsRow)   chartsRow.style.display   = showPrices ? '' : 'none';
+      if (journeyCard) journeyCard.style.display = showPrices ? '' : 'none';
+      this.insight(cur, prv);
+      Charts.value(); Charts.returns();
       return;
     }
-    if (marketCard) marketCard.style.display = '';
-    if (emptyState) emptyState.style.display = 'none';
+    if (marketCard)  marketCard.style.display  = '';
+    if (emptyState)  emptyState.style.display  = 'none';
+    if (chartsRow)   chartsRow.style.display   = '';
+    if (journeyCard) journeyCard.style.display = '';
     this.kpis(cur, prv); this.sidebar(cur, prv);
     this.assetTable(cur, prv); this.recs(cur, prv);
     this.pulse(); this.insight(cur, prv);
@@ -75,7 +83,7 @@ export const UI = {
     const sorted = ASSETS.map(a => ({ a, v: cur.rendimientos[a] })).filter(x => x.v !== null && x.v !== undefined).sort((x,y) => y.v - x.v);
     set('kpi-value', $f.format(cur.valor_total_usd));
     const de = document.getElementById('kpi-delta');
-    if (de) { de.textContent = delta === null ? 'N/D' : pct(delta); de.style.color = delta === null || delta >= 0 ? 'var(--success)' : 'var(--danger)'; }
+    if (de) { de.textContent = delta === null ? 'N/D' : pct(delta); de.style.color = delta === null ? 'var(--text-3)' : (delta >= 0 ? 'var(--success)' : 'var(--danger)'); }
     set('kpi-best', sorted[0] ? `${ASSET_META[sorted[0].a]?.full} ${pct(sorted[0].v)}` : '—');
     set('kpi-tech', pct(tech));
     set('date-badge', `Sesión: ${cur.fecha}`);
@@ -85,7 +93,7 @@ export const UI = {
     const delta = prv ? ((cur.valor_total_usd - prv.valor_total_usd) / prv.valor_total_usd) * 100 : null;
     set('sb-value', $f.format(cur.valor_total_usd));
     const el = document.getElementById('sb-delta');
-    if (el) { el.textContent = delta === null ? '' : pct(delta) + ' hoy'; el.style.color = delta === null || delta >= 0 ? '#34d399' : '#f87171'; }
+    if (el) { el.textContent = delta === null ? '' : pct(delta) + ' hoy'; el.style.color = delta === null ? '#6d5fa0' : (delta >= 0 ? '#34d399' : '#f87171'); }
     const streakEl = document.getElementById('sb-streak');
     if (streakEl) {
       const s = _calcStreak(Store.history);
@@ -95,6 +103,7 @@ export const UI = {
 
   selector() {
     const sel = document.getElementById('record-sel'); if (!sel) return;
+    if (!Store.history.length) { sel.innerHTML = '<option disabled selected>Sin sesiones aún</option>'; return; }
     sel.innerHTML = Store.history.map((r,i) =>
       `<option value="${i}"${i===Store.idx?' selected':''}>${shortLabel(r, i, Store.history)} — ${esc(r.fase.slice(0,28))}${r.fase.length>28?'…':''}</option>`
     ).join('');
@@ -175,6 +184,10 @@ export const UI = {
     if (!hh || !hb) return;
     if (hc) hc.textContent = Store.history.length + ' sesiones';
     hh.innerHTML = ['Fecha','Descripción','Valor USD',...ASSETS].map(h => `<th>${h}</th>`).join('');
+    if (!Store.history.length) {
+      hb.innerHTML = `<tr><td colspan="${3 + ASSETS.length}" style="text-align:center;color:var(--text-3);padding:24px;">Aún no registraste ninguna sesión.</td></tr>`;
+      return;
+    }
     hb.innerHTML = Store.history.map((r,i) =>
       `<tr${i===Store.idx?' style="background:#f5f3ff;"':''}>
         <td style="font-weight:600;color:var(--primary);white-space:nowrap;" class="mono">${shortLabel(r, i, Store.history)}</td>
