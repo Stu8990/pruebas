@@ -471,6 +471,16 @@ db.auth.onAuthStateChange((_event, session) => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/pruebas/sw.js', { scope: '/pruebas/' })
+      .then(reg => reg.update())
       .catch(err => console.warn('[SW] Registration failed:', err));
+  });
+
+  // Auto-reload once a newer service worker takes control, so installed/home-screen
+  // PWAs (notably iOS) don't get stuck showing a stale cached version.
+  let _swRefreshed = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swRefreshed) return;
+    _swRefreshed = true;
+    window.location.reload();
   });
 }

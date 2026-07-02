@@ -1,4 +1,4 @@
-const CACHE = 'investsmart-v20';
+const CACHE = 'investsmart-v21';
 const BASE = '/pruebas';
 const SHELL = [
   BASE + '/',
