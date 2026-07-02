@@ -5,7 +5,7 @@ import {
   goTo, toggleSidebar, closeSidebar, toggleExplain,
   checkBanner, dismissBanner, refreshData, onRecordChange, checkMenuBtn,
   openAddAsset, confirmAddAsset, removeCustomAsset, refreshAi, refreshLiveValue, syncLiveNow,
-  toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto,
+  toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto, addCapitalToPosition,
   submitAdvisor, askAdvisorChip,
 } from './app.js';
 
@@ -27,7 +27,7 @@ Object.assign(window, {
   // Registro rápido y cash
   quickRecord, applyQuickRecord, clearSavedCash, autoDesc,
   // Posiciones
-  toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto,
+  toggleAddPosition, savePosition, removePurchaseEntry, calcPosShares, clearPosMonto, addCapitalToPosition,
   // Activos personalizados
   openAddAsset, confirmAddAsset, removeCustomAsset,
   // IA y análisis

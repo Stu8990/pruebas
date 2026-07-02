@@ -193,6 +193,16 @@ export function toggleAddPosition() {
   panel.style.display = panel.style.display !== 'none' ? 'none' : 'block';
 }
 
+export function addCapitalToPosition(ticker) {
+  const panel = document.getElementById('add-position-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  const tickerEl = document.getElementById('pos-ticker');
+  if (tickerEl) tickerEl.value = ticker;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('pos-price')?.focus();
+}
+
 export function calcPosShares() {
   const price = parseFloat(document.getElementById('pos-price')?.value || '');
   const monto = parseFloat(document.getElementById('pos-monto')?.value || '');

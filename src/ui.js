@@ -559,6 +559,7 @@ export function renderPositionsPanel() {
             <div class="pos-card__ticker">${esc(ticker)}</div>
             <div class="pos-card__name">${esc(full)}</div>
           </div>
+          <button type="button" class="pos-card__add-btn" onclick="addCapitalToPosition('${esc(ticker)}')" title="Agregar más capital a ${esc(ticker)}">+</button>
           <div class="pos-card__stats">
             ${valueHtml}
             <div class="pos-card__avg">avg $${avg?.toFixed(2) ?? '—'} · ${shares.toFixed(4)} acc.</div>
