@@ -15,8 +15,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="InvestSmart">
   <link rel="apple-touch-icon" href="/pruebas/icons/apple-touch-icon.svg">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <!-- Versión exacta + integrity. Antes @2 servía la última 2.x que existiera
+       ese día, así que cualquier cosa publicada bajo ese rango se ejecutaba
+       aquí con acceso completo a la sesión. Se usa la ruta versionada directa
+       porque jsDelivr envuelve las URL cortas y su hash no es estable. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js"
+          integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+          integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Schibsted+Grotesk:wght@400..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -130,10 +138,6 @@
     <button class="nav-item" onclick="goTo('record',this)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Registrar
-    </button>
-    <button class="nav-item" onclick="goTo('history',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>
-      Historial
     </button>
     <button class="nav-item" onclick="goTo('per',this)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -305,6 +309,25 @@
           </div>
         </div>
       </div>
+
+      <!-- Historial. Era una pantalla propia con una sola tarjeta, alcanzable
+           únicamente por el cajón lateral: en el teléfono, tres toques. Vive
+           aquí plegada, y libera un destino de navegación. -->
+      <details class="card m-collapse" style="padding:18px;" open>
+        <summary class="m-summary">
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Historial de sesiones</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Un registro por cada día de bolsa que registraste</div>
+          </div>
+          <span id="hist-count" class="badge b-neu">0 sesiones</span>
+        </summary>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:9px;margin-top:14px;">
+          <table class="tbl">
+            <thead><tr id="hist-head"></tr></thead>
+            <tbody id="hist-body"></tbody>
+          </table>
+        </div>
+      </details>
     </div>
 
     <!-- ════════ PORTFOLIO ════════ -->
@@ -340,18 +363,19 @@
         </div>
       </div>
 
-      <div class="g2" id="portfolio-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <!-- «Rendimiento de cada acción» y «Estado actual» eran dos tarjetas
+           que respondían lo mismo: el gráfico era una columna de la tabla,
+           dibujada. Unidas son una sola unidad de lectura — primero la forma,
+           luego el detalle — y en el teléfono ahorran una cabecera entera. -->
+      <div id="portfolio-charts-row" style="display:block;margin-bottom:14px;">
         <div class="card" style="padding:18px;">
-          <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Rendimiento de cada acción</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% de ganancia/pérdida desde que compraste</div>
-          <div class="chart-box" style="--chart-h:270px;">
+          <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Cada acción, cómo va</div>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% desde que compraste · cambio vs la sesión anterior</div>
+          <div class="chart-box" style="--chart-h:250px;">
             <canvas id="returns-chart"></canvas>
             <div id="returns-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
           </div>
-        </div>
-        <div class="card" style="padding:18px;">
-          <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Estado actual</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">Rendimiento y cambio vs sesión anterior</div>
+          <div style="height:1px;background:var(--border);margin:18px 0 14px;"></div>
           <div style="overflow-x:auto;">
             <table class="tbl">
               <thead><tr>
@@ -637,24 +661,6 @@
     </div>
 
     <!-- ════════ HISTORY ════════ -->
-    <div id="page-history" class="page">
-      <div class="card" style="padding:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Historial de sesiones</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Un registro por cada día de bolsa que registraste</div>
-          </div>
-          <span id="hist-count" class="badge b-neu">0 sesiones</span>
-        </div>
-        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:9px;">
-          <table class="tbl">
-            <thead><tr id="hist-head"></tr></thead>
-            <tbody id="hist-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- ════════ PER ════════ -->
     <div id="page-per" class="page">
       <div class="card" style="padding:20px;margin-bottom:14px;border-left:4px solid var(--amber);">

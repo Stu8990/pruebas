@@ -1,14 +1,62 @@
 // Edge Function: xtb-sync
 // Conecta a la API WebSocket de XTB, lee posiciones y balance.
 // Credenciales se leen de Supabase (nunca del cliente).
+//
+// ⚠ NINGÚN MÓDULO DEL FRONTEND LLAMA A ESTA FUNCIÓN.
+// Es la pieza más sensible del proyecto — lee el usuario y la contraseña de
+// XTB de la tabla `user_credentials` — y no existe la funcionalidad que la
+// usaría. Mientras siga así, no debería estar desplegada:
+//
+//   npx supabase functions delete xtb-sync --project-ref fjufxwkhjgbkhqvpmryb
+//
+// Antes de volver a desplegarla hace falta, además de lo que ya está aquí,
+// declarar `user_credentials` en schema.sql con su política de RLS: hoy esa
+// tabla no está en control de versiones, así que no hay forma de auditar
+// desde el repositorio qué la protege.
+//
 // Deploy: supabase functions deploy xtb-sync
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Lista blanca de orígenes, igual que en ai-analysis. Con '*' cualquier web
+// podía invocarla con un JWT robado desde el navegador de la víctima.
+const ALLOWED_ORIGINS = [
+  'https://stu8990.github.io',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') ?? '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+const RATE_LIMIT = 12; // llamadas por hora
+
+// Falla cerrado: esta función abre una sesión con el bróker, así que ante la
+// duda se niega.
+async function checkRateLimit(admin: ReturnType<typeof createClient>, userId: string): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count, error } = await admin
+      .from('api_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('endpoint', 'xtb-sync')
+      .gte('created_at', since);
+    if (error) throw error;
+    if ((count ?? 0) >= RATE_LIMIT) return false;
+    await admin.from('api_usage').insert({ user_id: userId, endpoint: 'xtb-sync' });
+    return true;
+  } catch (err) {
+    console.error('[xtb-sync rate-limit]', (err as Error).message);
+    return false;
+  }
+}
 
 const XTB_WS = {
   real: 'wss://ws.xtb.com/real',
@@ -84,6 +132,7 @@ async function connectXtb(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
@@ -102,6 +151,12 @@ Deno.serve(async (req: Request) => {
       await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Sesión inválida' }), { status: 401, headers: corsHeaders });
+    }
+
+    if (!(await checkRateLimit(supabase, user.id))) {
+      return new Response(
+        JSON.stringify({ error: 'Demasiadas sincronizaciones. Intenta más tarde.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Leer credenciales XTB guardadas (nunca se exponen al cliente)
@@ -155,9 +210,12 @@ Deno.serve(async (req: Request) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // El mensaje crudo puede arrastrar detalles del handshake con el bróker.
+    // Se registra en el servidor y al cliente le llega algo genérico.
+    console.error('[xtb-sync]', (err as Error).message);
+    return new Response(JSON.stringify({ error: 'No se pudo sincronizar con XTB.' }), {
+      status: 502,
+      headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });

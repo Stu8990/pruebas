@@ -35,7 +35,6 @@ const PAGE_TITLES = {
   portfolio: 'Mis Acciones · Detalle',
   ai:        'Recomendaciones · IA',
   record:    'Registrar sesión de hoy',
-  history:   'Historial de sesiones',
   per:       '¿Está cara mi acción? · Análisis PER',
 };
 
@@ -45,6 +44,7 @@ function _todayStr() {
 }
 
 export function goTo(id, btn) {
+  if (id === 'history') id = 'dashboard';  // el historial se fusionó en Resumen
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
   // La vista activa queda expuesta al CSS para que la barra superior sea
@@ -55,9 +55,8 @@ export function goTo(id, btn) {
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === id));
   set('page-title', PAGE_TITLES[id] || '');
   closeSidebar();
-  if (id === 'dashboard') { Charts.value(); Charts.sector(); }
+  if (id === 'dashboard') { Charts.value(); Charts.sector(); UI.history(); }
   if (id === 'portfolio')   Charts.returns();
-  if (id === 'history')     UI.history();
   if (id === 'per')         renderWatchlist();
   if (id === 'ai')          triggerAiAnalysis();
   if (id === 'record') {
@@ -180,11 +179,27 @@ async function _refreshLiveValue() {
   if (btn) { btn.disabled = false; btn.textContent = '↻'; }
 }
 
+const LIVE_EVERY = 5 * 60 * 1000;
+
+// El intervalo se detiene cuando la pestaña deja de verse. Antes seguía
+// pidiendo precios cada 5 minutos con la app en segundo plano: gastaba cuota
+// de la Edge Function y batería del teléfono mientras nadie miraba. Al
+// volver se refresca una vez de inmediato, porque los datos ya están viejos.
 function _startLiveRefresh() {
-  if (_liveInterval) clearInterval(_liveInterval);
+  _stopLiveRefresh();
+  if (document.visibilityState === 'hidden') return;
   _refreshLiveValue();
-  _liveInterval = setInterval(_refreshLiveValue, 5 * 60 * 1000);
+  _liveInterval = setInterval(_refreshLiveValue, LIVE_EVERY);
 }
+
+function _stopLiveRefresh() {
+  if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') _stopLiveRefresh();
+  else if (Store.userId) _startLiveRefresh();
+});
 
 export async function refreshLiveValue() { await _refreshLiveValue(); }
 export { syncLiveNow };

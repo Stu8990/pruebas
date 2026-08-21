@@ -42,18 +42,55 @@ export const Store = {
     }
   },
 
+  // Una sesión sólo se migra si es reconocible como tal. Lo que venga de
+  // localStorage es de una versión anterior de la app y nadie garantiza su
+  // forma; sin este filtro cualquier resto se convertía en historial
+  // permanente, y de ahí alimentaba gráficos, algoritmo y prompts de la IA.
+  _validSession(r) {
+    if (!r || typeof r !== 'object') return null;
+    if (typeof r.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.fecha)) return null;
+    if (Number.isNaN(Date.parse(r.fecha + 'T12:00:00'))) return null;
+
+    const valor = Number(r.valor_total_usd);
+    if (!Number.isFinite(valor) || valor < 0 || valor > 1e12) return null;
+
+    // rendimientos: objeto plano de ticker -> número o null.
+    const src = (r.rendimientos && typeof r.rendimientos === 'object' && !Array.isArray(r.rendimientos))
+      ? r.rendimientos : {};
+    const rendimientos = {};
+    for (const [k, v] of Object.entries(src)) {
+      if (!/^[A-Z0-9.\-]{1,10}$/i.test(k)) continue;
+      if (v === null || v === undefined) { rendimientos[k] = null; continue; }
+      const n = Number(v);
+      rendimientos[k] = Number.isFinite(n) ? n : null;
+    }
+
+    return {
+      fecha: r.fecha,
+      fase: typeof r.fase === 'string' ? r.fase.slice(0, 120) : '',
+      valor_total_usd: valor,
+      rendimientos,
+    };
+  },
+
   async _seedInitialData(userId) {
     let source = null;
     for (const k of LEGACY_KEYS) {
       const s = localStorage.getItem(k);
       if (s) { try { source = JSON.parse(s); break; } catch {} }
     }
-    if (!source) { this.history = []; return; }
-    this.history = source;
-    const rows = this.history.map(r => ({
-      user_id: userId, fecha: r.fecha, fase: r.fase || '',
-      valor_total_usd: r.valor_total_usd, rendimientos: r.rendimientos,
-    }));
+    if (!Array.isArray(source) || !source.length) { this.history = []; return; }
+
+    const clean = source.map(r => this._validSession(r)).filter(Boolean);
+    const dropped = source.length - clean.length;
+    if (dropped > 0) {
+      console.warn(`[migración] ${dropped} de ${source.length} sesiones antiguas se descartaron por tener un formato no reconocible.`);
+      toast(`Se migraron ${clean.length} sesiones; ${dropped} se descartaron`);
+    }
+    if (!clean.length) { this.history = []; return; }
+
+    this.history = clean;
+    const rows = clean.map(r => ({ user_id: userId, ...r }));
     const { error } = await SessionRepo.insert(rows);
     if (error) console.error('Seed error:', error.code, error.message);
   },

@@ -55,7 +55,14 @@ async function checkRateLimit(userId: string): Promise<boolean> {
     if ((count ?? 0) >= RATE_LIMIT) return false;
     await admin.from('api_usage').insert({ user_id: userId, endpoint: 'ai-analysis' });
     return true;
-  } catch { return true; }
+  } catch (err) {
+    // Falla cerrado a propósito. Si la consulta de uso no responde (tabla
+    // ausente, RLS, Supabase caído) antes se concedía el acceso, y un fallo
+    // de infraestructura se convertía en llamadas ilimitadas contra la clave
+    // de Groq, que es la que paga. Es preferible que la caída se note.
+    console.error('[rate-limit] no se pudo verificar el uso:', (err as Error).message);
+    return false;
+  }
 }
 
 interface Session {
@@ -305,7 +312,7 @@ Deno.serve(async (req: Request) => {
 
   const allowed = await checkRateLimit(user.id);
   if (!allowed) {
-    return new Response(JSON.stringify({ error: 'Límite de análisis alcanzado (20/hora). Intenta más tarde.' }), {
+    return new Response(JSON.stringify({ error: 'Límite de análisis alcanzado (20/hora), o el control de uso no está disponible. Intenta más tarde.' }), {
       status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
