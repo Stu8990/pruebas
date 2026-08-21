@@ -22,9 +22,9 @@ export const WATCHLIST = [
 ];
 
 export function perZone(per) {
-  if (per < 18) return { bg:'#f0fdf4', border:'#bbf7d0', dot:'#10b981', text:'#065f46', zone:'Posiblemente barata 🟢', tip:'Precio razonable. Investiga: ¿la empresa gana dinero? ¿tiene deudas? ¿crece?' };
-  if (per > 25) return { bg:'#fef2f2', border:'#fecaca', dot:'#dc2626', text:'#7f1d1d', zone:'Cara 🔴',                tip:'PER alto. Solo tiene sentido si crece muy rápido. Investiga antes de comprar más.' };
-  return          { bg:'#fffbeb', border:'#fde68a', dot:'#f59e0b', text:'#78350f', zone:'Precio normal 🟡',          tip:'Ni barata ni cara. Evalúa si el negocio sigue creciendo y si tiene ventajas sobre la competencia.' };
+  if (per < 18) return { bg:'var(--success-light)', border:'var(--success-border)', dot:'#10b981', text:'var(--success-text)', zone:'Posiblemente barata', tip:'Precio razonable. Investiga: ¿la empresa gana dinero? ¿tiene deudas? ¿crece?' };
+  if (per > 25) return { bg:'var(--danger-light)', border:'var(--danger-border)', dot:'var(--danger)', text:'var(--danger-text)', zone:'Cara',                tip:'PER alto. Solo tiene sentido si crece muy rápido. Investiga antes de comprar más.' };
+  return          { bg:'var(--warning-light)', border:'var(--warning-border)', dot:'#f59e0b', text:'var(--warning-text)', zone:'Precio normal',          tip:'Ni barata ni cara. Evalúa si el negocio sigue creciendo y si tiene ventajas sobre la competencia.' };
 }
 
 async function _fetchTickers(tickers) {
@@ -60,7 +60,7 @@ export async function analyzeTickerPer(rawTicker) {
 
     if (item.error) {
       result.style.display = 'block';
-      result.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:15px;color:#7f1d1d;font-size:13px;">
+      result.innerHTML = `<div style="background:var(--danger-light);border:1px solid var(--danger-border);border-radius:11px;padding:15px;color:var(--danger-text);font-size:13px;">
         No se encontraron datos para <strong>${esc(ticker)}</strong>. Verifica que el símbolo sea correcto (usa el símbolo de bolsa, no el nombre).
       </div>`;
       return;
@@ -68,9 +68,9 @@ export async function analyzeTickerPer(rawTicker) {
 
     const wl   = WATCHLIST.find(w => w.ticker === ticker);
     const z    = item.pe ? perZone(item.pe) : null;
-    const chgColor = (item.changePercent ?? 0) >= 0 ? '#059669' : '#dc2626';
+    const chgColor = (item.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
     const chgSign  = (item.changePercent ?? 0) >= 0 ? '+' : '';
-    const ratingCfg = { 'COMPRAR': { bg:'#ecfdf5', color:'#059669' }, 'MANTENER': { bg:'#fffbeb', color:'#d97706' }, 'VENDER': { bg:'#fef2f2', color:'#dc2626' } };
+    const ratingCfg = { 'COMPRAR': { bg:'var(--success-light)', color:'var(--success)' }, 'MANTENER': { bg:'var(--warning-light)', color:'var(--warning)' }, 'VENDER': { bg:'var(--danger-light)', color:'var(--danger)' } };
     const rc = ratingCfg[item.analystRating ?? ''];
 
     // Barra de rango 52 semanas
@@ -78,13 +78,13 @@ export async function analyzeTickerPer(rawTicker) {
     if (item.week52Low && item.week52High && item.currentPrice) {
       const pct = Math.min(100, Math.max(0, ((item.currentPrice - item.week52Low) / (item.week52High - item.week52Low)) * 100));
       rangeBar = `<div style="margin-top:12px;">
-        <div style="font-size:11px;color:#78716c;margin-bottom:5px;font-weight:600;">Rango 52 semanas</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:5px;font-weight:600;">Rango 52 semanas</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:#a8a29e;">$${item.week52Low.toFixed(0)}</span>
-          <div style="flex:1;height:5px;background:#e7e5e4;border-radius:3px;position:relative;">
+          <span style="font-size:11px;color:var(--text-3);">$${item.week52Low.toFixed(0)}</span>
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;position:relative;">
             <div style="position:absolute;left:${pct}%;transform:translateX(-50%);top:-3px;width:11px;height:11px;border-radius:50%;background:var(--primary);border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
           </div>
-          <span style="font-size:11px;color:#a8a29e;">$${item.week52High.toFixed(0)}</span>
+          <span style="font-size:11px;color:var(--text-3);">$${item.week52High.toFixed(0)}</span>
         </div>
         <div style="text-align:center;font-size:10px;color:var(--text-3);margin-top:3px;">${pct.toFixed(0)}% del rango anual</div>
       </div>`;
@@ -94,21 +94,21 @@ export async function analyzeTickerPer(rawTicker) {
     result.innerHTML = `
       <div style="border:1px solid var(--border);border-radius:13px;overflow:hidden;">
         <!-- Header -->
-        <div style="padding:16px 18px;background:linear-gradient(135deg,#f5f3ff,#faf5ff);border-bottom:1px solid var(--border);">
+        <div style="padding:16px 18px;background:linear-gradient(135deg,var(--primary-light),var(--primary-light));border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-              <div style="font-size:20px;font-weight:800;font-family:'Space Grotesk',sans-serif;">${esc(ticker)}</div>
+              <div style="font-size:20px;font-weight:800;font-family:var(--font-display);">${esc(ticker)}</div>
               <div style="font-size:13px;color:var(--text-2);margin-top:2px;">${esc(item.name ?? '')}</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:22px;font-weight:700;font-family:'Space Grotesk',sans-serif;">$${item.currentPrice?.toFixed(2) ?? 'N/D'}</div>
+              <div style="font-size:22px;font-weight:700;font-family:var(--font-display);">$${item.currentPrice?.toFixed(2) ?? 'N/D'}</div>
               <div style="font-size:12px;font-weight:600;color:${chgColor};">${chgSign}${item.changePercent?.toFixed(2) ?? '—'}% hoy</div>
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
             ${rc ? `<span style="font-size:11px;font-weight:700;background:${rc.bg};color:${rc.color};padding:3px 10px;border-radius:20px;">Analistas: ${esc(item.analystRating)}</span>` : ''}
-            ${item.pe ? `<span style="font-size:11px;font-weight:700;background:#f5f3ff;color:var(--primary);padding:3px 10px;border-radius:20px;">PER ${item.pe.toFixed(1)}x</span>` : ''}
-            ${item.forwardPe ? `<span style="font-size:11px;font-weight:600;background:#f5f5f4;color:#78716c;padding:3px 10px;border-radius:20px;">PER futuro ${item.forwardPe.toFixed(1)}x</span>` : ''}
+            ${item.pe ? `<span style="font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary-ink);padding:3px 10px;border-radius:20px;">PER ${item.pe.toFixed(1)}x</span>` : ''}
+            ${item.forwardPe ? `<span style="font-size:11px;font-weight:600;background:var(--surface-2);color:var(--text-2);padding:3px 10px;border-radius:20px;">PER futuro ${item.forwardPe.toFixed(1)}x</span>` : ''}
           </div>
         </div>
         <!-- PER Analysis -->
@@ -119,9 +119,9 @@ export async function analyzeTickerPer(rawTicker) {
               <div style="font-size:14px;font-weight:700;color:${z.text};">${esc(ticker)} con PER ${item.pe.toFixed(1)}x → ${z.zone}</div>
             </div>
             <p style="font-size:12px;color:${z.text};opacity:.9;margin:0;line-height:1.7;">${z.tip}</p>
-          </div>` : '<div style="background:#f5f5f4;border-radius:10px;padding:12px;font-size:13px;color:#78716c;">PER no disponible para este activo (puede ser ETF o empresa sin beneficios publicados).</div>'}
+          </div>` : '<div style="background:var(--surface-2);border-radius:10px;padding:12px;font-size:13px;color:var(--text-2);">PER no disponible para este activo (puede ser ETF o empresa sin beneficios publicados).</div>'}
           ${rangeBar}
-          ${wl ? `<div style="margin-top:12px;padding:12px;background:#fafaf9;border:1px solid var(--border);border-radius:10px;">
+          ${wl ? `<div style="margin-top:12px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">¿Por qué está en la lista?</div>
             <p style="font-size:12px;color:var(--text-2);line-height:1.7;margin:0;">${esc(wl.thesis)}</p>
           </div>` : ''}
@@ -134,7 +134,7 @@ export async function analyzeTickerPer(rawTicker) {
       const msg = err.message === 'RATE_LIMIT'
         ? '⏳ Límite de peticiones alcanzado. Espera un momento e intenta de nuevo.'
         : `Error al obtener datos: ${esc(err.message)}`;
-      result.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:15px;color:#7f1d1d;font-size:13px;">${msg}</div>`;
+      result.innerHTML = `<div style="background:var(--danger-light);border:1px solid var(--danger-border);border-radius:11px;padding:15px;color:var(--danger-text);font-size:13px;">${msg}</div>`;
     }
   }
 }
@@ -145,10 +145,10 @@ export async function renderWatchlist() {
 
   // Skeleton loading
   el.innerHTML = WATCHLIST.map(w =>
-    `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:11px;padding:13px;display:flex;align-items:center;gap:10px;animate:pulse;">
-      <div style="width:38px;height:38px;border-radius:9px;background:#e7e5e4;flex-shrink:0;"></div>
-      <div style="flex:1;"><div style="height:12px;background:#e7e5e4;border-radius:4px;width:40%;margin-bottom:6px;"></div><div style="height:10px;background:#f5f5f4;border-radius:4px;width:70%;"></div></div>
-      <div style="width:50px;height:20px;background:#e7e5e4;border-radius:6px;"></div>
+    `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:13px;display:flex;align-items:center;gap:10px;animate:pulse;">
+      <div style="width:38px;height:38px;border-radius:9px;background:var(--border);flex-shrink:0;"></div>
+      <div style="flex:1;"><div style="height:12px;background:var(--border);border-radius:4px;width:40%;margin-bottom:6px;"></div><div style="height:10px;background:var(--surface-2);border-radius:4px;width:70%;"></div></div>
+      <div style="width:50px;height:20px;background:var(--border);border-radius:6px;"></div>
     </div>`
   ).join('');
 
@@ -160,12 +160,12 @@ export async function renderWatchlist() {
     el.innerHTML = WATCHLIST.map(w => {
       const d = byTicker[w.ticker] ?? {};
       const z = d.pe ? perZone(d.pe) : null;
-      const chgColor = (d.changePercent ?? 0) >= 0 ? '#059669' : '#dc2626';
+      const chgColor = (d.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
       const chgSign  = (d.changePercent ?? 0) >= 0 ? '+' : '';
-      const typeBg   = w.type === 'ETF' ? '#f0fdf4' : '#f5f3ff';
-      const typeClr  = w.type === 'ETF' ? '#059669' : '#7c3aed';
+      const typeBg   = w.type === 'ETF' ? 'var(--success-light)' : 'var(--primary-light)';
+      const typeClr  = w.type === 'ETF' ? 'var(--success)' : 'var(--primary)';
 
-      return `<button onclick="analyzeTickerPer('${w.ticker}')" style="width:100%;text-align:left;background:white;border:1px solid var(--border);border-radius:11px;padding:13px 15px;cursor:pointer;transition:box-shadow .15s,transform .15s;display:flex;align-items:flex-start;gap:12px;font-family:inherit;" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+      return `<button onclick="analyzeTickerPer('${w.ticker}')" style="width:100%;text-align:left;background: var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px;cursor:pointer;transition:box-shadow .15s,transform .15s;display:flex;align-items:flex-start;gap:12px;font-family:inherit;" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
         <div style="width:40px;height:40px;border-radius:10px;background:${w.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid ${w.color}33;">
           <span style="font-size:13px;font-weight:800;color:${w.color};">${w.ticker.slice(0,3)}</span>
         </div>
@@ -180,7 +180,7 @@ export async function renderWatchlist() {
         </div>
         <div style="flex-shrink:0;text-align:right;">
           ${d.currentPrice ? `<div style="font-size:13px;font-weight:700;">$${d.currentPrice.toFixed(2)}</div>
-          <div style="font-size:11px;color:${chgColor};font-weight:600;">${chgSign}${d.changePercent?.toFixed(2) ?? '—'}%</div>` : '<div style="font-size:11px;color:#a8a29e;">—</div>'}
+          <div style="font-size:11px;color:${chgColor};font-weight:600;">${chgSign}${d.changePercent?.toFixed(2) ?? '—'}%</div>` : '<div style="font-size:11px;color:var(--text-3);">—</div>'}
         </div>
       </button>`;
     }).join('');

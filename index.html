@@ -6,7 +6,10 @@
   <title>InvestSmart — Mi Portafolio</title>
   <!-- PWA -->
   <link rel="manifest" href="/pruebas/manifest.json">
-  <meta name="theme-color" content="var(--primary)">
+  <!-- El content de un <meta> no es CSS: var() no se resuelve aquí, así que
+       el color va literal. Coincide con --sidebar-from, que es la cabecera
+       verde en los dos temas. -->
+  <meta name="theme-color" content="#0a3428">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,7 +55,7 @@
         <button class="link-btn" onclick="showForgot()" style="color:var(--text-3);">¿Olvidaste tu contraseña? →</button>
         <div style="border-top:1px solid var(--surface-2);padding-top:10px;">
           <span style="font-size:12px;color:var(--text-3);">¿No tienes cuenta?</span>
-          <button class="link-btn" onclick="showSignup()" style="color:var(--primary);font-weight:700;">Crear cuenta →</button>
+          <button class="link-btn" onclick="showSignup()" style="color:var(--primary-ink);font-weight:700;">Crear cuenta →</button>
         </div>
       </div>
     </div>
@@ -104,7 +107,7 @@
       </div>
       <div>
         <div style="color:var(--sidebar-ink);font-weight:800;font-size:15px;font-family:var(--font-display);">InvestSmart</div>
-        <div style="color:#6d5fa0;font-size:11px;">Portafolio XTB</div>
+        <div style="color:var(--sidebar-ink-2);font-size:11px;">Portafolio XTB</div>
       </div>
     </div>
   </div>
@@ -140,14 +143,14 @@
 
   <div style="padding:14px;border-top:1px solid rgba(255,255,255,.06);">
     <div style="background:rgba(255,255,255,.06);border-radius:11px;padding:13px;">
-      <div style="font-size:10px;color:#6d5fa0;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Mi portafolio</div>
+      <div style="font-size:10px;color:var(--sidebar-ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Mi portafolio</div>
       <div id="sb-value" class="mono" style="font-size:24px;font-weight:800;color:var(--sidebar-ink);font-family:var(--font-display);">$0.00</div>
-      <div id="sb-delta" style="font-size:12px;color:#6d5fa0;margin-top:3px;"></div>
-      <div id="sb-streak" style="font-size:11px;color:#8b7fcf;margin-top:5px;"></div>
+      <div id="sb-delta" style="font-size:12px;color:var(--sidebar-ink-2);margin-top:3px;"></div>
+      <div id="sb-streak" style="font-size:11px;color:var(--sidebar-ink-2);margin-top:5px;"></div>
     </div>
     <!-- Sync status + logout -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:0 2px;">
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6d5fa0;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sidebar-ink-2);">
         <span class="sync-dot ok" id="sync-dot"></span>
         <span id="sync-label">Sincronizado</span>
       </div>
@@ -156,7 +159,7 @@
         <button class="side-action" onclick="signOut()">Salir →</button>
       </div>
     </div>
-    <div style="font-size:10px;color:#4c3d80;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="user-email-label"></div>
+    <div style="font-size:10px;color:var(--sidebar-ink-3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="user-email-label"></div>
   </div>
 </nav>
 
@@ -200,17 +203,17 @@
       <div id="welcome-banner" class="info-banner" style="margin-bottom:16px;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
           <div>
-            <div style="font-size:14px;font-weight:700;color:var(--primary-mid);margin-bottom:5px;">👋 Bienvenido a tu dashboard de inversiones</div>
+            <div style="font-size:14px;font-weight:700;color:var(--primary-mid);margin-bottom:5px;"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8"/></svg> Bienvenido a tu dashboard de inversiones</div>
             <p style="font-size:13px;color:var(--primary-deep);line-height:1.65;">Aquí verás <strong>cómo va tu dinero</strong> en tiempo real. Los números en verde son ganancias, los rojos pérdidas (¡normales en bolsa!). Registra cada día lunes–viernes para que el algoritmo aprenda.</p>
             <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);">📊 Resumen = visión general</span>
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);">📈 Mis Activos = detalle de cada acción</span>
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);">🧠 IA = consejos personalizados</span>
+              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Resumen = visión general</span>
+              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> Mis Activos = detalle de cada acción</span>
+              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3 3 3 0 0 0 .5 1.6A3 3 0 0 0 6 14a3 3 0 0 0 3 3v1a3 3 0 0 0 6 0v-1a3 3 0 0 0 3-3 3 3 0 0 0-.5-3.4A3 3 0 0 0 18 9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/><line x1="12" y1="5" x2="12" y2="18"/></svg> IA = consejos personalizados</span>
             </div>
           </div>
-          <button onclick="dismissBanner()" style="flex-shrink:0;border:none;background:none;cursor:pointer;color:#9d8fc7;font-size:18px;padding:2px;">✕</button>
+          <button onclick="dismissBanner()" style="flex-shrink:0;border:none;background:none;cursor:pointer;color:var(--sidebar-ink-2);font-size:18px;padding:2px;">✕</button>
         </div>
-        <button onclick="goTo('record')" class="btn btn-primary" style="margin-top:12px;width:100%;font-size:13px;">📋 Registrar mi primer día →</button>
+        <button onclick="goTo('record')" class="btn btn-primary" style="margin-top:12px;width:100%;font-size:13px;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Registrar mi primer día →</button>
       </div>
 
       <!-- Live portfolio block -->
@@ -218,7 +221,7 @@
 
       <!-- KPIs -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:var(--primary);">
+        <div class="card card-lift kpi-card" style="padding:16px 18px;">
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
             Mi dinero total <span class="help-icon" tabindex="0" data-tip="Suma de todo lo que tienes invertido ahora mismo, en dólares.">?</span>
           </div>
@@ -283,10 +286,10 @@
       <div id="sector-legend" style="display:none;"></div>
 
       <!-- AI insight -->
-      <div class="card" style="padding:18px;border-top:3px solid var(--primary);">
+      <div class="card" style="padding:18px;">
         <div style="display:flex;gap:14px;align-items:flex-start;">
           <div style="width:38px;height:38px;background:var(--primary-light);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary);" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10M12 8v4l3 3"/><circle cx="19" cy="5" r="3"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary-ink);" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10M12 8v4l3 3"/><circle cx="19" cy="5" r="3"/></svg>
           </div>
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
@@ -297,7 +300,7 @@
             <div style="display:flex;align-items:center;gap:8px;margin-top:9px;">
               <span style="font-size:11px;color:var(--text-3);">Confianza:</span>
               <div class="cbar" style="width:100px;"><div class="cbar-fill" id="conf-fill" style="width:0%;"></div></div>
-              <span id="conf-val" style="font-size:11px;font-weight:600;color:var(--primary);">0%</span>
+              <span id="conf-val" style="font-size:11px;font-weight:600;color:var(--primary-ink);">0%</span>
             </div>
           </div>
         </div>
@@ -309,7 +312,7 @@
 
       <!-- Empty state for users with no sessions and no positions -->
       <div id="portfolio-empty-state" style="display:none;text-align:center;padding:48px 24px;">
-        <div style="font-size:40px;margin-bottom:16px;">📊</div>
+        <div style="font-size:40px;margin-bottom:16px;"><svg class="ic" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
         <div style="font-size:18px;font-weight:700;font-family:var(--font-display);margin-bottom:8px;">Aún no tienes activos registrados</div>
         <div style="font-size:13px;color:var(--text-3);margin-bottom:24px;max-width:320px;margin-left:auto;margin-right:auto;">Agrega tus posiciones y registra tu primer día para ver el análisis completo de tu portafolio.</div>
         <button onclick="goTo('record')" class="btn btn-primary" style="margin-right:8px;">Registrar mi portafolio</button>
@@ -403,10 +406,10 @@
       </div>
 
       <!-- ── Asesor personal ── -->
-      <div class="card" style="padding:18px;margin-bottom:14px;border-top:3px solid var(--primary);">
+      <div class="card" style="padding:18px;margin-bottom:14px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:34px;height:34px;background:var(--primary-light);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary);" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary-ink);" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
           <div>
             <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Pregúntale a tu asesor</div>
@@ -485,18 +488,18 @@
             </div>
           </div>
           <form id="record-form" style="display:flex;flex-direction:column;gap:14px;">
-            <!-- ⚡ Registro rápido -->
+            <!-- <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Registro rápido -->
             <div style="background:var(--primary-light);border:1.5px solid var(--primary-border);border-radius:11px;padding:13px;">
-              <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">⚡ Registro rápido</div>
+              <div style="font-size:12px;font-weight:700;color:var(--primary-ink);margin-bottom:8px;"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Registro rápido</div>
               <div style="font-size:11px;color:var(--primary-mid);margin-bottom:10px;line-height:1.5;">Calcula automáticamente desde tus posiciones registradas. Solo ingresa tu saldo en efectivo de XTB.</div>
               <div id="qr-no-positions-hint" style="display:none;background:var(--warning-light);border:1px solid var(--warning-border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--warning-text);margin-bottom:8px;line-height:1.5;">
                 ⚠️ Primero agrega tus posiciones en la sección <strong>"Mis posiciones"</strong> aquí abajo — solo se hace una vez.
               </div>
               <div id="qr-cash-hint" style="display:none;font-size:11px;color:var(--text-3);margin-bottom:8px;line-height:1.5;"></div>
-              <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;">⚡ Calcular y registrar</button>
+              <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Calcular y registrar</button>
               <div id="qr-cash-row" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--primary-border);">
                 <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">
-                  Valor de tus acciones: <strong id="qr-stocks-value" style="color:var(--primary);">$0</strong>
+                  Valor de tus acciones: <strong id="qr-stocks-value" style="color:var(--primary-ink);">$0</strong>
                 </div>
                 <div style="display:flex;gap:8px;align-items:flex-end;">
                   <label style="flex:1;margin:0;">
@@ -546,7 +549,7 @@
         <div style="display:flex;flex-direction:column;gap:12px;">
           <details class="card m-collapse" style="padding:18px;border-top:3px solid var(--info);" open>
             <summary class="m-summary">
-              <div style="width:34px;height:34px;background:var(--info-light);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📖</div>
+              <div style="width:34px;height:34px;background:var(--info-light);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
               <div>
                 <div style="font-size:13px;font-weight:700;">¿Dónde encuentro estos datos?</div>
                 <div style="font-size:11px;color:var(--text-3);">Guía rápida XTB</div>
@@ -564,7 +567,7 @@
           </details>
           <details class="card m-collapse" style="padding:18px;" open>
             <summary class="m-summary">
-              <div style="width:30px;height:30px;background:var(--surface-2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⚙️</div>
+              <div style="width:30px;height:30px;background:var(--surface-2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7L5.6 5.6"/></svg></div>
               <div style="font-size:13px;font-weight:700;">Gestión de datos</div>
             </summary>
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
@@ -600,7 +603,7 @@
         </div>
         <!-- Add purchase form -->
         <div id="add-position-panel" style="display:none;background:var(--primary-light);border:1px solid var(--primary-border);border-radius:11px;padding:14px;margin-bottom:14px;">
-          <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;">Nueva compra</div>
+          <div style="font-size:12px;font-weight:700;color:var(--primary-ink);margin-bottom:6px;">Nueva compra</div>
           <div style="font-size:11px;color:var(--primary-mid);margin-bottom:10px;">Puedes ingresar el volumen directamente o el monto en USD que invertiste.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <label style="margin:0;">
@@ -687,7 +690,7 @@
       </div>
 
       <div class="card" style="padding:20px;">
-        <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">🔍 Analizar cualquier acción o ETF</div>
+        <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analizar cualquier acción o ETF</div>
         <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;">Escribe el símbolo (ticker) y obtenemos precio, PER y recomendación de analistas automáticamente.</div>
 
         <!-- Buscador -->
@@ -704,7 +707,7 @@
         <!-- Watchlist -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div>
-            <div style="font-size:13px;font-weight:700;">📋 Acciones y ETFs para explorar</div>
+            <div style="font-size:13px;font-weight:700;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Acciones y ETFs para explorar</div>
             <div style="font-size:11px;color:var(--text-3);margin-top:1px;">Precios en vivo · Toca para analizar</div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-const CACHE = 'investsmart-v24';
+const CACHE = 'investsmart-v25';
 const BASE = '/pruebas';
 const SHELL = [
   BASE + '/',
@@ -18,6 +18,7 @@ const SHELL = [
   BASE + '/src/ui.js',
   BASE + '/src/prices.js',
   BASE + '/src/ai.js',
+  BASE + '/src/icons.js',
   BASE + '/src/buy.js',
   BASE + '/src/positions.js',
   BASE + '/src/record.js',

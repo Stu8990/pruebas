@@ -7,9 +7,11 @@
   "scope": "/pruebas/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#1e1035",
-  "theme_color": "#7c3aed",
-  "categories": ["finance"],
+  "background_color": "#0a3428",
+  "theme_color": "#0a3428",
+  "categories": [
+    "finance"
+  ],
   "icons": [
     {
       "src": "/pruebas/icons/icon.svg",

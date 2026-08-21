@@ -14,11 +14,11 @@ InvestSmart es una SPA estática (sin build step) desplegada en GitHub Pages. Us
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Vanilla JS ES Modules, Chart.js, Inter + Space Grotesk |
+| Frontend | Vanilla JS ES Modules, Chart.js, Bricolage Grotesque + Schibsted Grotesk |
 | Auth + DB | Supabase JS v2 (JWT auto-refresh, persistSession: true) |
 | Backend | Supabase Edge Functions (Deno runtime) |
 | Market data | Yahoo Finance API (crumb auth 2025) vía Edge Function proxy |
-| AI | Groq API — `llama-3.3-70b-versatile` vía Edge Function |
+| AI | Groq API — `openai/gpt-oss-120b` vía Edge Function. Configurable con el secret `GROQ_MODEL`. `llama-3.3-70b-versatile` fue decomisionado por Groq el 2026-08-16. |
 | Styling | CSS custom properties — sin framework |
 | Deploy | GitHub Pages (static) + `npx serve` local |
 | Cache offline | Service Worker stale-while-revalidate (cache: `investsmart-v9`) |

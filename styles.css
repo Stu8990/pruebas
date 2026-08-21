@@ -1,73 +1,83 @@
+/* ══════════════════════════════════════════════════════════════════
+   PALETA — verde profundo
+   Regla que gobierna todo el archivo, porque en una app de portafolio
+   el verde y el rojo ya cargan significado:
+
+     · El verde de MARCA existe sólo como SUPERFICIE (sidebar, cabecera,
+       botones). Nunca es texto ni cifra.
+     · El verde de GANANCIA existe sólo como TEXTO y CIFRA. Nunca es
+       fondo.
+
+   Los dos verdes no comparten rol, así que no compiten por sentido.
+   Por eso --primary (superficie) y --primary-ink (tinta) están
+   separados: un único valor no puede servir a ambos sobre fondo oscuro.
+   ══════════════════════════════════════════════════════════════════ */
 :root {
   color-scheme: light dark;
 
-  /* Voz tipográfica. Bricolage Grotesque para display: una grotesca con
-     irregularidades deliberadas, reconocible a tamaño grande. Schibsted
-     Grotesk para texto y cifras: hecha para información densa y con
-     numerales de ancho fijo reales, que es lo que pide una app de dinero. */
   --font-display: 'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif;
   --font-text: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
 
-  /* El sidebar y la pantalla de acceso son violeta profundo en los dos
-     temas: son la marca. Su tinta no sigue al tema. */
-  --sidebar-from: #1e1035; --sidebar-to: #2d1b69;
-  --sidebar-ink: #ffffff;
+  /* Marca como superficie. Verde pino, oscuro y poco saturado: sostiene
+     texto blanco y no llama la atención por encima de los datos. */
+  --sidebar-from: #0a3428; --sidebar-to: #10553e;
+  --sidebar-ink:   #ffffff;
+  --sidebar-ink-2: #cbe4d7;   /* 6.4:1 sobre el extremo claro del gradiente */
+  --sidebar-ink-3: #a8ccb8;   /* 5.0:1 — etiquetas de sección */
+  --sidebar-hover: rgba(255,255,255,.09);
+  --sidebar-active: rgba(255,255,255,.16);
 
-  /* Superficies */
-  --bg: #f5f4f7; --surface: #ffffff; --surface-2: #fafaf9;
-  --border: #e7e5e4; --border-strong: #d6d3d1;
+  /* Superficies. Neutro con una gota de verde, para que el blanco no
+     choque en frío contra el pino. */
+  --bg: #f4f6f4; --surface: #ffffff; --surface-2: #eef1ee;
+  --border: #dfe4e0; --border-strong: #c2cbc5;
 
-  /* Texto */
-  --text: #1c1917; --text-2: #57534e; --text-3: #a8a29e;
+  --text: #131a16; --text-2: #47544d; --text-3: #5c6a63;
 
-  /* Tinta sobre superficies saturadas o invertidas (botón primario, toast) */
   --on-brand: #ffffff;
 
-  /* Marca */
-  --primary: #7c3aed; --primary-mid: #6d28d9; --primary-deep: #5b21b6;
-  --primary-soft: #a78bfa;
-  --primary-light: #f5f3ff; --primary-tint: #ede9fe; --primary-border: #ddd6fe;
+  --primary: #0f5c43; --primary-mid: #0b4634; --primary-deep: #082e22;
+  --primary-ink: #0f5c43; --primary-soft: #2f9370;
+  --primary-light: #eaf4ef; --primary-tint: #d7e9e0; --primary-border: #b9d8c9;
 
-  /* Semánticos */
-  --success: #059669; --success-bright: #10b981;
-  --success-light: #ecfdf5; --success-border: #d1fae5; --success-text: #065f46;
-  --danger: #dc2626; --danger-bright: #ef4444;
-  --danger-light: #fef2f2; --danger-border: #fecaca; --danger-text: #991b1b;
-  --warning: #d97706; --warning-bright: #f59e0b;
-  --warning-light: #fffbeb; --warning-border: #fde68a; --warning-text: #78350f;
-  --info: #3b82f6;
-  --info-light: #eff6ff; --info-border: #bfdbfe; --info-text: #1e3a8a;
+  /* Ganancia y pérdida: la única señal saturada de la pantalla. */
+  --success: #15803d; --success-bright: #22c55e;
+  --success-light: #f0fdf4; --success-border: #bbf7d0; --success-text: #14532d;
+  --danger: #c62828; --danger-bright: #ef4444;
+  --danger-light: #fef2f2; --danger-border: #fecaca; --danger-text: #7f1d1d;
+  --warning: #a86a08; --warning-bright: #d99512;
+  --warning-light: #fdf8ec; --warning-border: #ecd9a8; --warning-text: #6b4405;
+  --info: #1f6feb;
+  --info-light: #eef4fe; --info-border: #c3d8f8; --info-text: #133a78;
 
-  --amber: #f59e0b; --radius: 14px; --sw: 248px;
+  --amber: #d99512; --radius: 14px; --sw: 248px;
 }
 
 /* ── Tema oscuro ───────────────────────────────────────────────────
-   No es un gris neutro: extiende el violeta profundo que la app ya usa
-   en el sidebar, para que el mundo visual sea uno solo. Los tintes
-   semánticos pasan de fondo pastel a fondo profundo con tinta clara. */
+   Base grafito con temperatura verde, no un violeta ni un gris puro.
+   El botón primario mantiene verde saturado con tinta oscura: un verde
+   pastel con texto oscuro se lee como deshabilitado. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #120a20; --surface: #1b1130; --surface-2: #241839;
-    --border: #2f2148; --border-strong: #3d2c5c;
+    --bg: #0d1411; --surface: #151f1a; --surface-2: #1d2a24;
+    --border: #26362e; --border-strong: #35493f;
 
-    --text: #f4f1fa; --text-2: #bcb0d4; --text-3: #8a7ca8;
+    --text: #edf3ef; --text-2: #b0c0b7; --text-3: #84968c;
 
-    /* Sobre el violeta claro del tema oscuro la tinta va oscura:
-       blanco sobre #a78bfa daría 2.1:1. */
-    --on-brand: #1a1030;
+    --on-brand: #05170f;
 
-    --primary: #a78bfa; --primary-mid: #c4b5fd; --primary-deep: #ddd6fe;
-    --primary-soft: #8b5cf6;
-    --primary-light: #241a3d; --primary-tint: #2e2150; --primary-border: #402e63;
+    --primary: #2fa878; --primary-mid: #3fc08c; --primary-deep: #7fdcb5;
+    --primary-ink: #4ecf98; --primary-soft: #1d7c58;
+    --primary-light: #10261d; --primary-tint: #16382a; --primary-border: #24503c;
 
-    --success: #34d399; --success-bright: #6ee7b7;
-    --success-light: #0d2a22; --success-border: #1c4d3d; --success-text: #a7f3d0;
+    --success: #4ade80; --success-bright: #86efac;
+    --success-light: #0c2617; --success-border: #1c4a2e; --success-text: #bbf7d0;
     --danger: #f87171; --danger-bright: #fca5a5;
-    --danger-light: #2d1417; --danger-border: #5c2427; --danger-text: #fecaca;
-    --warning: #fbbf24; --warning-bright: #fcd34d;
-    --warning-light: #2b1f08; --warning-border: #5a4212; --warning-text: #fde68a;
-    --info: #60a5fa;
-    --info-light: #0f1e33; --info-border: #23406b; --info-text: #bfdbfe;
+    --danger-light: #2a1315; --danger-border: #562326; --danger-text: #fecaca;
+    --warning: #e0b155; --warning-bright: #f0cb84;
+    --warning-light: #241d0d; --warning-border: #4c3d18; --warning-text: #f5e2b4;
+    --info: #6ea8fa;
+    --info-light: #0e1b2e; --info-border: #24406b; --info-text: #c3d8f8;
   }
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,7 +86,7 @@
 html, body { height: 100%; font-family: var(--font-text); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 
 #auth-overlay {
-  position: fixed; inset: 0; background: linear-gradient(135deg, #1e1035 0%, #2d1b69 100%);
+  position: fixed; inset: 0; background: linear-gradient(135deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%);
   z-index: 500; display: flex; align-items: center; justify-content: center; padding: 16px;
 }
 #auth-overlay.hidden { display: none; }
@@ -90,14 +100,14 @@ html, body { height: 100%; font-family: var(--font-text); background: var(--bg);
 }
 .nav-item {
   display: flex; align-items: center; gap: 10px; padding: 9px 13px;
-  border-radius: 9px; cursor: pointer; color: #9d8fc7;
+  border-radius: 9px; cursor: pointer; color: var(--sidebar-ink-2);
   font-size: 13px; font-weight: 500; transition: all .14s;
   margin: 1px 10px; border: none; background: none;
   width: calc(100% - 20px); text-align: left; font-family: inherit;
 }
-.nav-item:hover { background: rgba(255,255,255,.08); color: #d4c9f0; }
-.nav-item.active { background: rgba(167,139,250,.22); color: #e9dfff; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(167,139,250,.25); }
-.nav-section { padding: 3px 20px 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #4c3d80; margin-top: 8px; }
+.nav-item:hover { background: var(--sidebar-hover); color: var(--sidebar-ink); }
+.nav-item.active { background: var(--sidebar-active); color: var(--sidebar-ink); font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255,255,255,.20); }
+.nav-section { padding: 3px 20px 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--sidebar-ink-3); margin-top: 8px; }
 
 .main-wrapper { margin-left: var(--sw); min-height: 100vh; min-height: 100dvh; padding-bottom: 24px; }
 
@@ -114,7 +124,7 @@ html, body { height: 100%; font-family: var(--font-text); background: var(--bg);
 .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 50; padding-bottom: env(safe-area-inset-bottom,0); }
 .bnav-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 6px; border: none; background: none; cursor: pointer; color: var(--text-3); font-size: 11px; font-weight: 600; font-family: inherit; flex: 1; transition: color .14s; }
 .bnav-btn svg { width: 22px; height: 22px; }
-.bnav-btn.active { color: var(--primary); }
+.bnav-btn.active { color: var(--primary-ink); }
 
 .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .b-ok  { background: var(--success-light); color: var(--success); }
@@ -439,7 +449,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .profile-stat__label { font-size:10px; color:var(--text-3); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
 .profile-stat__val { font-size:24px; font-weight:800; font-family:var(--font-display); line-height:1.15; }
 .profile-stat__desc { font-size:11px; color:var(--text-3); margin-top:3px; line-height:1.4; }
-.profile-stat__tip { font-size:10px; color:var(--primary); margin-top:8px; padding-top:7px; border-top:1px solid var(--border); line-height:1.55; }
+.profile-stat__tip { font-size:10px; color:var(--primary-ink); margin-top:8px; padding-top:7px; border-top:1px solid var(--border); line-height:1.55; }
 
 @media (max-width:480px) {
   .rec2 { margin-bottom:8px; }
@@ -450,7 +460,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 }
 
 /* ── Record form ─────────────────────────────────── */
-.form-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:.07em; }
+.form-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; color:var(--primary-ink); text-transform:uppercase; letter-spacing:.07em; }
 .form-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
 .rend-inp { transition:border-color .14s, background .14s, color .14s; }
@@ -473,7 +483,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .pos-card__pnl { font-size:17px; font-weight:800; font-family:var(--font-display); line-height:1.1; }
 .pos-card__live { font-size:11px; font-weight:600; margin-top:2px; line-height:1.3; }
 .pos-card__avg { font-size:10px; color:var(--text-3); margin-top:2px; }
-.pos-card__add-btn { flex-shrink:0; width:22px; height:22px; border-radius:50%; border:1.5px solid var(--primary); background:var(--primary-light); color:var(--primary); font-size:14px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background .15s,color .15s; }
+.pos-card__add-btn { flex-shrink:0; width:22px; height:22px; border-radius:50%; border:1.5px solid var(--primary); background:var(--primary-light); color:var(--primary-ink); font-size:14px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background .15s,color .15s; }
 .pos-card__add-btn:hover { background:var(--primary); color: var(--on-brand); }
 .pos-card__buys { display:flex; flex-wrap:wrap; gap:6px; }
 .pos-buy-chip { display:inline-flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:3px 7px 3px 10px; font-size:11px; color:var(--text-2); }
@@ -510,14 +520,14 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 
 /* ── AI Advisor ──────────────────────────────────── */
 .advisor-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-.advisor-chip { font-size:12px; font-weight:600; color:var(--primary); background:var(--primary-light); border:1.5px solid var(--primary-border); border-radius:20px; padding:6px 13px; cursor:pointer; transition:background .15s,border-color .15s; touch-action:manipulation; }
+.advisor-chip { font-size:12px; font-weight:600; color:var(--primary-ink); background:var(--primary-light); border:1.5px solid var(--primary-border); border-radius:20px; padding:6px 13px; cursor:pointer; transition:background .15s,border-color .15s; touch-action:manipulation; }
 .advisor-chip:hover { background:var(--primary-tint); border-color:var(--primary-soft); }
 .advisor-input-row { display:flex; gap:10px; margin-bottom:12px; }
 .advisor-input { flex:1; border:1.5px solid var(--border); border-radius:10px; padding:10px 13px; font-size:13px; font-family:inherit; color:var(--text-1); background: var(--surface); outline:none; }
 .advisor-input:focus { border-color:var(--primary); }
 .advisor-loading { font-size:12px; color:var(--text-3); padding:12px 0; text-align:center; }
 .advisor-answer { background:var(--primary-light); border:1px solid var(--primary-border); border-radius:12px; padding:14px 16px; margin-top:4px; }
-.advisor-question-label { font-size:11px; font-weight:700; color:var(--primary); margin-bottom:8px; }
+.advisor-question-label { font-size:11px; font-weight:700; color:var(--primary-ink); margin-bottom:8px; }
 .advisor-text { font-size:13px; color:var(--text-1); line-height:1.7; margin:0; white-space:pre-line; }
 .advisor-error { font-size:12px; color:var(--danger); padding:10px 0; }
 
@@ -538,7 +548,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .dlive-ticker { font-size:13px; font-weight:700; font-family:var(--font-display); }
 .dlive-pos-pnl { font-size:13px; font-weight:700; font-family:var(--font-display); line-height:1.1; }
 .dlive-pos-pct { font-size:10px; font-weight:600; margin-top:1px; }
-.dlive-btn { width:100%; padding:11px; background:var(--primary-light); color:var(--primary); border:none; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-display); touch-action:manipulation; }
+.dlive-btn { width:100%; padding:11px; background:var(--primary-light); color:var(--primary-ink); border:none; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-display); touch-action:manipulation; }
 .pos-buy-chip button { background:none; border:none; cursor:pointer; color:var(--danger); font-size:12px; line-height:1; padding:1px 2px; opacity:.5; font-family:inherit; }
 .pos-buy-chip button:hover { opacity:1; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
@@ -616,11 +626,11 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .side-action {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   background: none; border: none; border-radius: 7px; cursor: pointer;
-  font-family: inherit; font-size: 11px; color: #6d5fa0;
+  font-family: inherit; font-size: 11px; color: var(--sidebar-ink-2);
   padding: 4px 6px;
   transition: color .14s, background-color .14s;
 }
-.side-action:hover { color: #d4c9f0; background: rgba(255,255,255,.08); }
+.side-action:hover { color: var(--sidebar-ink); background: var(--sidebar-hover); }
 
 /* ── Material de referencia plegable ──────────────────────────────
    La página Registrar medía ~12 pantallas de scroll en un iPhone con
@@ -723,7 +733,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
     padding-top: max(11px, env(safe-area-inset-top));
   }
   .topbar #page-title { color: var(--sidebar-ink); }
-  .topbar #header-sub { color: #b9a9e8; }
+  .topbar #header-sub { color: var(--sidebar-ink-2); }
   .topbar #menu-btn svg { stroke: var(--sidebar-ink); }
 
   /* Los controles heredan el contexto oscuro en vez de recortarse en blanco. */
@@ -736,13 +746,13 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 
   .brandbar {
     display: block;
-    background: linear-gradient(168deg, var(--sidebar-to) 0%, #35217e 100%);
+    background: linear-gradient(168deg, var(--sidebar-to) 0%, var(--sidebar-to) 100%);
     padding: 2px 22px 18px;
     color: var(--sidebar-ink);
   }
   .brandbar__label {
     font-size: 10px; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; color: #a394d8; margin-bottom: 3px;
+    text-transform: uppercase; color: var(--sidebar-ink-3); margin-bottom: 3px;
   }
   .brandbar__value {
     font-family: var(--font-display);
@@ -765,7 +775,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 /* ── Superficies del navegador ────────────────────────────────────
    Selección, caret, scrollbar y foco vienen sin diseñar por defecto. */
 ::selection { background: var(--primary-tint); color: var(--text); }
-html { accent-color: var(--primary); caret-color: var(--primary); }
+html { accent-color: var(--primary-ink); caret-color: var(--primary-ink); }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -787,3 +797,7 @@ html { accent-color: var(--primary); caret-color: var(--primary); }
   font-size: 11px; font-weight: 400; padding: 7px 10px; border-radius: 8px;
   width: 200px; white-space: normal; z-index: 100; line-height: 1.5;
 }
+
+/* Iconos en línea dentro de texto: alineados a la altura de la x, no a la
+   línea base, para que no "floten" respecto a la palabra que acompañan. */
+.ic { display: inline-block; vertical-align: -0.14em; flex-shrink: 0; }

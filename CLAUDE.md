@@ -11,7 +11,7 @@ Deployed target: GitHub Pages (frontend) + Supabase (auth, DB, Edge Functions).
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vanilla JS ES Modules, Chart.js, Inter + Space Grotesk fonts |
+| Frontend | Vanilla JS ES Modules, Chart.js, Bricolage Grotesque + Schibsted Grotesk fonts |
 | Auth + DB | Supabase JS v2 (`persistSession: true`, JWT auto-refresh) |
 | Backend | Supabase Edge Functions (Deno runtime) |
 | Market data | Yahoo Finance API (crumb auth since 2025) |

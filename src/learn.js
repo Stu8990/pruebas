@@ -119,7 +119,7 @@ export const Learn = {
 
     // Not enough sessions — educate first
     if (Store.history.length < 2) {
-      recs.push({ type:'blue', icon:'📝', title:'Necesito más datos para analizarte',
+      recs.push({ type:'blue', icon:'note', title:'Necesito más datos para analizarte',
         body:'Registra al menos 2–3 sesiones para que el algoritmo identifique patrones en tu portafolio. Cuantas más sesiones, más precisas las recomendaciones.',
         conf: 99 });
       return recs;
@@ -129,7 +129,7 @@ export const Learn = {
     if (sorted.length) {
       const [best, bs] = sorted[0];
       const name = ASSET_META[best]?.full || best;
-      recs.push({ type:'green', icon:'🚀', title:`${name} es tu estrella`,
+      recs.push({ type:'green', icon:'rocket', title:`${name} es tu estrella`,
         body:`Rendimiento promedio ${pct(bs.avg)} · últimas sesiones ${pct(bs.recAvg)}. ${bs.recAvg > bs.avg ? 'Está acelerando — buen momento para monitorearla.' : 'Tendencia estable. Mantén posición.'}`,
         conf: Math.min(95, this.s.confidence + 5) });
     }
@@ -154,7 +154,7 @@ export const Learn = {
     if (tech !== null && def !== null && def > tech + 5) {
       const defNames  = defTickers.slice(0, 2).map(shortName).join(' y ');
       const techNames = techTickers.slice(0, 3).join(', ');
-      recs.push({ type:'amber', icon:'🔄', title:'Tus defensivos compensan tecnología',
+      recs.push({ type:'amber', icon:'cycle', title:'Tus defensivos compensan tecnología',
         body:`${defNames} (${pct(def)}) compensa la debilidad de ${techNames} (${pct(tech)}). El mercado está en modo precavido. Mantén el balance.`,
         conf: Math.min(90, this.s.confidence + 2) });
     }
@@ -166,14 +166,14 @@ export const Learn = {
       const growth     = ((last - first) / first) * 100;
       const riskLbl    = this.s.riskScore > 0.7 ? 'tolerancia alta al riesgo' : this.s.riskScore > 0.5 ? 'moderado' : 'conservador';
       const injText    = this.s.injections.length > 0 ? `${this.s.injections.length} aumento(s) de capital detectados. ` : '';
-      recs.push({ type:'purple', icon:'🧠', title:'El algoritmo ya te conoce',
+      recs.push({ type:'purple', icon:'brain', title:'El algoritmo ya te conoce',
         body:`${injText}Tu portafolio cambió ${pct(growth)} desde el inicio. Perfil: inversor ${riskLbl}. Confianza del análisis: ${this.s.confidence.toFixed(0)}%.`,
         conf: this.s.confidence });
     }
 
     // PER tip — only when user has few sessions (educational context)
     if (Store.history.length < 6) {
-      recs.push({ type:'blue', icon:'📊', title:'Tip: revisa el PER antes de comprar más',
+      recs.push({ type:'blue', icon:'chart', title:'Tip: revisa el PER antes de comprar más',
         body:'El PER dice cuántos años de ganancias estás pagando por una empresa. Menos de 18: posible oportunidad. Más de 25: solo si el crecimiento lo justifica.',
         conf: 80 });
     }

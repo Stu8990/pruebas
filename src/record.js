@@ -192,7 +192,7 @@ function _updateCashHint(cash) {
   const hint = document.getElementById('qr-cash-hint');
   if (!hint) return;
   if (cash > 0) {
-    hint.innerHTML = `Capital en efectivo guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary);">¿Cambió?</a>`;
+    hint.innerHTML = `Capital en efectivo guardado: <strong>$${(+cash).toFixed(2)}</strong> · <a href="#" onclick="clearSavedCash();return false;" style="color:var(--primary-ink);">¿Cambió?</a>`;
     hint.style.display = 'block';
   } else {
     hint.innerHTML = 'Sin capital guardado — ingrésalo una vez y quedará guardado.';

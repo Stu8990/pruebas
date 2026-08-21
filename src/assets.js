@@ -1,7 +1,7 @@
 import { ASSETS, ASSET_META } from './config.js';
 
 const KEY = 'investsmart-custom-assets';
-const PALETTE = ['#0ea5e9','#84cc16','#f43f5e','#06b6d4','#a855f7','#ec4899','#f97316','#78716c'];
+const PALETTE = ['#0ea5e9','#84cc16','#f43f5e','#06b6d4','#a855f7','#ec4899','#f97316','var(--text-2)'];
 
 export function getCustomAssets() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }

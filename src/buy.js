@@ -90,7 +90,7 @@ function _renderResult(slotEl, ticker, marketData, analysis) {
   const resultEl = slotEl.querySelector('.buy-slot-result');
   if (!resultEl) return;
 
-  const chgColor = (marketData.changePercent ?? 0) >= 0 ? '#059669' : '#dc2626';
+  const chgColor = (marketData.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
   const chgSign  = (marketData.changePercent ?? 0) >= 0 ? '+' : '';
   const scoreW   = Math.round((Math.min(10, Math.max(1, analysis.score ?? 5)) / 10) * 100);
   const vClass   = _verdictClass(analysis.verdict);
@@ -104,20 +104,20 @@ function _renderResult(slotEl, ticker, marketData, analysis) {
       <div style="margin-top:10px;">
         <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;font-weight:600;">Rango 52 semanas</div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:10px;color:#a8a29e;">$${marketData.week52Low.toFixed(0)}</span>
-          <div style="flex:1;height:4px;background:#e7e5e4;border-radius:2px;position:relative;">
+          <span style="font-size:10px;color:var(--text-3);">$${marketData.week52Low.toFixed(0)}</span>
+          <div style="flex:1;height:4px;background:var(--border);border-radius:2px;position:relative;">
             <div style="position:absolute;left:${pct}%;transform:translateX(-50%);top:-3px;width:10px;height:10px;border-radius:50%;background:var(--primary);border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>
           </div>
-          <span style="font-size:10px;color:#a8a29e;">$${marketData.week52High.toFixed(0)}</span>
+          <span style="font-size:10px;color:var(--text-3);">$${marketData.week52High.toFixed(0)}</span>
         </div>
       </div>`;
   }
 
   const favor = (analysis.puntos_favor || []).slice(0, 2)
-    .map(p => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;"><span style="color:#059669;flex-shrink:0;font-size:12px;">✓</span><span style="font-size:11px;color:var(--text-2);line-height:1.5;">${esc(p)}</span></div>`)
+    .map(p => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;"><span style="color:var(--success);flex-shrink:0;font-size:12px;">✓</span><span style="font-size:11px;color:var(--text-2);line-height:1.5;">${esc(p)}</span></div>`)
     .join('');
   const risks = (analysis.puntos_riesgo || []).slice(0, 2)
-    .map(p => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;"><span style="color:#d97706;flex-shrink:0;font-size:12px;">⚠</span><span style="font-size:11px;color:var(--text-2);line-height:1.5;">${esc(p)}</span></div>`)
+    .map(p => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;"><span style="color:var(--warning);flex-shrink:0;font-size:12px;">⚠</span><span style="font-size:11px;color:var(--text-2);line-height:1.5;">${esc(p)}</span></div>`)
     .join('');
 
   const slotIdx = slotEl.dataset.slot;
@@ -127,7 +127,7 @@ function _renderResult(slotEl, ticker, marketData, analysis) {
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
         <div>
-          <div style="font-size:16px;font-weight:800;font-family:'Space Grotesk',sans-serif;">${esc(ticker)}</div>
+          <div style="font-size:16px;font-weight:800;font-family:var(--font-display);">${esc(ticker)}</div>
           <div style="font-size:11px;color:var(--text-3);margin-top:1px;">${esc(marketData.name ?? '')}</div>
         </div>
         <span class="${vClass}">${esc(analysis.verdict ?? '—')}</span>
@@ -135,15 +135,15 @@ function _renderResult(slotEl, ticker, marketData, analysis) {
       <div style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
           <span style="font-size:10px;color:var(--text-3);font-weight:600;">Score de compra</span>
-          <span style="font-size:11px;font-weight:700;color:var(--primary);">${analysis.score ?? '—'}/10</span>
+          <span style="font-size:11px;font-weight:700;color:var(--primary-ink);">${analysis.score ?? '—'}/10</span>
         </div>
         <div class="cbar"><div class="cbar-fill" style="width:${scoreW}%;"></div></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
         <span style="font-size:12px;font-weight:700;">$${marketData.currentPrice?.toFixed(2) ?? '—'}</span>
         <span style="font-size:11px;color:${chgColor};font-weight:600;">${chgSign}${marketData.changePercent?.toFixed(2) ?? '—'}% hoy</span>
-        ${marketData.pe ? `<span style="font-size:10px;background:#f5f3ff;color:var(--primary);padding:1px 8px;border-radius:20px;font-weight:700;">PER ${marketData.pe.toFixed(1)}x</span>` : ''}
-        ${marketData.forwardPe ? `<span style="font-size:10px;background:#f5f5f4;color:#78716c;padding:1px 8px;border-radius:20px;">Fwd ${marketData.forwardPe.toFixed(1)}x</span>` : ''}
+        ${marketData.pe ? `<span style="font-size:10px;background:var(--primary-light);color:var(--primary-ink);padding:1px 8px;border-radius:20px;font-weight:700;">PER ${marketData.pe.toFixed(1)}x</span>` : ''}
+        ${marketData.forwardPe ? `<span style="font-size:10px;background:var(--surface-2);color:var(--text-2);padding:1px 8px;border-radius:20px;">Fwd ${marketData.forwardPe.toFixed(1)}x</span>` : ''}
       </div>
       ${rangeBar}
       <p style="font-size:12px;color:var(--text-2);line-height:1.6;margin:10px 0 8px;">${esc(analysis.razon_principal ?? '')}</p>
@@ -170,9 +170,9 @@ function _renderSlotLoading(slotEl, ticker) {
         Analizando ${esc(ticker)} con IA…
       </div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;opacity:.35;animation:pulse-skeleton 1.4s ease infinite;">
-        <div style="height:10px;background:#ddd6fe;border-radius:6px;width:70%;"></div>
-        <div style="height:8px;background:#ddd6fe;border-radius:6px;width:90%;"></div>
-        <div style="height:8px;background:#ddd6fe;border-radius:6px;width:55%;"></div>
+        <div style="height:10px;background:var(--primary-border);border-radius:6px;width:70%;"></div>
+        <div style="height:8px;background:var(--primary-border);border-radius:6px;width:90%;"></div>
+        <div style="height:8px;background:var(--primary-border);border-radius:6px;width:55%;"></div>
       </div>
     </div>`;
 }
@@ -182,7 +182,7 @@ function _renderSlotError(slotEl, message) {
   if (!resultEl) return;
   resultEl.style.display = 'block';
   resultEl.innerHTML = `
-    <div style="margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:12px;color:#7f1d1d;">
+    <div style="margin-top:10px;background:var(--danger-light);border:1px solid var(--danger-border);border-radius:10px;padding:12px;font-size:12px;color:var(--danger-text);">
       ${esc(message)}
     </div>`;
 }

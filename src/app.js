@@ -109,7 +109,7 @@ async function triggerAiAnalysis(force = false) {
     } catch { /* fall through to full load */ }
   }
   _aiLoading = true;
-  if (insightEl) insightEl.textContent = '🤖 Analizando tu portafolio con IA…';
+  if (insightEl) insightEl.textContent = 'Analizando tu portafolio con IA…';
   if (recsEl)    recsEl.innerHTML = _aiSkeleton();
   try {
     const data = await fetchAiAnalysis(force);
@@ -128,15 +128,15 @@ function _aiSkeleton() {
     `<div class="rec2 rec2-blue" style="opacity:.35;animation:pulse-skeleton 1.4s ease infinite;">
       <div class="rec2-bar"></div>
       <div class="rec2-body">
-        <div style="height:13px;background:#bae6fd;border-radius:6px;width:55%;margin-bottom:12px;"></div>
-        <div style="height:10px;background:#bae6fd;border-radius:6px;width:90%;margin-bottom:6px;"></div>
-        <div style="height:10px;background:#bae6fd;border-radius:6px;width:75%;"></div>
+        <div style="height:13px;background:var(--info-border);border-radius:6px;width:55%;margin-bottom:12px;"></div>
+        <div style="height:10px;background:var(--info-border);border-radius:6px;width:90%;margin-bottom:6px;"></div>
+        <div style="height:10px;background:var(--info-border);border-radius:6px;width:75%;"></div>
       </div>
     </div>`
   ).join('');
 }
 
-export function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('🤖 Actualizando análisis IA…'); }
+export function refreshAi() { clearAiCache(); triggerAiAnalysis(true); toast('Actualizando análisis IA…'); }
 
 export async function submitAdvisor() {
   const input = document.getElementById('advisor-input');
@@ -261,9 +261,9 @@ export function openAddAsset() {
   if (panel) { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; return; }
   panel = document.createElement('div');
   panel.id = 'add-asset-panel';
-  panel.style.cssText = 'margin-top:8px;padding:14px;background:#f5f3ff;border-radius:11px;border:1px solid #ddd6fe;';
+  panel.style.cssText = 'margin-top:8px;padding:14px;background:var(--primary-light);border-radius:11px;border:1px solid var(--primary-border);';
   panel.innerHTML = `
-    <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">Agregar activo personalizado</div>
+    <div style="font-size:13px;font-weight:700;color:var(--primary-ink);margin-bottom:10px;">Agregar activo personalizado</div>
     <div style="display:flex;gap:8px;align-items:flex-end;">
       <label style="flex:1;margin:0;">
         <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px;">Símbolo (ticker)</span>

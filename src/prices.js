@@ -57,18 +57,18 @@ export async function fetchMarketData() {
     if (gridEl) {
       const baseItems = items.filter(item => ASSETS.includes(item.ticker));
       gridEl.innerHTML = baseItems.map(item => {
-        if (item.error) return `<div style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;opacity:.5;"><div style="font-weight:700;font-size:13px;">${item.ticker}</div><div style="font-size:11px;color:var(--text-3);">Sin datos</div></div>`;
+        if (item.error) return `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;opacity:.5;"><div style="font-weight:700;font-size:13px;">${item.ticker}</div><div style="font-size:11px;color:var(--text-3);">Sin datos</div></div>`;
         const chgColor = (item.changePercent ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)';
         const chgSign  = (item.changePercent ?? 0) >= 0 ? '+' : '';
-        const ratingCfg = { 'COMPRAR':'#059669', 'MANTENER':'#d97706', 'VENDER':'#dc2626' };
-        const ratingColor = ratingCfg[item.analystRating ?? ''] ?? '#a8a29e';
+        const ratingCfg = { 'COMPRAR':'var(--success)', 'MANTENER':'var(--warning)', 'VENDER':'var(--danger)' };
+        const ratingColor = ratingCfg[item.analystRating ?? ''] ?? 'var(--text-3)';
         let perDot = '';
         if (item.pe) {
-          const dotColor = item.pe < 18 ? '#10b981' : item.pe > 25 ? '#dc2626' : '#f59e0b';
+          const dotColor = item.pe < 18 ? '#10b981' : item.pe > 25 ? 'var(--danger)' : '#f59e0b';
           perDot = `<span style="width:7px;height:7px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:3px;"></span>`;
         }
         return `<div data-ticker="${esc(item.ticker)}" data-price="${item.currentPrice ?? ''}" data-change="${item.changePercent ?? ''}" data-pe="${item.pe ?? ''}" data-rating="${esc(item.analystRating ?? '')}"
-          style="background:#fafaf9;border:1px solid var(--border);border-radius:10px;padding:12px;">
+          style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
             <div><div style="font-weight:700;font-size:13px;">${esc(item.ticker)}</div><div style="font-size:10px;color:var(--text-3);">${esc((item.name??'').split(' ').slice(0,3).join(' '))}</div></div>
             ${item.analystRating ? `<span style="font-size:10px;font-weight:700;color:${ratingColor};background:${ratingColor}18;padding:2px 6px;border-radius:20px;">${item.analystRating}</span>` : ''}
@@ -86,7 +86,7 @@ export async function fetchMarketData() {
       newsEl.style.display = 'block';
       newsListEl.innerHTML = newsItems.map(i =>
         `<a href="${safeUrl(i.latestNews.url)}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:flex-start;gap:8px;text-decoration:none;">
-          <span style="flex-shrink:0;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary);padding:2px 6px;border-radius:4px;">${esc(i.ticker)}</span>
+          <span style="flex-shrink:0;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary-ink);padding:2px 6px;border-radius:4px;">${esc(i.ticker)}</span>
           <span style="font-size:12px;color:var(--text-2);line-height:1.5;">${esc(i.latestNews.title)}</span>
         </a>`
       ).join('');

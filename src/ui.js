@@ -1,4 +1,5 @@
 import { ASSETS, ASSET_META } from './config.js';
+import { icon } from './icons.js';
 import { getAllAssets, getCustomAssets } from './assets.js';
 import { Store } from './store.js';
 import { Learn } from './learn.js';
@@ -96,7 +97,7 @@ export const UI = {
     // sidebar está oculto y el valor no se podía ver sin abrir el cajón.
     set('hd-value', $f.format(cur.valor_total_usd));
     const deltaTxt = delta === null ? '' : pct(delta) + ' hoy';
-    const deltaCol = delta === null ? '#6d5fa0' : (delta >= 0 ? '#34d399' : '#f87171');
+    const deltaCol = delta === null ? 'var(--sidebar-ink-2)' : (delta >= 0 ? '#34d399' : '#f87171');
     const el = document.getElementById('sb-delta');
     if (el) { el.textContent = deltaTxt; el.style.color = deltaCol; }
     const hd = document.getElementById('hd-delta');
@@ -104,7 +105,7 @@ export const UI = {
     const streakEl = document.getElementById('sb-streak');
     if (streakEl) {
       const s = _calcStreak(Store.history);
-      streakEl.textContent = s >= 5 ? `📅 ${s} días registrando · ¡Sigue así!` : s > 1 ? `📅 ${s} días registrando` : '';
+      streakEl.textContent = s >= 5 ? `${s} días registrando · ¡Sigue así!` : s > 1 ? `${s} días registrando` : '';
     }
   },
 
@@ -128,7 +129,7 @@ export const UI = {
         </div></td>
         <td style="color:var(--text-3);font-size:11px;">${ASSET_META[a].role}</td>
         <td class="mono" style="font-weight:700;color:${(v!==null&&v>=0)?'var(--success)':'var(--danger)'};">${pct(v)}</td>
-        <td class="mono" style="font-size:12px;color:${d===null?'#a8a29e':d>=0?'#3b82f6':'var(--danger)'};">${pp(d)}</td>
+        <td class="mono" style="font-size:12px;color:${d===null?'var(--text-3)':d>=0?'#3b82f6':'var(--danger)'};">${pp(d)}</td>
         <td><span class="badge ${cls}">${lbl}</span></td>
       </tr>`;
     }).join('');
@@ -150,7 +151,7 @@ export const UI = {
         <div class="rec2-bar"></div>
         <div class="rec2-body">
           <div class="rec2-head">
-            <div class="rec2-icon">${r.icon}</div>
+            <div class="rec2-icon">${icon(r.icon, 18) || icon('chart', 18)}</div>
             <div class="rec2-meta">
               <div class="rec2-title">${r.title}</div>
               <span class="rec2-conf-pill">✦ ${r.conf.toFixed(0)}% confianza</span>
@@ -196,8 +197,8 @@ export const UI = {
       return;
     }
     hb.innerHTML = Store.history.map((r,i) =>
-      `<tr${i===Store.idx?' style="background:#f5f3ff;"':''}>
-        <td style="font-weight:600;color:var(--primary);white-space:nowrap;" class="mono">${shortLabel(r, i, Store.history)}</td>
+      `<tr${i===Store.idx?' style="background:var(--primary-light);"':''}>
+        <td style="font-weight:600;color:var(--primary-ink);white-space:nowrap;" class="mono">${shortLabel(r, i, Store.history)}</td>
         <td style="color:var(--text-2);font-size:11px;max-width:180px;">${esc(r.fase)}</td>
         <td class="mono" style="font-weight:600;color:var(--success);">${$f.format(r.valor_total_usd)}</td>
         ${ASSETS.map(a => `<td class="mono" style="color:${r.rendimientos[a]>=0?'var(--success)':'var(--danger)'};font-size:11px;">${pct(r.rendimientos[a])}</td>`).join('')}
@@ -241,9 +242,9 @@ export const UI = {
       const chgColor = weekPct === null ? 'var(--text-3)' : up ? 'var(--success)' : 'var(--danger)';
       const chgText  = weekPct !== null ? `${weekPct >= 0 ? '+' : ''}${weekPct.toFixed(1)}%` : '';
 
-      const emoji       = isFirst ? '🌱' : isLast ? '🎯' : up ? '↑' : '↓';
-      const borderColor = isFirst ? '#10b981' : isLast ? '#7c3aed' : up ? '#10b981' : '#dc2626';
-      const bg          = isFirst ? '#ecfdf5' : isLast ? '#f5f3ff' : up ? '#f0fdf4' : '#fef2f2';
+      const emoji       = isFirst ? icon('sprout', 15) : isLast ? icon('target', 15) : up ? '↑' : '↓';
+      const borderColor = isFirst ? '#10b981' : isLast ? 'var(--primary)' : up ? '#10b981' : 'var(--danger)';
+      const bg          = isFirst ? 'var(--success-light)' : isLast ? 'var(--primary-light)' : up ? 'var(--success-light)' : 'var(--danger-light)';
       const label       = isLast ? 'Reciente' : isFirst ? `${dateLabel(s.fecha)} (inicio)` : dateLabel(s.fecha);
 
       return `<div style="display:flex;align-items:center;flex-shrink:0;">
@@ -269,22 +270,22 @@ export const UI = {
     const posCount = s.phases.filter(p=>p.type==='up').length;
     const negCount = s.phases.filter(p=>p.type==='down').length;
     const cards = [
-      { icon:'🧠', lbl:'Tu perfil de inversor', val:riskLbl, color:riskColor, desc:riskDesc,
+      { icon:'brain', lbl:'Tu perfil de inversor', val:riskLbl, color:riskColor, desc:riskDesc,
         tip: s.riskScore > 0.7 ? 'Ventaja: puedes mantener posiciones en caídas sin pánico.' :
              s.riskScore > 0.5 ? 'Consejo: combina acciones growth con ETFs como VOO para equilibrar.' :
              'Consejo: prioriza ETFs diversificados; reduce acciones individuales volátiles.' },
-      { icon:'🏆', lbl:'Tu acción más rentable', val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : '#a8a29e', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más sesiones',
+      { icon:'trophy', lbl:'Tu acción más rentable', val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : 'var(--text-3)', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más sesiones',
         tip: top ? 'Analiza qué sector es este activo para buscar activos parecidos.' : 'Aparecerá cuando tengas más de 3 sesiones registradas.' },
-      { icon:'💰', lbl:'Aumentos de capital', val:s.injections.length, color:'var(--primary)', desc:'Inyecciones detectadas por el algoritmo',
+      { icon:'wallet', lbl:'Aumentos de capital', val:s.injections.length, color:'var(--primary)', desc:'Inyecciones detectadas por el algoritmo',
         tip: s.injections.length === 0 ? 'Tip: agregar capital en caídas baja tu precio promedio — estrategia DCA.' : 'Bien. Inyectar capital en caídas mejora tu rendimiento a largo plazo.' },
-      { icon:'📅', lbl:'Sesiones analizadas', val:n, color:'#8b5cf6', desc:`${posCount} positivas · ${negCount} negativas`,
+      { icon:'calendar', lbl:'Sesiones analizadas', val:n, color:'#8b5cf6', desc:`${posCount} positivas · ${negCount} negativas`,
         tip: n < 10 ? 'Necesitas ~20 sesiones para análisis confiables. ¡Sigue registrando!' :
              n < 20 ? 'Buen avance. Las predicciones mejoran con cada sesión.' :
              'Suficientes datos. El algoritmo ya detecta tus patrones de inversión.' },
     ];
     el.innerHTML = cards.map(c =>
       `<div class="profile-stat">
-        <div class="profile-stat__icon">${c.icon}</div>
+        <div class="profile-stat__icon">${icon(c.icon, 17) || icon('chart', 17)}</div>
         <div class="profile-stat__label">${c.lbl}</div>
         <div class="profile-stat__val" style="color:${c.color};">${c.val}</div>
         <div class="profile-stat__desc">${c.desc}</div>
@@ -303,12 +304,12 @@ export const UI = {
             <div style="width:7px;height:7px;border-radius:50%;background:${a.color};flex-shrink:0;"></div>
             ${esc(a.ticker)} — ${esc(a.full)}
           </div>
-          ${a.isCustom ? `<button type="button" onclick="removeCustomAsset('${esc(a.ticker)}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:#a8a29e;font-size:13px;padding:0;line-height:1;">✕</button>` : ''}
+          ${a.isCustom ? `<button type="button" onclick="removeCustomAsset('${esc(a.ticker)}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0;line-height:1;">✕</button>` : ''}
         </div>
         <input id="inp-${esc(a.ticker)}" type="number" step="0.01" placeholder="0.00" class="rend-inp" oninput="autoDesc();this.className='rend-inp'+(+this.value>0?' rend-pos':+this.value<0?' rend-neg':'')" />
       </label>`
     ).join('') +
-    `<button type="button" onclick="openAddAsset()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;border-style:dashed;color:var(--primary);">+ Agregar activo o ETF</button>`;
+    `<button type="button" onclick="openAddAsset()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;border-style:dashed;color:var(--primary-ink);">+ Agregar activo o ETF</button>`;
   },
 
   prefill() {
@@ -336,14 +337,14 @@ export const UI = {
     myTickers.forEach(t => { const inp = document.getElementById('per-inp-' + t); if (inp?.value) saved[t] = inp.value; });
 
     el.innerHTML = myTickers.map(ticker => {
-      const meta = allMetaMap[ticker] ?? { full: ticker, role: '', color: '#a8a29e' };
-      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:#fafaf9;">
+      const meta = allMetaMap[ticker] ?? { full: ticker, role: '', color: 'var(--text-3)' };
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);">
         <div style="width:8px;height:8px;border-radius:50%;background:${meta.color};flex-shrink:0;"></div>
         <div style="flex:1;">
           <div style="font-size:13px;font-weight:600;">${esc(ticker)} — ${esc(meta.full)}</div>
           <div style="font-size:11px;color:var(--text-3);">${esc(meta.role ?? '')}</div>
         </div>
-        <input id="per-inp-${ticker}" type="number" step="0.1" placeholder="—" readonly style="width:80px;font-size:13px;padding:6px 8px;background:#f5f5f4;color:var(--text-2);cursor:default;border-color:#e7e5e4;" />
+        <input id="per-inp-${ticker}" type="number" step="0.1" placeholder="—" readonly style="width:80px;font-size:13px;padding:6px 8px;background:var(--surface-2);color:var(--text-2);cursor:default;border-color:var(--border);" />
       </div>`;
     }).join('');
 
@@ -366,7 +367,7 @@ export const UI = {
       const avg    = getAvgPrice(ticker);
       const shares = getTotalShares(ticker);
       const meta   = allAssets.find(a => a.ticker === ticker);
-      const color  = meta?.color || '#7c3aed';
+      const color  = meta?.color || 'var(--primary)';
       const cost   = shares * (avg ?? 0);
       const live   = priceCache.get(ticker) ?? null;
       const curVal = live != null ? shares * live : null;
@@ -391,9 +392,9 @@ export const UI = {
     const posRows = rows.map(({ ticker, color, gainUSD, gainPct }) => {
       const c = gainPct == null ? 'var(--text-3)' : gainPct >= 0 ? 'var(--success)' : 'var(--danger)';
       const da = _smartAlert(ticker, gainPct);
-      const alertDot = da?.cls === 'pos-alert--warn'    ? '<span style="font-size:10px;color:#dc2626;font-weight:700;">⚠</span>'
-                     : da?.cls === 'pos-alert--caution' ? '<span style="font-size:10px;color:#d97706;font-weight:700;">!</span>'
-                     : da?.cls === 'pos-alert--good'    ? '<span style="font-size:10px;color:#059669;font-weight:700;">↑</span>'
+      const alertDot = da?.cls === 'pos-alert--warn'    ? '<span style="font-size:10px;color:var(--danger);font-weight:700;">⚠</span>'
+                     : da?.cls === 'pos-alert--caution' ? '<span style="font-size:10px;color:var(--warning);font-weight:700;">!</span>'
+                     : da?.cls === 'pos-alert--good'    ? '<span style="font-size:10px;color:var(--success);font-weight:700;">↑</span>'
                      : '';
       return `<div class="dlive-row">
         <div style="display:flex;align-items:center;gap:7px;">
@@ -527,7 +528,7 @@ export function renderPositionsPanel() {
       const shares = getTotalShares(ticker);
       const buys   = pos[ticker].purchases;
       const meta   = allAssets.find(a => a.ticker === ticker);
-      const color  = meta?.color || '#7c3aed';
+      const color  = meta?.color || 'var(--primary)';
       const full   = meta?.full  || ticker;
 
       const costBasis = shares * (avg ?? 0);
@@ -696,7 +697,7 @@ export function renderSetupChecklist() {
   const step = (done, label, action) => `
     <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
       <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
-        background:${done ? '#d1fae5' : '#f5f3ff'};color:${done ? '#065f46' : '#7c3aed'};border:1.5px solid ${done ? '#6ee7b7' : '#ddd6fe'};">
+        background:${done ? 'var(--success-border)' : 'var(--primary-light)'};color:${done ? 'var(--success-text)' : 'var(--primary)'};border:1.5px solid ${done ? '#6ee7b7' : 'var(--primary-border)'};">
         ${done ? '✓' : '○'}
       </div>
       <div style="flex:1;font-size:13px;color:${done ? 'var(--text-3)' : 'var(--text-1)'};${done ? 'text-decoration:line-through;' : ''}">${label}</div>
@@ -704,12 +705,12 @@ export function renderSetupChecklist() {
     </div>`;
 
   el.innerHTML = `
-    <div style="background:#faf5ff;border:1.5px solid #ddd6fe;border-radius:12px;padding:14px 16px;margin-bottom:4px;">
-      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">🚀 Primeros pasos</div>
+    <div style="background:var(--primary-light);border:1.5px solid var(--primary-border);border-radius:12px;padding:14px 16px;margin-bottom:4px;">
+      <div style="font-size:13px;font-weight:700;color:var(--primary-ink);margin-bottom:10px;">${icon('rocket', 14)} Primeros pasos</div>
       ${step(true,  'Cuenta creada', '')}
-      <div style="height:1px;background:#ede9fe;margin:2px 0;"></div>
+      <div style="height:1px;background:var(--primary-tint);margin:2px 0;"></div>
       ${step(hasPosns,  'Agrega tus posiciones (qué acciones tienes y a qué precio)', "goTo('record')")}
-      <div style="height:1px;background:#ede9fe;margin:2px 0;"></div>
+      <div style="height:1px;background:var(--primary-tint);margin:2px 0;"></div>
       ${step(hasRecord, 'Guarda tu primer registro del día', "goTo('record')")}
     </div>`;
 }

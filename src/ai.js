@@ -2,6 +2,7 @@ import { EDGE_BASE } from './config.js';
 import { Store } from './store.js';
 import { db } from './auth.js';
 import { esc, edgeThrow } from './utils.js';
+import { icon } from './icons.js';
 import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
 import { priceCache, marketCache } from './prices.js';
 
@@ -173,7 +174,10 @@ function _renderRecommendations(recs) {
       <div class="rec2-bar"></div>
       <div class="rec2-body">
         <div class="rec2-head">
-          <div class="rec2-icon">${esc(r.icon ?? '📊')}</div>
+          <!-- r.icon viene del LLM: puede ser cualquier emoji. Se resuelve
+               contra el set propio y si no coincide cae en uno neutro, para
+               que la recomendación no rompa el sistema de iconos. -->
+          <div class="rec2-icon">${icon(r.icon, 18) || icon('chart', 18)}</div>
           <div class="rec2-meta">
             <div class="rec2-title">${esc(r.title)}</div>
             <span class="rec2-conf-pill">✦ ${conf.toFixed(0)}% confianza</span>
