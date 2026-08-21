@@ -38,30 +38,62 @@ async function getAuthUser(req: Request): Promise<{ id: string } | null> {
   return (!error && user) ? user : null;
 }
 
-async function checkRateLimit(userId: string): Promise<boolean> {
+// Tres resultados, no dos. «Llegaste al límite» y «no pude comprobarlo» son
+// problemas distintos con soluciones distintas, y devolver el mismo 429 para
+// ambos deja al usuario sin saber si esperar una hora o revisar la base.
+type RateCheck =
+  | { estado: 'ok' }
+  | { estado: 'limite'; libreDesde: string | null }
+  | { estado: 'no-disponible'; causa: string };
+
+async function checkRateLimit(userId: string): Promise<RateCheck> {
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
   try {
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count } = await admin
+    // supabase-js NO lanza excepciones: devuelve { data, error }. Sin mirar
+    // ese campo, una tabla ausente daba count = null, y `null >= 20` es falso,
+    // así que el límite dejaba pasar todo creyendo que había cero llamadas.
+    const { count, error } = await admin
       .from('api_usage')
-      .select('*', { count: 'exact', head: true })
+      .select('created_at', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('endpoint', 'ai-analysis')
       .gte('created_at', since);
 
-    if ((count ?? 0) >= RATE_LIMIT) return false;
-    await admin.from('api_usage').insert({ user_id: userId, endpoint: 'ai-analysis' });
-    return true;
+    if (error) throw new Error(`consulta de uso: ${error.message}`);
+
+    if ((count ?? 0) >= RATE_LIMIT) {
+      // Cuándo se libera un hueco: una hora después de la llamada más antigua
+      // que sigue dentro de la ventana.
+      const { data: masAntigua } = await admin
+        .from('api_usage')
+        .select('created_at')
+        .eq('user_id', userId)
+        .eq('endpoint', 'ai-analysis')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      const t = masAntigua?.[0]?.created_at;
+      return {
+        estado: 'limite',
+        libreDesde: t ? new Date(new Date(t).getTime() + 60 * 60 * 1000).toISOString() : null,
+      };
+    }
+
+    const { error: errIns } = await admin
+      .from('api_usage')
+      .insert({ user_id: userId, endpoint: 'ai-analysis' });
+    if (errIns) throw new Error(`registro de uso: ${errIns.message}`);
+
+    return { estado: 'ok' };
   } catch (err) {
-    // Falla cerrado a propósito. Si la consulta de uso no responde (tabla
-    // ausente, RLS, Supabase caído) antes se concedía el acceso, y un fallo
-    // de infraestructura se convertía en llamadas ilimitadas contra la clave
-    // de Groq, que es la que paga. Es preferible que la caída se note.
-    console.error('[rate-limit] no se pudo verificar el uso:', (err as Error).message);
-    return false;
+    const causa = (err as Error).message;
+    console.error('[rate-limit] no se pudo verificar el uso:', causa);
+    return { estado: 'no-disponible', causa };
   }
 }
 
@@ -310,11 +342,23 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const allowed = await checkRateLimit(user.id);
-  if (!allowed) {
-    return new Response(JSON.stringify({ error: 'Límite de análisis alcanzado (20/hora), o el control de uso no está disponible. Intenta más tarde.' }), {
-      status: 429, headers: { ...cors, 'Content-Type': 'application/json' },
-    });
+  const rate = await checkRateLimit(user.id);
+  if (rate.estado === 'limite') {
+    const hora = rate.libreDesde
+      ? new Date(rate.libreDesde).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    return new Response(JSON.stringify({
+      error: hora
+        ? `Llegaste a ${RATE_LIMIT} análisis en la última hora. Vuelve a intentar a partir de las ${hora}.`
+        : `Llegaste a ${RATE_LIMIT} análisis en la última hora. Intenta de nuevo más tarde.`,
+      motivo: 'limite',
+    }), { status: 429, headers: { ...cors, 'Content-Type': 'application/json' } });
+  }
+  if (rate.estado === 'no-disponible') {
+    return new Response(JSON.stringify({
+      error: `No se pudo verificar el uso, así que el análisis queda bloqueado por seguridad (${rate.causa}). Revisa que la tabla api_usage exista en la base.`,
+      motivo: 'control-caido',
+    }), { status: 503, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 
   const groqKey = Deno.env.get('GROQ_API_KEY');
