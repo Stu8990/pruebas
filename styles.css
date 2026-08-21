@@ -37,7 +37,7 @@ html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; backgrou
 .nav-item.active { background: rgba(167,139,250,.22); color: #e9dfff; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(167,139,250,.25); }
 .nav-section { padding: 3px 20px 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #4c3d80; margin-top: 8px; }
 
-.main-wrapper { margin-left: var(--sw); min-height: 100vh; padding-bottom: 24px; }
+.main-wrapper { margin-left: var(--sw); min-height: 100vh; min-height: 100dvh; padding-bottom: 24px; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 1px 4px rgba(0,0,0,.04); }
 .card-lift { transition: box-shadow .18s, transform .18s; }
@@ -185,7 +185,7 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
   .main-wrapper header > div:last-child {
     width: 100%; display: flex; gap: 8px;
   }
-  #record-sel { flex: 1; max-width: none !important; font-size: 11px !important; padding: 6px 8px !important; }
+  #record-sel { flex: 1; max-width: none !important; font-size: 16px !important; padding: 8px 10px !important; }
 
   /* Record form: inputs 1 col */
   #return-inputs { grid-template-columns: 1fr !important; }
@@ -514,3 +514,10 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
 .tdi-ticker { font-size: 13px; font-weight: 700; color: var(--text-1); min-width: 54px; letter-spacing: .03em; }
 .tdi-name   { font-size: 12px; color: var(--text-2); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tdi-exch   { font-size: 10px; color: var(--text-3); background: var(--bg); border-radius: 4px; padding: 1px 5px; flex-shrink: 0; }
+
+/* ── Móvil: evitar el auto-zoom de iOS Safari al enfocar un campo ──────────
+   Safari hace zoom cuando el font-size del control es < 16px. Subimos sólo
+   en pantallas táctiles pequeñas para no alterar el layout de escritorio. */
+@media (max-width: 768px) {
+  input, select, textarea, .advisor-input { font-size: 16px; }
+}

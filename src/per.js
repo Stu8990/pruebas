@@ -1,5 +1,5 @@
 import { ASSET_META, EDGE_BASE } from './config.js';
-import { toast, esc } from './utils.js';
+import { toast, esc, edgeThrow } from './utils.js';
 import { db } from './auth.js';
 
 export const WATCHLIST = [
@@ -38,7 +38,7 @@ async function _fetchTickers(tickers) {
     body: JSON.stringify({ tickers }),
   });
   if (res.status === 429) throw new Error('RATE_LIMIT');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) await edgeThrow(res, 'market-data');
   return res.json();
 }
 

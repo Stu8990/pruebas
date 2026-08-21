@@ -6,3 +6,6 @@ reports/
 .env.*
 !.env.example
 supabase/.temp/
+
+# Dossier de auditoría de seguridad — local, no publicar
+audit-context/

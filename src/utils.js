@@ -111,3 +111,18 @@ export function shortLabel(r, i, history) {
   const dupes = history.slice(0, i).filter(x => x.fecha === r.fecha).length;
   return dupes > 0 ? base + ' ②' : base;
 }
+
+// Lee el cuerpo de una respuesta fallida de una Edge Function y lanza un Error
+// con el mensaje real del servidor. Sin esto un 500 sólo dice "HTTP 500" y la
+// causa (modelo decomisionado, key ausente, rate limit…) se pierde.
+export async function edgeThrow(res, label) {
+  let detail = '';
+  try {
+    const body = await res.clone().json();
+    detail = body?.error || body?.message || '';
+  } catch {
+    try { detail = (await res.text()).trim().slice(0, 300); } catch { /* cuerpo ilegible */ }
+  }
+  const prefix = label ? `${label} HTTP ${res.status}` : `HTTP ${res.status}`;
+  throw new Error(detail ? `${prefix}: ${detail}` : prefix);
+}

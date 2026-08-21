@@ -1,7 +1,7 @@
 import { EDGE_BASE } from './config.js';
 import { Store } from './store.js';
 import { db } from './auth.js';
-import { esc } from './utils.js';
+import { esc, edgeThrow } from './utils.js';
 import { getPositions, getAvgPrice, getTotalShares } from './positions.js';
 import { priceCache, marketCache } from './prices.js';
 
@@ -68,7 +68,7 @@ export async function fetchAiAnalysis(forceRefresh = false) {
     body: JSON.stringify({ history: history.slice(-20), market: getMarketSnapshot(), positions: getPositionValues() }),
   });
 
-  if (!res.ok) throw new Error(`ai-analysis HTTP ${res.status}`);
+  if (!res.ok) await edgeThrow(res, 'ai-analysis');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   saveCache(data);
@@ -140,7 +140,7 @@ export async function askAdvisor(question) {
     }),
   });
 
-  if (!res.ok) throw new Error(`ai-analysis HTTP ${res.status}`);
+  if (!res.ok) await edgeThrow(res, 'ai-analysis');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data.answer;

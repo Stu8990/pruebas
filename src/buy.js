@@ -2,7 +2,7 @@ import { EDGE_BASE } from './config.js';
 import { Store } from './store.js';
 import { Learn } from './learn.js';
 import { db } from './auth.js';
-import { esc, toast, createCache } from './utils.js';
+import { esc, toast, createCache, edgeThrow } from './utils.js';
 import { getAllAssets } from './assets.js';
 
 const SLOTS_KEY = 'investsmart-buy-slots';
@@ -33,7 +33,7 @@ async function _fetchMarketData(ticker) {
     },
     body: JSON.stringify({ tickers: [ticker] }),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) await edgeThrow(res, 'market-data');
   const items = await res.json();
   return items[0];
 }
@@ -48,7 +48,7 @@ async function _fetchBuyAnalysis(ticker, marketData, portfolio) {
     },
     body: JSON.stringify({ mode: 'buy', ticker, marketData, portfolio }),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) await edgeThrow(res, 'ai-analysis');
   return res.json();
 }
 
@@ -296,7 +296,7 @@ export async function autoRecommend() {
       },
       body: JSON.stringify({ mode: 'suggest', portfolio: _buildSuggestContext() }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) await edgeThrow(res, 'ai-analysis');
     const { tickers } = await res.json();
     if (!Array.isArray(tickers) || !tickers.length) throw new Error('No tickers returned');
 

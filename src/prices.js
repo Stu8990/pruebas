@@ -1,5 +1,5 @@
 import { ASSETS, ASSET_META, EDGE_BASE } from './config.js';
-import { toast, esc } from './utils.js';
+import { toast, esc, edgeThrow } from './utils.js';
 import { db } from './auth.js';
 import { getPositions } from './positions.js';
 
@@ -36,7 +36,7 @@ export async function fetchMarketData() {
       },
       body: JSON.stringify({ tickers: _allYfTickers }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) await edgeThrow(res, 'market-data');
     const raw   = await res.json();
     const items = raw.map(item => ({ ...item, ticker: _localRevMap[item.ticker] ?? item.ticker }));
     items.forEach(item => {

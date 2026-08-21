@@ -22,6 +22,10 @@ function getCorsHeaders(req: Request) {
 
 const RATE_LIMIT = 20; // llamadas por hora
 
+// Modelo Groq. llama-3.3-70b-versatile fue decomisionado el 2026-08-16.
+// Reemplazo recomendado por Groq: openai/gpt-oss-120b (soporta response_format json_object).
+const GROQ_MODEL = Deno.env.get('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
+
 async function getAuthUser(req: Request): Promise<{ id: string } | null> {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -324,7 +328,7 @@ Deno.serve(async (req: Request) => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: GROQ_MODEL,
           messages: [
             { role: 'system', content: 'Eres un asesor de inversiones senior. Responde SOLO con el JSON solicitado, en español, sin texto adicional.' },
             { role: 'user', content: prompt },
@@ -362,7 +366,7 @@ Deno.serve(async (req: Request) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: GROQ_MODEL,
           messages: [
             {
               role: 'system',
@@ -486,7 +490,7 @@ REGLAS CRÍTICAS:
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: GROQ_MODEL,
           messages: [
             { role: 'system', content: 'Eres un asesor de inversiones personal. Responde EXCLUSIVAMENTE en español latinoamericano. Responde SOLO con el JSON solicitado, sin markdown.' },
             { role: 'user', content: advisorPrompt },
@@ -521,7 +525,7 @@ REGLAS CRÍTICAS:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         messages: [
           {
             role: 'system',
