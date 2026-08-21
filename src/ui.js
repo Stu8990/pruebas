@@ -92,8 +92,15 @@ export const UI = {
   sidebar(cur, prv) {
     const delta = prv ? ((cur.valor_total_usd - prv.valor_total_usd) / prv.valor_total_usd) * 100 : null;
     set('sb-value', $f.format(cur.valor_total_usd));
+    // La cabecera de marca del móvil refleja el mismo dato: en el teléfono el
+    // sidebar está oculto y el valor no se podía ver sin abrir el cajón.
+    set('hd-value', $f.format(cur.valor_total_usd));
+    const deltaTxt = delta === null ? '' : pct(delta) + ' hoy';
+    const deltaCol = delta === null ? '#6d5fa0' : (delta >= 0 ? '#34d399' : '#f87171');
     const el = document.getElementById('sb-delta');
-    if (el) { el.textContent = delta === null ? '' : pct(delta) + ' hoy'; el.style.color = delta === null ? '#6d5fa0' : (delta >= 0 ? '#34d399' : '#f87171'); }
+    if (el) { el.textContent = deltaTxt; el.style.color = deltaCol; }
+    const hd = document.getElementById('hd-delta');
+    if (hd) { hd.textContent = deltaTxt; hd.style.color = deltaCol; }
     const streakEl = document.getElementById('sb-streak');
     if (streakEl) {
       const s = _calcStreak(Store.history);

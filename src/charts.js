@@ -10,22 +10,42 @@ export const Charts = {
 
   _mob() { return window.innerWidth < 768; },
 
+  // Los gráficos leen los tokens del tema en cada render. Antes tenían los
+  // grises del tema claro incrustados, así que en oscuro los ejes quedaban
+  // casi invisibles; y pedían 'Inter', una fuente que la app ya no carga.
+  _theme() {
+    const cs = getComputedStyle(document.documentElement);
+    const t = n => cs.getPropertyValue(n).trim();
+    return {
+      font:   t('--font-text') || 'system-ui, sans-serif',
+      tick:   t('--text-3'),
+      legend: t('--text-2'),
+      grid:   t('--surface-2'),
+      border: t('--border'),
+      tipBg:  t('--text'),
+      tipFg:  t('--surface'),
+      tipBody:t('--text-3'),
+      surface:t('--surface'),
+    };
+  },
+
   _opts(unit) {
     const mob = this._mob();
+    const th  = this._theme();
     return {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'nearest', intersect: false },
       plugins: {
         legend: { labels: {
-          color:'#78716c', boxWidth: mob ? 7 : 9, usePointStyle:true, pointStyle:'circle',
-          font:{ size: mob ? 9 : 11, family:'Inter' }, padding: mob ? 6 : 10,
+          color: th.legend, boxWidth: mob ? 7 : 9, usePointStyle:true, pointStyle:'circle',
+          font:{ size: mob ? 9 : 11, family: th.font }, padding: mob ? 6 : 10,
         }},
-        tooltip: { backgroundColor:'#1c1917', titleColor:'#fafaf9', bodyColor:'#d6d3d1', padding:11, cornerRadius:9,
+        tooltip: { backgroundColor: th.tipBg, titleColor: th.tipFg, bodyColor: th.tipBody, padding:11, cornerRadius:9,
           callbacks: { label: c => `${c.dataset.label}: ${unit==='usd' ? $f.format(c.parsed.y) : pct(c.parsed.y)}` } },
       },
       scales: {
-        x: { ticks:{ color:'#a8a29e', font:{ size: mob ? 9 : 10, family:'Inter' }, maxRotation: mob ? 45 : 0, maxTicksLimit: mob ? 5 : 8 }, grid:{ color:'#f5f5f4' }, border:{ color:'#e7e5e4' } },
-        y: { ticks:{ color:'#a8a29e', font:{ size: mob ? 9 : 10, family:'Inter' }, callback: v => unit==='usd' ? `$${v}` : `${v}%` }, grid:{ color:'#f5f5f4' }, border:{ color:'#e7e5e4' } },
+        x: { ticks:{ color: th.tick, font:{ size: mob ? 9 : 10, family: th.font }, maxRotation: mob ? 45 : 0, maxTicksLimit: mob ? 5 : 8 }, grid:{ color: th.grid }, border:{ color: th.border } },
+        y: { ticks:{ color: th.tick, font:{ size: mob ? 9 : 10, family: th.font }, callback: v => unit==='usd' ? `$${v}` : `${v}%` }, grid:{ color: th.grid }, border:{ color: th.border } },
       },
     };
   },
@@ -84,7 +104,7 @@ export const Charts = {
     const sectors = Object.keys(totals), total = Object.values(totals).reduce((s,v) => s+v, 0) || 1;
     this.sc = new Chart(ctx, { type:'doughnut', data: {
       labels: sectors,
-      datasets: [{ data: sectors.map(s => totals[s]), backgroundColor: sectors.map(s => SECTOR_COLORS[s] || '#a8a29e'), borderWidth:2, borderColor:'#fff' }],
+      datasets: [{ data: sectors.map(s => totals[s]), backgroundColor: sectors.map(s => SECTOR_COLORS[s] || '#a8a29e'), borderWidth:2, borderColor: this._theme().surface }],
     }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#1c1917', bodyColor:'#d6d3d1', padding:10, cornerRadius:9, callbacks:{ label: c => `${c.label}: ${((c.parsed/total)*100).toFixed(1)}%` } } }, cutout:'65%' } });
     const leg = document.getElementById('sector-legend');
     if (leg) leg.innerHTML = sectors.map(s =>
