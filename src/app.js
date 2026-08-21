@@ -6,7 +6,7 @@ import { Charts } from './charts.js';
 import { UI, renderPositionsPanel, renderPortfolioKPI, renderDashSectors, kpiLive, renderSetupChecklist } from './ui.js';
 import { fetchMarketData } from './prices.js';
 import { fetchAiAnalysis, renderAiPage, clearAiCache, askAdvisor } from './ai.js';
-import { analyzeBuy, clearBuySlot, loadBuySlots, autoRecommend, refreshBuyRecommendations } from './buy.js';
+import { analyzeBuy, clearBuySlot, loadBuySlots, refreshBuyRecommendations } from './buy.js';
 import { evaluateAllPer, analyzeTickerPer, renderWatchlist } from './per.js';
 import { set, toast, attachTickerSearch, esc } from './utils.js';
 import { getPositions, addPurchase, removePurchase, getAvgPrice, getTotalShares, hasPositions, loadPositions } from './positions.js';
@@ -379,7 +379,6 @@ async function initApp(userId, email) {
   Store._syncCloud().then(changed => {
     if (changed) { Learn.train(Store.history); UI.prefill(); UI.all(); }
     if (Store.history.length === 0 && !isOnboardingDone()) showOnboarding();
-    autoRecommend();
     autoRecord();
   });
 
@@ -463,10 +462,17 @@ document.getElementById('btn-export').addEventListener('click', () => {
   toast('✓ Datos exportados');
 });
 
+// Una sola entrada dispara los dos análisis: el de valoración (precio, PER,
+// opinión de analistas) y el veredicto de compra de la IA. Antes eran tres
+// cajas repartidas en dos páginas para la misma pregunta.
 document.getElementById('per-form').addEventListener('submit', e => {
   e.preventDefault();
   const ticker = document.getElementById('per-ticker').value.trim();
+  if (!ticker) return;
   analyzeTickerPer(ticker);
+  // El veredicto necesita al menos un día registrado para compararlo con tu
+  // portafolio; analyzeBuy lo comprueba y avisa por su cuenta si falta.
+  if (Store.history.length >= 1) analyzeBuy(ticker, 0);
 });
 
 document.getElementById('auth-email').addEventListener('keydown',    e => { if (e.key === 'Enter') document.getElementById('auth-password').focus(); });

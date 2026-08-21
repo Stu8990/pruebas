@@ -47,7 +47,9 @@ export async function analyzeTickerPer(rawTicker) {
   const loading = document.getElementById('per-loading');
   const result  = document.getElementById('per-result');
   if (!ticker) { toast('Escribe un símbolo. Ej: AAPL'); return; }
-  if (!/^[A-Z]{1,6}$/.test(ticker)) { toast('Símbolo inválido. Usa letras mayúsculas, máx 6. Ej: MSFT'); return; }
+  // Mismo patrón que el análisis de compra: antes esta caja rechazaba
+  // símbolos con punto o guion, como BRK-B, que la otra sí aceptaba.
+  if (!/^[A-Z0-9.\-]{1,10}$/.test(ticker)) { toast('Símbolo inválido. Ej: AAPL, VOO, BRK-B'); return; }
 
   if (loading) { loading.style.display = 'block'; loading.textContent = `Buscando datos de ${ticker}…`; }
   if (result)    result.style.display = 'none';

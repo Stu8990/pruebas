@@ -405,18 +405,9 @@
 
     <!-- ════════ AI ════════ -->
     <div id="page-ai" class="page">
-      <div class="card" style="padding:18px;margin-bottom:14px;border-left:4px solid var(--success-bright);">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-          <div style="width:34px;height:34px;background:var(--success-light);border-radius:8px;display:flex;align-items:center;justify-content:center;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--success);" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          </div>
-          <div>
-            <div style="font-size:13px;font-weight:700;font-family:var(--font-display);">Pulso del mercado ahora</div>
-            <div id="pulse-date" style="font-size:11px;color:var(--text-3);">Calculado con tus datos</div>
-          </div>
-        </div>
-        <div id="pulse-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" class="g4"></div>
-      </div>
+      <!-- «Pulso del mercado» y «Qué hacer ahora» eran dos tarjetas separadas
+           alimentadas por la MISMA respuesta de la IA: pulse y recommendations
+           del mismo JSON. Separadas parecían dos análisis distintos. -->
       <div class="card" style="padding:18px;margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div>
@@ -428,6 +419,8 @@
             Actualizar IA
           </button>
         </div>
+        <div id="pulse-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" class="g4"></div>
+        <div id="pulse-date" style="display:none;"></div>
         <div id="recommendations"></div>
       </div>
 
@@ -453,44 +446,6 @@
           <button onclick="submitAdvisor()" class="btn btn-primary" style="flex-shrink:0;min-width:88px;">Preguntar</button>
         </div>
         <div id="advisor-response"></div>
-      </div>
-
-      <!-- ── ¿Compro? — Análisis de compra ── -->
-      <div class="card" style="padding:18px;margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">¿Compro?</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Analiza cualquier acción o ETF · Groq evalúa con tus datos</div>
-          </div>
-          <button onclick="refreshBuyRecommendations()" class="btn btn-ghost btn-sm" style="gap:5px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Recomendar
-          </button>
-        </div>
-        <div id="buy-slots" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;">
-          <!-- Slot 0 -->
-          <div id="buy-slot-0" class="buy-slot" data-slot="0">
-            <div class="buy-slot-input">
-              <label style="flex:1;margin:0;">
-                <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px;">Símbolo (ticker)</span>
-                <input class="buy-ticker-input" placeholder="Ej: AAPL, VOO, BRK-B" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')analyzeBuy(this.value,0)" />
-              </label>
-              <button type="button" onclick="analyzeBuy(this.closest('.buy-slot').querySelector('.buy-ticker-input').value,0)" class="btn btn-primary btn-sm" style="align-self:flex-end;">Analizar</button>
-            </div>
-            <div class="buy-slot-result" style="display:none;"></div>
-          </div>
-          <!-- Slot 1 -->
-          <div id="buy-slot-1" class="buy-slot" data-slot="1">
-            <div class="buy-slot-input">
-              <label style="flex:1;margin:0;">
-                <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px;">Símbolo (ticker)</span>
-                <input class="buy-ticker-input" placeholder="Ej: NVDA, MSFT, QQQ" style="text-transform:uppercase;letter-spacing:.05em;" onkeydown="if(event.key==='Enter')analyzeBuy(this.value,1)" />
-              </label>
-              <button type="button" onclick="analyzeBuy(this.closest('.buy-slot').querySelector('.buy-ticker-input').value,1)" class="btn btn-primary btn-sm" style="align-self:flex-end;">Analizar</button>
-            </div>
-            <div class="buy-slot-result" style="display:none;"></div>
-          </div>
-        </div>
       </div>
 
       <div class="card" style="padding:18px;">
@@ -698,8 +653,8 @@
       </div>
 
       <div class="card" style="padding:20px;">
-        <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analizar cualquier acción o ETF</div>
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;">Escribe el símbolo (ticker) y obtenemos precio, PER y recomendación de analistas automáticamente.</div>
+        <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> ¿Me conviene esta acción?</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;">Escribe el símbolo y te decimos el precio, si está cara o barata, qué opinan los analistas y si es buen momento para comprarla.</div>
 
         <!-- Buscador -->
         <form id="per-form" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:20px;">
@@ -711,6 +666,13 @@
         </form>
         <div id="per-loading" style="display:none;font-size:13px;color:var(--text-3);padding:10px 0;"></div>
         <div id="per-result" style="margin-bottom:20px;display:none;"></div>
+
+        <!-- El veredicto de compra vivía en la página IA, en dos cajas idénticas
+             que no explicaban por qué eran dos. Analizar una acción que no
+             tienes es una sola cosa, y esta es su página. -->
+        <div class="buy-slot" id="buy-slot-0" style="display:none;margin-bottom:20px;">
+          <div class="buy-slot-result" style="display:none;"></div>
+        </div>
 
         <!-- Watchlist -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">

@@ -193,6 +193,9 @@ export async function analyzeBuy(rawTicker, slotIndex) {
   if (!slotEl) return;
 
   if (!ticker) { toast('Escribe un símbolo. Ej: AAPL'); return; }
+  // En ¿Cara? el hueco nace oculto para no dejar un recuadro vacío antes de
+  // que el usuario busque nada.
+  slotEl.style.display = '';
   if (!/^[A-Z0-9.\-]{1,10}$/.test(ticker)) { toast('Símbolo inválido. Ej: AAPL, VOO, BRK-B'); return; }
   if (Store.history.length < 1) { toast('Registra al menos un día antes de usar el análisis de compra.'); return; }
 
@@ -234,6 +237,7 @@ export async function analyzeBuy(rawTicker, slotIndex) {
 
 export function clearBuySlot(slotIndex) {
   const slotEl = document.getElementById(`buy-slot-${slotIndex}`);
+  if (slotEl && slotEl.closest('#page-per')) slotEl.style.display = 'none';
   if (!slotEl) return;
 
   const saved = _getSavedSlots();
@@ -271,7 +275,13 @@ function _buildSuggestContext() {
   };
 }
 
+// Sugería dos tickers y los metía en las cajas de «¿Compro?». Al unificar el
+// analizador en ¿Cara? quedó una sola caja, y ésa la escribe el usuario:
+// rellenarla sola le pisaría lo que está tecleando. Se conserva la función
+// —el modo 'suggest' de la Edge Function sigue existiendo— pero ya no se
+// dispara sola; espera un hueco propio en la página ¿Cara?.
 export async function autoRecommend() {
+  if (!document.getElementById('buy-slot-1')) return;
   const saved = _getSavedSlots();
   // Both slots already have data → just restore from cache
   if (saved[0] && saved[1]) { loadBuySlots(); return; }
@@ -320,6 +330,4 @@ export async function autoRecommend() {
 
 export function refreshBuyRecommendations() {
   clearBuySlot(0);
-  clearBuySlot(1);
-  autoRecommend();
 }
