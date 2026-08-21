@@ -40,7 +40,7 @@
         <span class="lbl">Contraseña</span>
         <div style="position:relative;">
           <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px;" />
-          <button type="button" onclick="toggleAuthPwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#a8a29e;font-size:13px;padding:0;">👁</button>
+          <button type="button" class="pwd-eye" onclick="toggleAuthPwd()" aria-label="Mostrar u ocultar la contraseña"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </label>
       <button onclick="loginWithPassword()" class="btn btn-primary" id="btn-login" style="width:100%;padding:12px;">
@@ -49,10 +49,10 @@
       <p id="auth-err" style="font-size:12px;color:var(--danger);margin-top:10px;display:none;text-align:center;"></p>
       <!-- Links inferiores -->
       <div id="forgot-section" style="margin-top:14px;text-align:center;display:flex;flex-direction:column;gap:6px;">
-        <button onclick="showForgot()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a8a29e;font-family:inherit;">¿Olvidaste tu contraseña? →</button>
+        <button class="link-btn" onclick="showForgot()" style="color:#a8a29e;">¿Olvidaste tu contraseña? →</button>
         <div style="border-top:1px solid #f5f5f4;padding-top:10px;">
           <span style="font-size:12px;color:#a8a29e;">¿No tienes cuenta?</span>
-          <button onclick="showSignup()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#7c3aed;font-weight:700;font-family:inherit;margin-left:5px;">Crear cuenta →</button>
+          <button class="link-btn" onclick="showSignup()" style="color:#7c3aed;font-weight:700;">Crear cuenta →</button>
         </div>
       </div>
     </div>
@@ -68,7 +68,7 @@
         <span class="lbl">Contraseña</span>
         <div style="position:relative;">
           <input id="signup-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right:40px;" />
-          <button type="button" onclick="toggleSignupPwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#a8a29e;font-size:13px;padding:0;">👁</button>
+          <button type="button" class="pwd-eye" onclick="toggleSignupPwd()" aria-label="Mostrar u ocultar la contraseña"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </label>
       <label style="display:block;margin-bottom:16px;">
@@ -78,7 +78,7 @@
       <button onclick="signUp()" class="btn btn-primary" id="btn-signup" style="width:100%;padding:12px;">Crear cuenta</button>
       <p id="signup-err" style="font-size:12px;margin-top:10px;display:none;text-align:center;"></p>
       <div style="margin-top:12px;text-align:center;">
-        <button onclick="backToLogin()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#a8a29e;font-family:inherit;">← Volver al inicio de sesión</button>
+        <button class="link-btn" onclick="backToLogin()" style="color:#a8a29e;">← Volver al inicio de sesión</button>
       </div>
     </div>
 
@@ -87,7 +87,7 @@
       <p style="font-size:13px;color:#57534e;margin-bottom:16px;line-height:1.6;">Ingresa tu correo y te enviamos un enlace para restablecer la contraseña.</p>
       <label><span class="lbl">Tu correo</span><input id="forgot-email" type="email" placeholder="tu@correo.com" /></label>
       <button onclick="sendReset()" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;">Enviar enlace</button>
-      <button onclick="backToLogin()" style="width:100%;margin-top:8px;background:none;border:none;cursor:pointer;font-size:12px;color:#a8a29e;font-family:inherit;">← Volver al login</button>
+      <button class="link-btn" onclick="backToLogin()" style="width:100%;margin-top:8px;color:#a8a29e;">← Volver al login</button>
       <p id="forgot-msg" style="font-size:12px;color:var(--success);margin-top:8px;display:none;text-align:center;"></p>
     </div>
   </div>
@@ -152,8 +152,8 @@
         <span id="sync-label">Sincronizado</span>
       </div>
       <div style="display:flex;gap:6px;">
-        <button onclick="showChangePwd()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d5fa0;font-family:inherit;padding:2px 4px;">🔑</button>
-        <button onclick="signOut()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6d5fa0;font-family:inherit;padding:2px 4px;">Salir →</button>
+        <button class="side-action" onclick="showChangePwd()" aria-label="Cambiar contraseña"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2"/><path d="M12.4 11.6a5.5 5.5 0 1 0-7.8 7.8 5.5 5.5 0 0 0 7.8-7.8z"/><path d="M12.4 11.6L19 5l3 3-3.5 3.5-3-3"/></svg></button>
+        <button class="side-action" onclick="signOut()">Salir →</button>
       </div>
     </div>
     <div style="font-size:10px;color:#4c3d80;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="user-email-label"></div>
@@ -265,7 +265,7 @@
           </div>
           <span id="date-badge" class="badge b-pri">—</span>
         </div>
-        <div style="position:relative;height:220px;">
+        <div class="chart-box" style="--chart-h:220px;">
           <canvas id="value-chart"></canvas>
           <div id="value-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
         </div>
@@ -333,7 +333,7 @@
         <div class="card" style="padding:18px;">
           <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;">Rendimiento de cada acción</div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% de ganancia/pérdida desde que compraste</div>
-          <div style="position:relative;height:270px;">
+          <div class="chart-box" style="--chart-h:270px;">
             <canvas id="returns-chart"></canvas>
             <div id="returns-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
           </div>
@@ -384,7 +384,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div>
             <div style="font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;">Qué hacer ahora</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Análisis generado por Llama 3.3 70B · Groq</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Análisis generado con IA · Groq</div>
           </div>
           <button onclick="refreshAi()" class="btn btn-ghost btn-sm" style="gap:5px;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -536,15 +536,15 @@
         </div>
 
         <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="card" style="padding:18px;border-top:3px solid #3b82f6;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <details class="card m-collapse" style="padding:18px;border-top:3px solid #3b82f6;" open>
+            <summary class="m-summary">
               <div style="width:34px;height:34px;background:#eff6ff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📖</div>
               <div>
                 <div style="font-size:13px;font-weight:700;">¿Dónde encuentro estos datos?</div>
                 <div style="font-size:11px;color:var(--text-3);">Guía rápida XTB</div>
               </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:9px;">
+            </summary>
+            <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px;">
               <div class="xtb-step"><div class="xtb-num">1</div><span>Abre la <strong>app o web</strong> de XTB</span></div>
               <div class="xtb-step"><div class="xtb-num">2</div><span>Ve a <strong>Mi Portafolio</strong></span></div>
               <div class="xtb-step"><div class="xtb-num">3</div><span>Anota el <strong>valor total</strong> — aparece arriba en grande</span></div>
@@ -553,13 +553,13 @@
             <div style="margin-top:12px;padding:10px 12px;background:#eff6ff;border-radius:9px;font-size:11px;color:#1e3a8a;line-height:1.55;border:1px solid #bfdbfe;">
               ℹ️ Los rendimientos son <strong>acumulados desde que compraste</strong>, no solo el cambio de hoy.
             </div>
-          </div>
-          <div class="card" style="padding:18px;">
-            <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+          </details>
+          <details class="card m-collapse" style="padding:18px;" open>
+            <summary class="m-summary">
               <div style="width:30px;height:30px;background:#f5f5f4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">⚙️</div>
               <div style="font-size:13px;font-weight:700;">Gestión de datos</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
+            </summary>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
               <button id="btn-export" class="btn btn-ghost" style="width:100%;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Exportar mis datos (JSON)
@@ -569,7 +569,7 @@
                 Borrar todos mis registros
               </button>
             </div>
-          </div>
+          </details>
         </div>
       </div>
 

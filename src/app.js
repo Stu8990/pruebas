@@ -47,6 +47,9 @@ function _todayStr() {
 export function goTo(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
+  // La vista activa queda expuesta al CSS para que la barra superior sea
+  // contextual en móvil (ver styles.css, bloque "Barra superior contextual").
+  document.body.dataset.view = id;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === id));
@@ -462,6 +465,9 @@ db.auth.onAuthStateChange((_event, session) => {
 });
 
 // ── Bootstrap ─────────────────────────────────────────
+document.body.dataset.view = 'dashboard';  // la vista inicial, antes del primer goTo()
+syncCollapsibles();
+
 (async () => {
   const { data: { session } } = await db.auth.getSession();
   if (session?.user) await startApp(session);
@@ -483,4 +489,17 @@ if ('serviceWorker' in navigator) {
     _swRefreshed = true;
     window.location.reload();
   });
+}
+
+// El material de referencia (guía XTB, gestión de datos) se pliega en pantallas
+// pequeñas: expandido ocupa varias pantallas de scroll en la página Registrar.
+export function syncCollapsibles() {
+  const mq = window.matchMedia('(max-width: 1024px)');
+  const apply = () => document.querySelectorAll('details.m-collapse')
+    .forEach(d => { d.open = !mq.matches; });
+  apply();
+  mq.addEventListener('change', apply);
+  // Segundo pase tras `load`: en el arranque en frío el viewport puede no
+  // estar resuelto todavía cuando corre el módulo, y el estado se quedaba abierto.
+  window.addEventListener('load', apply, { once: true });
 }

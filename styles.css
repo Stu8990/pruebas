@@ -10,6 +10,7 @@
   --border: #e7e5e4; --radius: 14px; --sw: 248px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.chart-box { position: relative; height: var(--chart-h, 220px); }
 .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 20px; font-size: 12px; color: var(--text-3); }
 html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 
@@ -520,4 +521,111 @@ label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--t
    en pantallas táctiles pequeñas para no alterar el layout de escritorio. */
 @media (max-width: 768px) {
   input, select, textarea, .advisor-input { font-size: 16px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   PASE MOBILE-FIRST
+   La app se usa sobre todo en el teléfono. Este bloque adapta la
+   experiencia al pulgar y a la pantalla estrecha; no reescala píxeles.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Controles reclasificados ─────────────────────────────────────
+   Eran <button> sueltos con estilo inline. Ahora tienen nombre para
+   que el tamaño táctil se pueda gobernar desde un solo sitio. */
+.pwd-eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  background: none; border: none; border-radius: 8px;
+  color: var(--text-3); cursor: pointer; padding: 0;
+  transition: color .14s, background-color .14s;
+}
+.pwd-eye:hover { color: var(--text-2); background: var(--bg); }
+
+.link-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 12px; padding: 4px 2px;
+  border-radius: 6px;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { text-decoration: underline; }
+
+.side-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  background: none; border: none; border-radius: 7px; cursor: pointer;
+  font-family: inherit; font-size: 11px; color: #6d5fa0;
+  padding: 4px 6px;
+  transition: color .14s, background-color .14s;
+}
+.side-action:hover { color: #d4c9f0; background: rgba(255,255,255,.08); }
+
+/* ── Material de referencia plegable ──────────────────────────────
+   La página Registrar medía ~12 pantallas de scroll en un iPhone con
+   la guía XTB y la gestión de datos siempre abiertas. */
+.m-collapse > summary { list-style: none; }
+.m-collapse > summary::-webkit-details-marker { display: none; }
+
+.m-summary {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; min-height: 44px;
+}
+.m-summary::after {
+  content: ''; margin-left: auto; flex-shrink: 0;
+  width: 7px; height: 7px; margin-right: 4px;
+  border-right: 2px solid var(--text-3);
+  border-bottom: 2px solid var(--text-3);
+  transform: rotate(45deg); transform-origin: 60% 60%;
+  transition: transform .18s cubic-bezier(.2,.8,.3,1);
+}
+.m-collapse[open] > .m-summary::after { transform: rotate(-135deg); }
+.m-summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 8px; }
+
+/* ── Barra superior contextual ────────────────────────────────────
+   El selector de sesión y el "Actualizar" global aparecían en las
+   cinco vistas. En Registrar, IA y ¿Cara? no tienen función, y en
+   Activos/IA compiten con el "Actualizar" que ya vive en la tarjeta.
+   Se ocultan sólo donde sobran, y sólo en móvil. */
+@media (max-width: 1024px) {
+  body[data-view="record"] #record-sel,
+  body[data-view="ai"]     #record-sel,
+  body[data-view="per"]    #record-sel { display: none; }
+
+  body[data-view="portfolio"] header .btn-ghost,
+  body[data-view="ai"]        header .btn-ghost,
+  body[data-view="per"]       header .btn-ghost { display: none; }
+}
+
+/* ── Puntero grueso: todo lo tocable llega a 44px ─────────────────
+   Se consulta el método de entrada, no el ancho: un portátil táctil
+   también necesita el target grande. */
+@media (pointer: coarse) {
+  .nav-item   { padding: 12px 13px; min-height: 44px; }
+  .advisor-chip { min-height: 44px; padding: 10px 16px; }
+  .btn        { min-height: 44px; }
+  .btn-sm     { padding: 10px 14px; min-height: 44px; }
+  .link-btn   { min-height: 44px; padding: 10px 8px; }
+  .side-action{ min-height: 44px; min-width: 44px; }
+  .pwd-eye    { width: 44px; height: 44px; }
+
+  /* Sin estados hover: en táctil quedan "pegados" tras el toque. */
+  .card-lift:hover  { transform: none; }
+  .btn-primary:hover{ transform: none; }
+  .rec:hover        { transform: none; }
+}
+
+/* ── Teléfono ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* El asesor: el input quedaba tan estrecho que truncaba su propio
+     placeholder. La fila se apila y el botón ocupa el ancho. */
+  .advisor-input-row { flex-direction: column; align-items: stretch; }
+  .advisor-input-row .btn { width: 100%; }
+
+  /* Los contenedores reservaban su altura completa aunque el gráfico
+     estuviera vacío, lo que dejaba scroll muerto entre tarjetas. */
+  .chart-box { height: calc(var(--chart-h) * .72); }
+  /* charts.js pone display:flex en el estado vacío y display:none cuando
+     hay datos, así que el estado vacío se detecta por "flex". */
+  .chart-box:has(.chart-empty[style*="flex"]) { height: 128px; }
 }
