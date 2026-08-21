@@ -80,15 +80,15 @@ export const Learn = {
   },
 
   insight(cur, prv) {
-    if (!cur) return 'Registra tu primera sesión para activar el análisis.';
+    if (!cur) return 'Registra tu primer día para activar el análisis.';
     const delta = prv ? ((cur.valor_total_usd - prv.valor_total_usd) / prv.valor_total_usd) * 100 : 0;
     const lines = [];
 
     // Portfolio movement
-    if (!prv)           lines.push('Primera sesión registrada. Seguiré tu portafolio desde aquí.');
-    else if (delta > 0.5)  lines.push(`Tu portafolio ganó ${pct(delta)} en esta sesión — buen resultado.`);
-    else if (delta < -0.5) lines.push(`Tu portafolio bajó ${pct(delta)} en esta sesión. Es normal en bolsa; lo importante es la tendencia de largo plazo.`);
-    else                   lines.push(`Sesión de consolidación (${pct(delta)}). El mercado tomó un respiro.`);
+    if (!prv)           lines.push('Primer día registrado. Seguiré tu portafolio desde aquí.');
+    else if (delta > 0.5)  lines.push(`Tu portafolio ganó ${pct(delta)} hoy — buen resultado.`);
+    else if (delta < -0.5) lines.push(`Tu portafolio bajó ${pct(delta)} hoy. Es normal en bolsa; lo importante es la tendencia de largo plazo.`);
+    else                   lines.push(`Día de consolidación (${pct(delta)}). El mercado tomó un respiro.`);
 
     // Dynamic sector analysis using user's actual holdings
     const tech = avgRend(cur.rendimientos, tickersBySector('Tech'));
@@ -120,7 +120,7 @@ export const Learn = {
     // Not enough sessions — educate first
     if (Store.history.length < 2) {
       recs.push({ type:'blue', icon:'note', title:'Necesito más datos para analizarte',
-        body:'Registra al menos 2–3 sesiones para que el algoritmo identifique patrones en tu portafolio. Cuantas más sesiones, más precisas las recomendaciones.',
+        body:'Registra al menos 2–3 días para que el algoritmo identifique patrones en tu portafolio. Cuantos más días, más precisas las recomendaciones.',
         conf: 99 });
       return recs;
     }
@@ -130,7 +130,7 @@ export const Learn = {
       const [best, bs] = sorted[0];
       const name = ASSET_META[best]?.full || best;
       recs.push({ type:'green', icon:'rocket', title:`${name} es tu estrella`,
-        body:`Rendimiento promedio ${pct(bs.avg)} · últimas sesiones ${pct(bs.recAvg)}. ${bs.recAvg > bs.avg ? 'Está acelerando — buen momento para monitorearla.' : 'Tendencia estable. Mantén posición.'}`,
+        body:`Rendimiento promedio ${pct(bs.avg)} · últimos días ${pct(bs.recAvg)}. ${bs.recAvg > bs.avg ? 'Está acelerando — buen momento para monitorearla.' : 'Tendencia estable. Mantén posición.'}`,
         conf: Math.min(95, this.s.confidence + 5) });
     }
 
@@ -140,7 +140,7 @@ export const Learn = {
       if (ws.score < -3) {
         const name = ASSET_META[wKey]?.full || wKey;
         recs.push({ type:'red', icon:'⚠️', title:`${name} bajo presión`,
-          body:`Promedio ${pct(ws.avg)} en tus sesiones registradas. Antes de vender: ¿el negocio sigue siendo bueno? Las caídas temporales son normales. No vendas por pánico.`,
+          body:`Promedio ${pct(ws.avg)} en los días que registraste. Antes de vender: ¿el negocio sigue siendo bueno? Las caídas temporales son normales. No vendas por pánico.`,
           conf: this.s.confidence });
       }
     }
@@ -221,7 +221,7 @@ export const Learn = {
 
     // Fill to 4 with confidence if needed
     if (cards.length < 4) {
-      cards.push({ label:'Sesiones positivas', value:`${Math.round(ups/total*100)}%`,
+      cards.push({ label:'Días en verde', value:`${Math.round(ups/total*100)}%`,
         up:ups>total/2, desc:`${ups} de ${this.s.phases.length} días registrados` });
     }
 
@@ -231,7 +231,7 @@ export const Learn = {
 
 export function generateDescription(newRecord) {
   const prv = Store.history.at(-1);
-  if (!prv) return `Primera sesión · ${newRecord.fecha}`;
+  if (!prv) return `Primer día · ${newRecord.fecha}`;
   const pctChange = ((newRecord.valor_total_usd - prv.valor_total_usd) / prv.valor_total_usd) * 100;
 
   // Use all assets including custom ones

@@ -194,7 +194,7 @@ export async function analyzeBuy(rawTicker, slotIndex) {
 
   if (!ticker) { toast('Escribe un símbolo. Ej: AAPL'); return; }
   if (!/^[A-Z0-9.\-]{1,10}$/.test(ticker)) { toast('Símbolo inválido. Ej: AAPL, VOO, BRK-B'); return; }
-  if (Store.history.length < 1) { toast('Registra al menos una sesión antes de usar el análisis de compra.'); return; }
+  if (Store.history.length < 1) { toast('Registra al menos un día antes de usar el análisis de compra.'); return; }
 
   const inputEl = slotEl.querySelector('.buy-ticker-input');
   if (inputEl) inputEl.value = ticker;

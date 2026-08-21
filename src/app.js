@@ -34,7 +34,7 @@ const PAGE_TITLES = {
   dashboard: 'Mi Portafolio · Resumen',
   portfolio: 'Mis Acciones · Detalle',
   ai:        'Recomendaciones · IA',
-  record:    'Registrar sesión de hoy',
+  record:    'Registrar el día de hoy',
   per:       '¿Está cara mi acción? · Análisis PER',
 };
 
@@ -447,7 +447,7 @@ document.getElementById('record-form').addEventListener('submit', async e => {
   const ok = await Store.add({ fecha, fase, valor_total_usd: valor, rendimientos: rend });
   if (ok) { const cap = document.getElementById('f-capital'); if (cap) cap.value = ''; }
   btn.disabled = false; btn.textContent = 'Guardar en la nube';
-  if (ok) { UI.all(); toast('✓ Sesión guardada en la nube.'); goTo('dashboard', document.querySelector('.nav-item')); }
+  if (ok) { UI.all(); toast('✓ Día guardado en la nube.'); goTo('dashboard', document.querySelector('.nav-item')); }
 });
 
 document.getElementById('btn-reset').addEventListener('click', async () => {

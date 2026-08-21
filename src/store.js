@@ -84,8 +84,8 @@ export const Store = {
     const clean = source.map(r => this._validSession(r)).filter(Boolean);
     const dropped = source.length - clean.length;
     if (dropped > 0) {
-      console.warn(`[migración] ${dropped} de ${source.length} sesiones antiguas se descartaron por tener un formato no reconocible.`);
-      toast(`Se migraron ${clean.length} sesiones; ${dropped} se descartaron`);
+      console.warn(`[migración] ${dropped} de ${source.length} registros antiguos se descartaron por tener un formato no reconocible.`);
+      toast(`Se migraron ${clean.length} registros; ${dropped} se descartaron`);
     }
     if (!clean.length) { this.history = []; return; }
 

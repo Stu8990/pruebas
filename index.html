@@ -187,7 +187,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Actualizar
       </button>
-      <select id="record-sel" title="Selecciona una sesión para ver su detalle" style="padding:7px 10px;max-width:200px;" onchange="onRecordChange(event)"></select>
+      <select id="record-sel" title="Elige un día para ver su detalle" style="padding:7px 10px;max-width:200px;" onchange="onRecordChange(event)"></select>
     </div>
   </header>
 
@@ -223,26 +223,28 @@
       <!-- Live portfolio block -->
       <div id="dash-live-block" style="margin-bottom:16px;"></div>
 
-      <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div class="card card-lift kpi-card" style="padding:16px 18px;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-            Mi dinero total <span class="help-icon" tabindex="0" data-tip="Suma de todo lo que tienes invertido ahora mismo, en dólares.">?</span>
-          </div>
-          <div id="kpi-value" class="num-hero mono">$0.00</div>
-          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
-            <span id="kpi-live-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text-3);flex-shrink:0;transition:background .4s;"></span>
-            <span id="kpi-live-status" style="font-size:11px;color:var(--text-3);">Capital en USD</span>
-          </div>
+      <!-- Aquí había dos tarjetas: «Mi dinero total» y «Hoy subió / bajó».
+           Las dos repetían lo que ya muestran la cabecera verde y la tarjeta
+           «Portafolio en vivo» de arriba, y encima con cifras distintas: estas
+           traían el precio en vivo y la cabecera el último día registrado. Con
+           tres sitios mostrando el mismo dinero no había forma de saber cuál
+           era el bueno. Queda un solo sitio, y este hueco pasa a decir qué
+           hacer, que es lo único que la pantalla de entrada no decía. -->
+      <div class="card card-lift" id="kpi-next-card" style="padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Qué te toca</div>
+          <div id="kpi-next-title" style="font-size:18px;font-weight:700;font-family:var(--font-display);line-height:1.25;">—</div>
+          <div id="kpi-next-sub" style="font-size:12px;color:var(--text-3);margin-top:4px;"></div>
         </div>
-        <div class="card card-lift kpi-card" style="padding:16px 18px;border-top-color:var(--success-bright);">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-            Hoy subió / bajó <span class="help-icon" tabindex="0" data-tip="Cuánto cambió comparado con la sesión anterior.">?</span>
-          </div>
-          <div id="kpi-delta" class="num-hero mono" style="color:var(--text-3);">—</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:6px;">vs sesión anterior</div>
-        </div>
+        <button id="kpi-next-btn" onclick="goTo('record',null)" class="btn btn-primary" style="flex-shrink:0;display:none;">Registrar</button>
       </div>
+
+      <!-- Contenedores sin pintar: kpiLive() sigue escribiendo aquí y de aquí
+           se refleja a la cabecera verde, que es donde el usuario lo lee. -->
+      <span id="kpi-value" style="display:none;"></span>
+      <span id="kpi-delta" style="display:none;"></span>
+      <span id="kpi-live-dot" style="display:none;"></span>
+      <span id="kpi-live-status" style="display:none;"></span>
 
       <!-- Sectores hoy -->
       <div id="dash-sectors" style="margin-bottom:16px;"></div>
@@ -276,7 +278,7 @@
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
           <div>
             <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Evolución de mi portafolio</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Valor en USD · Cada punto = una sesión registrada</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Valor en USD · Cada punto = un día que anotaste</div>
           </div>
           <span id="date-badge" class="badge b-pri">—</span>
         </div>
@@ -316,10 +318,10 @@
       <details class="card m-collapse" style="padding:18px;" open>
         <summary class="m-summary">
           <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Historial de sesiones</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Un registro por cada día de bolsa que registraste</div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Historial de días</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Un registro por cada día que anotaste</div>
           </div>
-          <span id="hist-count" class="badge b-neu">0 sesiones</span>
+          <span id="hist-count" class="badge b-neu">0 días</span>
         </summary>
         <div style="overflow-x:auto;border:1px solid var(--border);border-radius:9px;margin-top:14px;">
           <table class="tbl">
@@ -370,7 +372,7 @@
       <div id="portfolio-charts-row" style="display:block;margin-bottom:14px;">
         <div class="card" style="padding:18px;">
           <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Cada acción, cómo va</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% desde que compraste · cambio vs la sesión anterior</div>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% desde que compraste · cambio vs el día anterior</div>
           <div class="chart-box" style="--chart-h:250px;">
             <canvas id="returns-chart"></canvas>
             <div id="returns-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
@@ -381,7 +383,7 @@
               <thead><tr>
                 <th>Acción</th><th>Tipo</th>
                 <th title="% desde que la compraste">Ganancia</th>
-                <th title="Cambio respecto a ayer">Vs ayer</th>
+                <th title="Cambio respecto al día anterior">Vs ayer</th>
                 <th>Estado</th>
               </tr></thead>
               <tbody id="asset-table"></tbody>
@@ -507,7 +509,7 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
             </div>
             <div>
-              <div style="font-size:15px;font-weight:800;font-family:var(--font-display);">Registrar sesión de hoy</div>
+              <div style="font-size:15px;font-weight:800;font-family:var(--font-display);">Registrar el día de hoy</div>
               <div style="font-size:11px;color:var(--text-3);margin-top:2px;">La descripción se genera automáticamente al completar</div>
             </div>
           </div>

@@ -63,6 +63,9 @@ export const UI = {
       if (chartsRow)   chartsRow.style.display   = showPrices ? '' : 'none';
       if (journeyCard) journeyCard.style.display = showPrices ? '' : 'none';
       this.insight(cur, prv);
+      // Sin sesiones todavía es justo cuando más importa decir qué hacer:
+      // este es el primer día del usuario y la pantalla estaría en blanco.
+      this.nextAction();
       Charts.value(); Charts.returns();
       return;
     }
@@ -79,15 +82,49 @@ export const UI = {
   },
 
   kpis(cur, prv) {
-    const delta = prv ? ((cur.valor_total_usd - prv.valor_total_usd) / prv.valor_total_usd) * 100 : null;
-    const tech  = Store.avg(cur, ['NVDA','MSFT','AMZN']);
+    const tech   = Store.avg(cur, ['NVDA','MSFT','AMZN']);
     const sorted = ASSETS.map(a => ({ a, v: cur.rendimientos[a] })).filter(x => x.v !== null && x.v !== undefined).sort((x,y) => y.v - x.v);
-    set('kpi-value', $f.format(cur.valor_total_usd));
-    const de = document.getElementById('kpi-delta');
-    if (de) { de.textContent = delta === null ? 'N/D' : pct(delta); de.style.color = delta === null ? 'var(--text-3)' : (delta >= 0 ? 'var(--success)' : 'var(--danger)'); }
+
+    // El valor y el cambio del día ya no se pintan aquí: los lleva la
+    // cabecera verde, que es el único sitio donde se leen.
+    this.nextAction();
     set('kpi-best', sorted[0] ? `${ASSET_META[sorted[0].a]?.full} ${pct(sorted[0].v)}` : '—');
     set('kpi-tech', pct(tech));
-    set('date-badge', `Sesión: ${cur.fecha}`);
+    set('date-badge', cur.fecha);
+  },
+
+  // Lo único de la pantalla de entrada que propone hacer algo, en vez de
+  // limitarse a mostrar estado.
+  nextAction() {
+    const titleEl = document.getElementById('kpi-next-title');
+    const subEl   = document.getElementById('kpi-next-sub');
+    const btnEl   = document.getElementById('kpi-next-btn');
+    if (!titleEl) return;
+
+    const hoy      = new Date().toISOString().slice(0, 10);
+    const yaHoy    = Store.history.some(r => r.fecha === hoy);
+    const streak   = _calcStreak(Store.history);
+    const finDeSem = [0, 6].includes(new Date(hoy + 'T12:00:00').getDay());
+
+    if (!Store.history.length) {
+      titleEl.textContent = 'Registra tu primer día';
+      subEl.textContent   = 'Copia el valor total desde XTB. Toma un minuto.';
+      if (btnEl) { btnEl.style.display = ''; btnEl.textContent = 'Empezar'; }
+      return;
+    }
+    if (yaHoy) {
+      titleEl.textContent = 'Ya registraste hoy';
+      subEl.textContent   = streak > 1 ? `${streak} días seguidos` : 'Vuelve mañana';
+      if (btnEl) btnEl.style.display = 'none';
+    } else if (finDeSem) {
+      titleEl.textContent = 'Nada que hacer hoy';
+      subEl.textContent   = 'La bolsa cierra el fin de semana';
+      if (btnEl) btnEl.style.display = 'none';
+    } else {
+      titleEl.textContent = 'Te toca registrar hoy';
+      subEl.textContent   = streak > 1 ? `Llevas ${streak} días seguidos` : 'Toma un minuto';
+      if (btnEl) { btnEl.style.display = ''; btnEl.textContent = 'Registrar'; }
+    }
   },
 
   sidebar(cur, prv) {
@@ -111,7 +148,7 @@ export const UI = {
 
   selector() {
     const sel = document.getElementById('record-sel'); if (!sel) return;
-    if (!Store.history.length) { sel.innerHTML = '<option disabled selected>Sin sesiones aún</option>'; return; }
+    if (!Store.history.length) { sel.innerHTML = '<option disabled selected>Sin días registrados</option>'; return; }
     sel.innerHTML = Store.history.map((r,i) =>
       `<option value="${i}"${i===Store.idx?' selected':''}>${shortLabel(r, i, Store.history)} — ${esc(r.fase.slice(0,28))}${r.fase.length>28?'…':''}</option>`
     ).join('');
@@ -190,10 +227,10 @@ export const UI = {
   history() {
     const hh = document.getElementById('hist-head'), hb = document.getElementById('hist-body'), hc = document.getElementById('hist-count');
     if (!hh || !hb) return;
-    if (hc) hc.textContent = Store.history.length + ' sesiones';
+    if (hc) hc.textContent = Store.history.length + (Store.history.length === 1 ? ' día' : ' días');
     hh.innerHTML = ['Fecha','Descripción','Valor USD',...ASSETS].map(h => `<th>${h}</th>`).join('');
     if (!Store.history.length) {
-      hb.innerHTML = `<tr><td colspan="${3 + ASSETS.length}" style="text-align:center;color:var(--text-3);padding:24px;">Aún no registraste ninguna sesión.</td></tr>`;
+      hb.innerHTML = `<tr><td colspan="${3 + ASSETS.length}" style="text-align:center;color:var(--text-3);padding:24px;">Aún no registraste ningún día.</td></tr>`;
       return;
     }
     hb.innerHTML = Store.history.map((r,i) =>
@@ -274,13 +311,13 @@ export const UI = {
         tip: s.riskScore > 0.7 ? 'Ventaja: puedes mantener posiciones en caídas sin pánico.' :
              s.riskScore > 0.5 ? 'Consejo: combina acciones growth con ETFs como VOO para equilibrar.' :
              'Consejo: prioriza ETFs diversificados; reduce acciones individuales volátiles.' },
-      { icon:'trophy', lbl:'Tu acción más rentable', val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : 'var(--text-3)', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más sesiones',
-        tip: top ? 'Analiza qué sector es este activo para buscar activos parecidos.' : 'Aparecerá cuando tengas más de 3 sesiones registradas.' },
+      { icon:'trophy', lbl:'Tu acción más rentable', val:top ? ASSET_META[top[0]]?.full || top[0] : '—', color:top ? ASSET_META[top[0]]?.color : 'var(--text-3)', desc:top ? `Retorno prom. ${pct(top[1].avg)}` : 'Registra más días',
+        tip: top ? 'Analiza qué sector es este activo para buscar activos parecidos.' : 'Aparecerá cuando tengas más de 3 días registrados.' },
       { icon:'wallet', lbl:'Aumentos de capital', val:s.injections.length, color:'var(--primary)', desc:'Inyecciones detectadas por el algoritmo',
         tip: s.injections.length === 0 ? 'Tip: agregar capital en caídas baja tu precio promedio — estrategia DCA.' : 'Bien. Inyectar capital en caídas mejora tu rendimiento a largo plazo.' },
-      { icon:'calendar', lbl:'Sesiones analizadas', val:n, color:'#8b5cf6', desc:`${posCount} positivas · ${negCount} negativas`,
-        tip: n < 10 ? 'Necesitas ~20 sesiones para análisis confiables. ¡Sigue registrando!' :
-             n < 20 ? 'Buen avance. Las predicciones mejoran con cada sesión.' :
+      { icon:'calendar', lbl:'Días analizados', val:n, color:'#8b5cf6', desc:`${posCount} positivas · ${negCount} negativas`,
+        tip: n < 10 ? 'Necesitas ~20 días para análisis confiables. ¡Sigue registrando!' :
+             n < 20 ? 'Buen avance. Las predicciones mejoran con cada día.' :
              'Suficientes datos. El algoritmo ya detecta tus patrones de inversión.' },
     ];
     el.innerHTML = cards.map(c =>
@@ -447,6 +484,9 @@ export function kpiLive(data) {
   // kpi-value — live total
   const kpiEl = document.getElementById('kpi-value');
   if (kpiEl) kpiEl.textContent = `$${total.toFixed(2)}`;
+  // La cabecera verde es donde se lee el dinero. Si hay precio en vivo manda
+  // ese; si no, se queda el del último día registrado que puso sidebar().
+  set('hd-value', `$${total.toFixed(2)}`);
 
   // kpi-delta — live change vs yesterday's record (not today's, which would be near-zero)
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
@@ -457,6 +497,8 @@ export function kpiLive(data) {
     const color    = deltaPct >= 0 ? 'var(--success)' : 'var(--danger)';
     const deltaEl  = document.getElementById('kpi-delta');
     if (deltaEl) { deltaEl.textContent = `${sign}${deltaPct.toFixed(2)}%`; deltaEl.style.color = color; }
+    const hdDelta = document.getElementById('hd-delta');
+    if (hdDelta) { hdDelta.textContent = `${sign}${deltaPct.toFixed(2)}% hoy`; hdDelta.style.color = deltaPct >= 0 ? '#34d399' : '#f87171'; }
   }
 
   // kpi-best — asset with highest live rendimiento
