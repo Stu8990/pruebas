@@ -9,3 +9,7 @@ supabase/.temp/
 
 # Dossier de auditoría de seguridad — local, no publicar
 audit-context/
+
+node_modules/
+test-results/
+playwright-report/

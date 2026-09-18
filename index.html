@@ -1,724 +1,111 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>InvestSmart — Mi Portafolio</title>
-  <!-- PWA -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>InvestSmart</title>
+  <meta name="description" content="Tu cartera de XTB explicada en simple: cómo vas, por qué subiste o bajaste y qué hacer con tu próximo aporte.">
   <link rel="manifest" href="/pruebas/manifest.json">
-  <!-- El content de un <meta> no es CSS: var() no se resuelve aquí, así que
-       el color va literal. Coincide con --sidebar-from, que es la cabecera
-       verde en los dos temas. -->
-  <meta name="theme-color" content="#0a3428">
+  <meta name="theme-color" content="#0E3B2E" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B1411" media="(prefers-color-scheme: dark)">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="InvestSmart">
+  <link rel="icon" href="/pruebas/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/pruebas/icons/apple-touch-icon.svg">
-  <!-- Versión exacta + integrity. Antes @2 servía la última 2.x que existiera
-       ese día, así que cualquier cosa publicada bajo ese rango se ejecutaba
-       aquí con acceso completo a la sesión. Se usa la ruta versionada directa
-       porque jsDelivr envuelve las URL cortas y su hash no es estable. -->
+  <!-- Versión exacta + integrity: nada que se publique después bajo el mismo
+       rango puede ejecutarse aquí con acceso a la sesión. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js"
           integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg"
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
-          integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
-          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Schibsted+Grotesk:wght@400..900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Schibsted+Grotesk:wght@400..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-auth="pending">
 
-<!-- ══════════════════════ AUTH OVERLAY ══════════════════════ -->
-<div id="auth-overlay">
-  <div class="auth-card">
-    <div style="text-align:center;margin-bottom:24px;">
-      <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--primary),var(--primary-soft));border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+<!-- ═══════════ Acceso ═══════════ -->
+<main id="auth" class="auth" aria-labelledby="auth-title">
+  <div class="auth__card">
+    <div class="brand">
+      <svg class="brand__mark" viewBox="0 0 32 32" width="36" height="36" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M8 21l6-6 4 4 7-8" fill="none" stroke="var(--on-brand)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand__name">InvestSmart</span>
+    </div>
+    <h1 id="auth-title" class="auth__title">Tu cartera de XTB, explicada en simple.</h1>
+    <p class="auth__lead">Cómo vas, por qué subiste o bajaste y qué hacer con tu próximo aporte.</p>
+
+    <form id="form-login" class="stack" novalidate>
+      <label class="field"><span class="field__label">Correo</span>
+        <input name="email" type="email" autocomplete="email" inputmode="email" required></label>
+      <label class="field"><span class="field__label">Contraseña</span>
+        <input name="password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="form-msg" role="alert" hidden></p>
+      <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+      <div class="auth__links">
+        <button type="button" class="link" data-action="auth-view" data-view="signup">Crear cuenta</button>
+        <button type="button" class="link" data-action="auth-view" data-view="forgot">Olvidé mi contraseña</button>
       </div>
-      <h2 style="font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--text);">InvestSmart</h2>
-      <p style="color:var(--text-3);font-size:13px;margin-top:5px;">Tu portafolio XTB · Sincronizado en la nube</p>
-    </div>
+    </form>
 
-    <div id="auth-login-form">
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:18px;line-height:1.6;">Ingresa tus credenciales para acceder a tu portafolio.</p>
-      <label style="display:block;margin-bottom:10px;">
-        <span class="lbl">Correo electrónico</span>
-        <input id="auth-email" type="email" placeholder="tu@correo.com" autocomplete="email" />
-      </label>
-      <label style="display:block;margin-bottom:16px;">
-        <span class="lbl">Contraseña</span>
-        <div style="position:relative;">
-          <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px;" />
-          <button type="button" class="pwd-eye" onclick="toggleAuthPwd()" aria-label="Mostrar u ocultar la contraseña"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        </div>
-      </label>
-      <button onclick="loginWithPassword()" class="btn btn-primary" id="btn-login" style="width:100%;padding:12px;">
-        Entrar a mi portafolio
-      </button>
-      <p id="auth-err" style="font-size:12px;color:var(--danger);margin-top:10px;display:none;text-align:center;"></p>
-      <!-- Links inferiores -->
-      <div id="forgot-section" style="margin-top:14px;text-align:center;display:flex;flex-direction:column;gap:6px;">
-        <button class="link-btn" onclick="showForgot()" style="color:var(--text-3);">¿Olvidaste tu contraseña? →</button>
-        <div style="border-top:1px solid var(--surface-2);padding-top:10px;">
-          <span style="font-size:12px;color:var(--text-3);">¿No tienes cuenta?</span>
-          <button class="link-btn" onclick="showSignup()" style="color:var(--primary-ink);font-weight:700;">Crear cuenta →</button>
-        </div>
-      </div>
-    </div>
+    <form id="form-signup" class="stack" novalidate hidden>
+      <label class="field"><span class="field__label">Correo</span>
+        <input name="email" type="email" autocomplete="email" inputmode="email" required></label>
+      <label class="field"><span class="field__label">Contraseña</span>
+        <input name="password" type="password" autocomplete="new-password" required minlength="6">
+        <span class="field__hint">Mínimo 6 caracteres.</span></label>
+      <label class="field"><span class="field__label">Repite la contraseña</span>
+        <input name="password2" type="password" autocomplete="new-password" required minlength="6"></label>
+      <p class="form-msg" role="alert" hidden></p>
+      <button class="btn btn--primary btn--block" type="submit">Crear cuenta</button>
+      <div class="auth__links"><button type="button" class="link" data-action="auth-view" data-view="login">Ya tengo cuenta</button></div>
+    </form>
 
-    <!-- Signup -->
-    <div id="auth-signup-form" style="display:none;">
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:18px;line-height:1.6;">Crea tu cuenta gratuita y empieza a trackear tu portafolio.</p>
-      <label style="display:block;margin-bottom:10px;">
-        <span class="lbl">Correo electrónico</span>
-        <input id="signup-email" type="email" placeholder="tu@correo.com" autocomplete="email" />
-      </label>
-      <label style="display:block;margin-bottom:10px;">
-        <span class="lbl">Contraseña</span>
-        <div style="position:relative;">
-          <input id="signup-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="padding-right:40px;" />
-          <button type="button" class="pwd-eye" onclick="toggleSignupPwd()" aria-label="Mostrar u ocultar la contraseña"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        </div>
-      </label>
-      <label style="display:block;margin-bottom:16px;">
-        <span class="lbl">Confirmar contraseña</span>
-        <input id="signup-password2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" />
-      </label>
-      <button onclick="signUp()" class="btn btn-primary" id="btn-signup" style="width:100%;padding:12px;">Crear cuenta</button>
-      <p id="signup-err" style="font-size:12px;margin-top:10px;display:none;text-align:center;"></p>
-      <div style="margin-top:12px;text-align:center;">
-        <button class="link-btn" onclick="backToLogin()" style="color:var(--text-3);">← Volver al inicio de sesión</button>
-      </div>
-    </div>
-
-    <!-- Recuperar contraseña -->
-    <div id="auth-forgot-form" style="display:none;">
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.6;">Ingresa tu correo y te enviamos un enlace para restablecer la contraseña.</p>
-      <label><span class="lbl">Tu correo</span><input id="forgot-email" type="email" placeholder="tu@correo.com" /></label>
-      <button onclick="sendReset()" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;">Enviar enlace</button>
-      <button class="link-btn" onclick="backToLogin()" style="width:100%;margin-top:8px;color:var(--text-3);">← Volver al login</button>
-      <p id="forgot-msg" style="font-size:12px;color:var(--success);margin-top:8px;display:none;text-align:center;"></p>
-    </div>
+    <form id="form-forgot" class="stack" novalidate hidden>
+      <p class="muted">Te enviaremos un enlace para crear una contraseña nueva.</p>
+      <label class="field"><span class="field__label">Correo</span>
+        <input name="email" type="email" autocomplete="email" inputmode="email" required></label>
+      <p class="form-msg" role="alert" hidden></p>
+      <button class="btn btn--primary btn--block" type="submit">Enviar enlace</button>
+      <div class="auth__links"><button type="button" class="link" data-action="auth-view" data-view="login">Volver</button></div>
+    </form>
   </div>
-</div>
+</main>
 
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-
-<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
-<nav class="sidebar" id="sidebar">
-  <div style="padding:20px 16px 12px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--primary-soft));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      </div>
-      <div>
-        <div style="color:var(--sidebar-ink);font-weight:800;font-size:15px;font-family:var(--font-display);">InvestSmart</div>
-        <div style="color:var(--sidebar-ink-2);font-size:11px;">Portafolio XTB</div>
-      </div>
-    </div>
-  </div>
-
-  <div style="flex:1;padding:4px 0;">
-    <div class="nav-section">Vista general</div>
-    <button class="nav-item active" onclick="goTo('dashboard',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Resumen
-    </button>
-    <button class="nav-item" onclick="goTo('portfolio',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Mis Activos
-    </button>
-    <button class="nav-item" onclick="goTo('ai',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10M12 8v4l3 3"/><circle cx="19" cy="5" r="3"/></svg>
-      Recomendaciones IA
-    </button>
-    <div class="nav-section" style="margin-top:10px;">Acciones</div>
-    <button class="nav-item" onclick="goTo('record',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Registrar
-    </button>
-    <button class="nav-item" onclick="goTo('per',this)">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      ¿Está cara mi acción?
-    </button>
-  </div>
-
-  <div style="padding:14px;border-top:1px solid rgba(255,255,255,.06);">
-    <div style="background:rgba(255,255,255,.06);border-radius:11px;padding:13px;">
-      <div style="font-size:10px;color:var(--sidebar-ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Mi portafolio</div>
-      <div id="sb-value" class="mono" style="font-size:24px;font-weight:800;color:var(--sidebar-ink);font-family:var(--font-display);">$0.00</div>
-      <div id="sb-delta" style="font-size:12px;color:var(--sidebar-ink-2);margin-top:3px;"></div>
-      <div id="sb-streak" style="font-size:11px;color:var(--sidebar-ink-2);margin-top:5px;"></div>
-    </div>
-    <!-- Sync status + logout -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:0 2px;">
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sidebar-ink-2);">
-        <span class="sync-dot ok" id="sync-dot"></span>
-        <span id="sync-label">Sincronizado</span>
-      </div>
-      <div style="display:flex;gap:6px;">
-        <button class="side-action" onclick="showChangePwd()" aria-label="Cambiar contraseña"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2"/><path d="M12.4 11.6a5.5 5.5 0 1 0-7.8 7.8 5.5 5.5 0 0 0 7.8-7.8z"/><path d="M12.4 11.6L19 5l3 3-3.5 3.5-3-3"/></svg></button>
-        <button class="side-action" onclick="signOut()">Salir →</button>
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--sidebar-ink-3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="user-email-label"></div>
-  </div>
-</nav>
-
-<!-- ══════════════════════ MAIN ══════════════════════ -->
-<div class="main-wrapper">
-
-  <!-- Top bar -->
+<!-- ═══════════ App ═══════════ -->
+<div id="app" class="app" hidden>
   <header class="topbar">
-    <button id="menu-btn" onclick="toggleSidebar()" style="display:none;padding:6px;border:none;background:none;cursor:pointer;border-radius:7px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--text-2);" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <div class="brand brand--small">
+      <svg class="brand__mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M8 21l6-6 4 4 7-8" fill="none" stroke="var(--on-brand)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand__name">InvestSmart</span>
+    </div>
+    <button type="button" class="refresh" data-action="refresh" aria-live="polite">
+      <svg class="refresh__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="refresh-label">Actualizar</span>
     </button>
-    <div style="flex:1;">
-      <h1 id="page-title" style="font-size:16px;font-weight:700;font-family:var(--font-display);">Resumen del Portafolio</h1>
-      <div style="display:flex;align-items:center;gap:5px;margin-top:1px;">
-        <span class="pulse"></span>
-        <span id="header-sub" style="font-size:11px;">Datos sincronizados en Supabase · Registros L–V</span>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="refreshData()" class="btn btn-ghost btn-sm">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Actualizar
-      </button>
-      <select id="record-sel" title="Elige un día para ver su detalle" style="padding:7px 10px;max-width:200px;" onchange="onRecordChange(event)"></select>
-    </div>
   </header>
 
-  <!-- Cabecera de marca. Sólo móvil: el valor del portafolio vivía únicamente
-       dentro del sidebar, o sea invisible detrás del botón hamburguesa. -->
-  <div class="brandbar">
-    <div class="brandbar__label">Mi portafolio</div>
-    <div class="brandbar__value mono" id="hd-value">$0.00</div>
-    <div class="brandbar__delta" id="hd-delta"></div>
-  </div>
+  <nav class="tabs" aria-label="Secciones">
+    <a href="#inicio" class="tab" data-tab="inicio">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>
+      <span>Inicio</span></a>
+    <a href="#acciones" class="tab" data-tab="acciones">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M7 15v-4M12 15V6M17 15v-7"/></svg>
+      <span>Acciones</span></a>
+    <a href="#plan" class="tab" data-tab="plan">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      <span>Plan</span></a>
+    <a href="#mas" class="tab" data-tab="mas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      <span>Más</span></a>
+  </nav>
 
-  <div class="pad" style="padding:18px 22px;">
-
-    <!-- ════════ DASHBOARD ════════ -->
-    <div id="page-dashboard" class="page active">
-
-      <div id="welcome-banner" class="info-banner" style="margin-bottom:16px;display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--primary-mid);margin-bottom:5px;"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8"/></svg> Bienvenido a tu dashboard de inversiones</div>
-            <p style="font-size:13px;color:var(--primary-deep);line-height:1.65;">Aquí verás <strong>cómo va tu dinero</strong> en tiempo real. Los números en verde son ganancias, los rojos pérdidas (¡normales en bolsa!). Registra cada día lunes–viernes para que el algoritmo aprenda.</p>
-            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Resumen = visión general</span>
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> Mis Activos = detalle de cada acción</span>
-              <span style="font-size:12px;background: var(--surface);border:1px solid var(--primary-border);border-radius:20px;padding:4px 10px;color:var(--primary-mid);"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3 3 3 0 0 0 .5 1.6A3 3 0 0 0 6 14a3 3 0 0 0 3 3v1a3 3 0 0 0 6 0v-1a3 3 0 0 0 3-3 3 3 0 0 0-.5-3.4A3 3 0 0 0 18 9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/><line x1="12" y1="5" x2="12" y2="18"/></svg> IA = consejos personalizados</span>
-            </div>
-          </div>
-          <button onclick="dismissBanner()" style="flex-shrink:0;border:none;background:none;cursor:pointer;color:var(--sidebar-ink-2);font-size:18px;padding:2px;">✕</button>
-        </div>
-        <button onclick="goTo('record')" class="btn btn-primary" style="margin-top:12px;width:100%;font-size:13px;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Registrar mi primer día →</button>
-      </div>
-
-      <!-- Live portfolio block -->
-      <div id="dash-live-block" style="margin-bottom:16px;"></div>
-
-      <!-- Aquí había dos tarjetas: «Mi dinero total» y «Hoy subió / bajó».
-           Las dos repetían lo que ya muestran la cabecera verde y la tarjeta
-           «Portafolio en vivo» de arriba, y encima con cifras distintas: estas
-           traían el precio en vivo y la cabecera el último día registrado. Con
-           tres sitios mostrando el mismo dinero no había forma de saber cuál
-           era el bueno. Queda un solo sitio, y este hueco pasa a decir qué
-           hacer, que es lo único que la pantalla de entrada no decía. -->
-      <div class="card card-lift" id="kpi-next-card" style="padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Qué te toca</div>
-          <div id="kpi-next-title" style="font-size:18px;font-weight:700;font-family:var(--font-display);line-height:1.25;">—</div>
-          <div id="kpi-next-sub" style="font-size:12px;color:var(--text-3);margin-top:4px;"></div>
-        </div>
-        <button id="kpi-next-btn" onclick="goTo('record',null)" class="btn btn-primary" style="flex-shrink:0;display:none;">Registrar</button>
-      </div>
-
-      <!-- Contenedores sin pintar: kpiLive() sigue escribiendo aquí y de aquí
-           se refleja a la cabecera verde, que es donde el usuario lo lee. -->
-      <span id="kpi-value" style="display:none;"></span>
-      <span id="kpi-delta" style="display:none;"></span>
-      <span id="kpi-live-dot" style="display:none;"></span>
-      <span id="kpi-live-status" style="display:none;"></span>
-
-      <!-- Sectores hoy -->
-      <div id="dash-sectors" style="margin-bottom:16px;"></div>
-
-      <!-- hidden ids kept for JS compat -->
-      <span id="kpi-best" style="display:none;"></span>
-      <span id="kpi-tech" style="display:none;"></span>
-
-      <!-- Setup checklist — visible hasta completar los 3 pasos, luego desaparece -->
-      <div id="setup-checklist" style="margin-bottom:12px;"></div>
-
-      <!-- Unsync banner — aparece cuando el valor en vivo difiere del último registro -->
-      <div id="kpi-unsync-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--warning-light);border:1px solid var(--warning-border);border-radius:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:16px;">⚠️</span>
-            <div>
-              <div style="font-size:12px;font-weight:600;color:var(--warning-text);">Valor en vivo no sincronizado con el historial</div>
-              <div id="kpi-unsync-diff" style="font-size:11px;color:var(--warning-text);">—</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button onclick="refreshLiveValue()" id="btn-live-refresh" class="btn btn-ghost btn-sm" style="padding:5px 10px;font-size:14px;" title="Actualizar precios">↻</button>
-            <button onclick="syncLiveNow()" class="btn btn-sm" style="background:var(--warning-bright);color:var(--warning-text);border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">Sincronizar</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Evolución -->
-      <div class="card" style="padding:18px;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Evolución de mi portafolio</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Valor en USD · Cada punto = un día que anotaste</div>
-          </div>
-          <span id="date-badge" class="badge b-pri">—</span>
-        </div>
-        <div class="chart-box" style="--chart-h:220px;">
-          <canvas id="value-chart"></canvas>
-          <div id="value-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
-        </div>
-      </div>
-      <!-- hidden canvas kept so Charts.init() doesn't throw if referenced -->
-      <canvas id="sector-chart" style="display:none;"></canvas>
-      <div id="sector-legend" style="display:none;"></div>
-
-      <!-- AI insight -->
-      <div class="card" style="padding:18px;">
-        <div style="display:flex;gap:14px;align-items:flex-start;">
-          <div style="width:38px;height:38px;background:var(--primary-light);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary-ink);" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10M12 8v4l3 3"/><circle cx="19" cy="5" r="3"/></svg>
-          </div>
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-              <span style="font-size:13px;font-weight:700;font-family:var(--font-display);">Qué está pasando hoy</span>
-              <span class="badge b-pri" style="font-size:10px;">IA</span>
-            </div>
-            <p id="daily-insight" style="font-size:13px;color:var(--text-2);line-height:1.7;">Analizando tu portafolio…</p>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:9px;">
-              <span style="font-size:11px;color:var(--text-3);">Confianza:</span>
-              <div class="cbar" style="width:100px;"><div class="cbar-fill" id="conf-fill" style="width:0%;"></div></div>
-              <span id="conf-val" style="font-size:11px;font-weight:600;color:var(--primary-ink);">0%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Historial. Era una pantalla propia con una sola tarjeta, alcanzable
-           únicamente por el cajón lateral: en el teléfono, tres toques. Vive
-           aquí plegada, y libera un destino de navegación. -->
-      <details class="card m-collapse" style="padding:18px;" open>
-        <summary class="m-summary">
-          <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Historial de días</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Un registro por cada día que anotaste</div>
-          </div>
-          <span id="hist-count" class="badge b-neu">0 días</span>
-        </summary>
-        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:9px;margin-top:14px;">
-          <table class="tbl">
-            <thead><tr id="hist-head"></tr></thead>
-            <tbody id="hist-body"></tbody>
-          </table>
-        </div>
-      </details>
-    </div>
-
-    <!-- ════════ PORTFOLIO ════════ -->
-    <div id="page-portfolio" class="page">
-
-      <!-- Empty state for users with no sessions and no positions -->
-      <div id="portfolio-empty-state" style="display:none;text-align:center;padding:48px 24px;">
-        <div style="font-size:40px;margin-bottom:16px;"><svg class="ic" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-        <div style="font-size:18px;font-weight:700;font-family:var(--font-display);margin-bottom:8px;">Aún no tienes activos registrados</div>
-        <div style="font-size:13px;color:var(--text-3);margin-bottom:24px;max-width:320px;margin-left:auto;margin-right:auto;">Agrega tus posiciones y registra tu primer día para ver el análisis completo de tu portafolio.</div>
-        <button onclick="goTo('record')" class="btn btn-primary" style="margin-right:8px;">Registrar mi portafolio</button>
-        <button onclick="goTo('buy')" class="btn btn-ghost">Agregar posiciones</button>
-      </div>
-
-      <!-- Precios reales del mercado -->
-      <div id="market-prices-card" class="card" style="padding:18px;margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Precios reales de hoy</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Precio actual · Cambio de hoy · PER · Recomendación de analistas de Wall Street</div>
-          </div>
-          <button onclick="fetchMarketData()" class="btn btn-ghost btn-sm">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Actualizar
-          </button>
-        </div>
-        <div id="market-loading" style="text-align:center;padding:18px;color:var(--text-3);font-size:13px;">⟳ Cargando precios del mercado…</div>
-        <div id="market-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" class="g4"></div>
-        <!-- Latest news strip -->
-        <div id="market-news" style="margin-top:12px;display:none;border-top:1px solid var(--border);padding-top:10px;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Últimas noticias <span style="font-weight:400;text-transform:none;letter-spacing:0;">(fuente en inglés)</span></div>
-          <div id="news-list" style="display:flex;flex-direction:column;gap:5px;"></div>
-        </div>
-      </div>
-
-      <!-- «Rendimiento de cada acción» y «Estado actual» eran dos tarjetas
-           que respondían lo mismo: el gráfico era una columna de la tabla,
-           dibujada. Unidas son una sola unidad de lectura — primero la forma,
-           luego el detalle — y en el teléfono ahorran una cabecera entera. -->
-      <div id="portfolio-charts-row" style="display:block;margin-bottom:14px;">
-        <div class="card" style="padding:18px;">
-          <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Cada acción, cómo va</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">% desde que compraste · cambio vs el día anterior</div>
-          <div class="chart-box" style="--chart-h:250px;">
-            <canvas id="returns-chart"></canvas>
-            <div id="returns-chart-empty" class="chart-empty" style="display:none;">Aparecerá aquí después de tu primer registro</div>
-          </div>
-          <div style="height:1px;background:var(--border);margin:18px 0 14px;"></div>
-          <div style="overflow-x:auto;">
-            <table class="tbl">
-              <thead><tr>
-                <th>Acción</th><th>Tipo</th>
-                <th title="% desde que la compraste">Ganancia</th>
-                <th title="Cambio respecto al día anterior">Vs ayer</th>
-                <th>Estado</th>
-              </tr></thead>
-              <tbody id="asset-table"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="card" id="portfolio-journey-card" style="padding:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Tu viaje inversor</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Rendimiento semana a semana · últimas 6 semanas</div>
-          </div>
-          <span class="badge b-pri">Semanal</span>
-        </div>
-        <div id="growth-journey" style="display:flex;align-items:center;overflow-x:auto;padding-bottom:6px;"></div>
-      </div>
-    </div>
-
-    <!-- ════════ AI ════════ -->
-    <div id="page-ai" class="page">
-      <!-- «Pulso del mercado» y «Qué hacer ahora» eran dos tarjetas separadas
-           alimentadas por la MISMA respuesta de la IA: pulse y recommendations
-           del mismo JSON. Separadas parecían dos análisis distintos. -->
-      <div class="card" style="padding:18px;margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Qué hacer ahora</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Análisis generado con IA · Groq</div>
-          </div>
-          <button onclick="refreshAi()" class="btn btn-ghost btn-sm" style="gap:5px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Actualizar IA
-          </button>
-        </div>
-        <div id="pulse-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" class="g4"></div>
-        <div id="pulse-date" style="display:none;"></div>
-        <div id="recommendations"></div>
-      </div>
-
-      <!-- ── Asesor personal ── -->
-      <div class="card" style="padding:18px;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="width:34px;height:34px;background:var(--primary-light);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary-ink);" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:700;font-family:var(--font-display);">Pregúntale a tu asesor</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:1px;">Analiza tu portafolio real · Groq + tus datos</div>
-          </div>
-        </div>
-        <div class="advisor-chips">
-          <button class="advisor-chip" onclick="askAdvisorChip('¿Debo vender algo ahora?')">¿Debo vender algo?</button>
-          <button class="advisor-chip" onclick="askAdvisorChip('¿Cuál es mi mayor riesgo ahora mismo?')">¿Mi mayor riesgo?</button>
-          <button class="advisor-chip" onclick="askAdvisorChip('¿Dónde debería reinvertir mis ganancias?')">¿Dónde reinvertir?</button>
-          <button class="advisor-chip" onclick="askAdvisorChip('¿Cómo está mi portafolio vs el mercado?')">¿Cómo estoy vs el mercado?</button>
-        </div>
-        <div class="advisor-input-row">
-          <input id="advisor-input" type="text" class="advisor-input" placeholder="Pregunta lo que quieras sobre tu portafolio…" onkeydown="if(event.key==='Enter')submitAdvisor()" />
-          <button onclick="submitAdvisor()" class="btn btn-primary" style="flex-shrink:0;min-width:88px;">Preguntar</button>
-        </div>
-        <div id="advisor-response"></div>
-      </div>
-
-      <div class="card" style="padding:18px;">
-        <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;">Lo que el algoritmo aprendió de ti</div>
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;">Cuanto más datos registres, más personalizados serán los consejos</div>
-        <div class="g2" id="learning-profile" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
-      </div>
-    </div>
-
-    <!-- ════════ RECORD ════════ -->
-    <div id="page-record" class="page">
-      <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="card" style="padding:22px;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border);">
-            <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--success),var(--success-bright));border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-            </div>
-            <div>
-              <div style="font-size:15px;font-weight:800;font-family:var(--font-display);">Registrar el día de hoy</div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">La descripción se genera automáticamente al completar</div>
-            </div>
-          </div>
-          <form id="record-form" style="display:flex;flex-direction:column;gap:14px;">
-            <!-- <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Registro rápido -->
-            <div style="background:var(--primary-light);border:1.5px solid var(--primary-border);border-radius:11px;padding:13px;">
-              <div style="font-size:12px;font-weight:700;color:var(--primary-ink);margin-bottom:8px;"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Registro rápido</div>
-              <div style="font-size:11px;color:var(--primary-mid);margin-bottom:10px;line-height:1.5;">Calcula automáticamente desde tus posiciones registradas. Solo ingresa tu saldo en efectivo de XTB.</div>
-              <div id="qr-no-positions-hint" style="display:none;background:var(--warning-light);border:1px solid var(--warning-border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--warning-text);margin-bottom:8px;line-height:1.5;">
-                ⚠️ Primero agrega tus posiciones en la sección <strong>"Mis posiciones"</strong> aquí abajo — solo se hace una vez.
-              </div>
-              <div id="qr-cash-hint" style="display:none;font-size:11px;color:var(--text-3);margin-bottom:8px;line-height:1.5;"></div>
-              <button type="button" id="btn-quick-record" onclick="quickRecord()" class="btn btn-primary btn-sm" style="width:100%;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Calcular y registrar</button>
-              <div id="qr-cash-row" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--primary-border);">
-                <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">
-                  Valor de tus acciones: <strong id="qr-stocks-value" style="color:var(--primary-ink);">$0</strong>
-                </div>
-                <div style="display:flex;gap:8px;align-items:flex-end;">
-                  <label style="flex:1;margin:0;">
-                    <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px;">Saldo en efectivo XTB (USD)</span>
-                    <input id="qr-cash" type="number" step="0.01" placeholder="0.00" min="0" />
-                  </label>
-                  <button type="button" onclick="applyQuickRecord()" class="btn btn-success btn-sm" style="align-self:flex-end;">Aplicar</button>
-                </div>
-              </div>
-            </div>
-            <div class="form-section-label">① Datos del día</div>
-            <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <label><span class="lbl">Fecha *</span><input id="f-fecha" type="date" required /></label>
-              <label>
-                <span class="lbl">Valor total en USD *
-                  <span class="help-icon" tabindex="0" data-tip="Abre tu app XTB y anota el valor total de tu portafolio.">?</span>
-                </span>
-                <input id="f-valor" type="number" step="0.01" placeholder="80.00" required oninput="autoDesc()" />
-              </label>
-            </div>
-            <label>
-              <span class="lbl">¿Agregaste capital hoy? (opcional)
-                <span class="help-icon" tabindex="0" data-tip="Si hoy metiste dinero nuevo a tu cuenta de XTB, indica el monto aquí. Así el sistema no lo confunde con ganancia de mercado.">?</span>
-              </span>
-              <input id="f-capital" type="number" step="0.01" min="0" placeholder="0.00" />
-            </label>
-            <div>
-              <div class="form-section-label" style="margin-bottom:10px;">② Rendimiento de cada acción (%)
-                <span class="help-icon" tabindex="0" data-tip="En XTB: abre cada posición y copia el % de ganancia/pérdida. Positivo (+) = ganas, negativo (–) = pierdes." style="font-weight:400;text-transform:none;letter-spacing:0;">?</span>
-              </div>
-              <div style="font-size:11px;color:var(--text-3);margin-bottom:9px;line-height:1.5;">Verde = ganancia · Rojo = pérdida. Valores acumulados desde tu compra.</div>
-              <div id="return-inputs" style="display:grid;grid-template-columns:1fr 1fr;gap:9px;"></div>
-            </div>
-            <div class="form-section-label">③ Revisar y guardar</div>
-            <label>
-              <span class="lbl">Descripción <span style="font-size:11px;color:var(--text-3);font-weight:400;">(se genera automáticamente)</span></span>
-              <textarea id="f-fase" rows="2" placeholder="Se calculará sola al completar los rendimientos…" style="resize:none;"></textarea>
-              <div class="field-help">Puedes editarla o dejarla como está.</div>
-            </label>
-            <button type="submit" class="btn btn-success" style="width:100%;padding:12px;font-size:14px;" id="btn-save-record">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-              Guardar en la nube
-            </button>
-          </form>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <details class="card m-collapse" style="padding:18px;border-top:3px solid var(--info);" open>
-            <summary class="m-summary">
-              <div style="width:34px;height:34px;background:var(--info-light);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
-              <div>
-                <div style="font-size:13px;font-weight:700;">¿Dónde encuentro estos datos?</div>
-                <div style="font-size:11px;color:var(--text-3);">Guía rápida XTB</div>
-              </div>
-            </summary>
-            <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px;">
-              <div class="xtb-step"><div class="xtb-num">1</div><span>Abre la <strong>app o web</strong> de XTB</span></div>
-              <div class="xtb-step"><div class="xtb-num">2</div><span>Ve a <strong>Mi Portafolio</strong></span></div>
-              <div class="xtb-step"><div class="xtb-num">3</div><span>Anota el <strong>valor total</strong> — aparece arriba en grande</span></div>
-              <div class="xtb-step"><div class="xtb-num">4</div><span>El <strong>% de cada acción</strong> aparece al lado (ej: NVDA +8.65%)</span></div>
-            </div>
-            <div style="margin-top:12px;padding:10px 12px;background:var(--info-light);border-radius:9px;font-size:11px;color:var(--info-text);line-height:1.55;border:1px solid var(--info-border);">
-              ℹ️ Los rendimientos son <strong>acumulados desde que compraste</strong>, no solo el cambio de hoy.
-            </div>
-          </details>
-          <details class="card m-collapse" style="padding:18px;" open>
-            <summary class="m-summary">
-              <div style="width:30px;height:30px;background:var(--surface-2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7L5.6 5.6"/></svg></div>
-              <div style="font-size:13px;font-weight:700;">Gestión de datos</div>
-            </summary>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-              <button id="btn-export" class="btn btn-ghost" style="width:100%;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Exportar mis datos (JSON)
-              </button>
-              <button id="btn-reset" class="btn btn-danger" style="width:100%;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
-                Borrar todos mis registros
-              </button>
-            </div>
-          </details>
-        </div>
-      </div>
-
-      <!-- Mis posiciones -->
-      <div class="card" style="padding:18px;margin-top:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--primary-soft));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-            </div>
-            <div>
-              <div style="font-size:14px;font-weight:800;font-family:var(--font-display);">Mis posiciones</div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:1px;">Setup único — solo se hace una vez</div>
-            </div>
-          </div>
-          <button type="button" onclick="toggleAddPosition()" class="btn btn-primary btn-sm" style="gap:5px;" id="btn-add-position">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Agregar compra
-          </button>
-        </div>
-        <!-- Add purchase form -->
-        <div id="add-position-panel" style="display:none;background:var(--primary-light);border:1px solid var(--primary-border);border-radius:11px;padding:14px;margin-bottom:14px;">
-          <div style="font-size:12px;font-weight:700;color:var(--primary-ink);margin-bottom:6px;">Nueva compra</div>
-          <div style="font-size:11px;color:var(--primary-mid);margin-bottom:10px;">Puedes ingresar el volumen directamente o el monto en USD que invertiste.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <label style="margin:0;">
-              <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:3px;">Ticker</span>
-              <input id="pos-ticker" placeholder="Ej: VOO, NVDA" style="text-transform:uppercase;" />
-            </label>
-            <label style="margin:0;">
-              <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:3px;">Precio por acción (USD)</span>
-              <input id="pos-price" type="number" step="0.01" min="0.01" placeholder="652.32" oninput="calcPosShares()" />
-            </label>
-            <label style="margin:0;">
-              <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:3px;">Volumen XTB <span style="font-weight:400;">(ej: 0.0016)</span></span>
-              <input id="pos-shares" type="number" step="0.000001" min="0.000001" placeholder="0.0016" oninput="clearPosMonto()" />
-            </label>
-            <label style="margin:0;">
-              <span style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:3px;">— o monto invertido (USD)</span>
-              <input id="pos-monto" type="number" step="0.01" min="0.01" placeholder="1.10" oninput="calcPosShares()" />
-            </label>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button type="button" onclick="savePosition()" class="btn btn-primary btn-sm" style="flex:1;">Guardar compra</button>
-            <button type="button" onclick="toggleAddPosition()" class="btn btn-ghost btn-sm">Cancelar</button>
-          </div>
-          <div id="pos-msg" style="font-size:11px;margin-top:7px;min-height:14px;"></div>
-        </div>
-        <!-- Portfolio KPI banner -->
-        <div id="portfolio-kpi"></div>
-        <!-- Positions list -->
-        <div id="positions-list"></div>
-      </div>
-    </div>
-
-    <!-- ════════ HISTORY ════════ -->
-    <!-- ════════ PER ════════ -->
-    <div id="page-per" class="page">
-      <div class="card" style="padding:20px;margin-bottom:14px;border-left:4px solid var(--amber);">
-        <div onclick="toggleExplain()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <div style="font-size:15px;font-weight:700;font-family:var(--font-display);">¿Qué significa el PER? ¿Para qué sirve?</div>
-            <div style="font-size:12px;color:var(--text-3);margin-top:2px;">Toca para entenderlo con un ejemplo real</div>
-          </div>
-          <span id="explain-arrow" style="font-size:20px;color:var(--text-3);">▼</span>
-        </div>
-        <div class="explain-body" id="explain-body">
-          <div style="margin-top:14px;padding:14px;background:var(--warning-light);border-radius:10px;border:1px solid var(--warning-border);">
-            <p style="font-size:13px;color:var(--warning-text);line-height:1.75;margin-bottom:10px;"><strong>Imagínate esto:</strong> Hay una panadería que gana $10 al año. Si la venden en $150, pagas 15 años de ganancias → <strong>PER = 15</strong>. Si la venden en $300, pagas 30 años → <strong>PER = 30</strong>.</p>
-            <p style="font-size:13px;color:var(--warning-text);line-height:1.75;margin-bottom:10px;">En bolsa pasa igual: el PER dice <em>"¿cuántos años de ganancias estás pagando por esta empresa?"</em></p>
-            <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">
-              <div style="display:flex;align-items:center;gap:10px;"><div class="per-dot" style="background:var(--success-bright);"></div><span style="font-size:13px;color:var(--success-text);"><strong>Menos de 18:</strong> Posiblemente barata. Vale investigar si el negocio está sano.</span></div>
-              <div style="display:flex;align-items:center;gap:10px;"><div class="per-dot" style="background:var(--warning-bright);"></div><span style="font-size:13px;color:var(--warning-text);"><strong>Entre 18 y 25:</strong> Precio normal. Funciona si la empresa sigue creciendo.</span></div>
-              <div style="display:flex;align-items:center;gap:10px;"><div class="per-dot" style="background:var(--danger-bright);"></div><span style="font-size:13px;color:var(--danger-text);"><strong>Más de 25:</strong> Cara. Solo tiene sentido si crece muy rápido (como NVDA o MSFT).</span></div>
-            </div>
-            <p style="font-size:12px;color:var(--warning-text);margin-top:10px;font-style:italic;">PER alto no significa mala acción. NVIDIA tiene PER altísimo porque crece enormemente — lo importante es entender POR QUÉ.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="padding:20px;margin-bottom:14px;">
-        <div style="font-size:14px;font-weight:700;font-family:var(--font-display);margin-bottom:4px;">Evalúa tus acciones actuales</div>
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;">
-          PER actualizado automáticamente al cargar la página. Toca <strong>Evaluar</strong> para ver el análisis.
-        </div>
-        <div id="per-my-assets" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
-        <button onclick="evaluateAllPer()" class="btn btn-primary" style="width:100%;">Evaluar todas mis acciones</button>
-        <div id="per-my-results" style="margin-top:12px;display:none;"></div>
-      </div>
-
-      <div class="card" style="padding:20px;">
-        <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:3px;"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> ¿Me conviene esta acción?</div>
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:16px;">Escribe el símbolo y te decimos el precio, si está cara o barata, qué opinan los analistas y si es buen momento para comprarla.</div>
-
-        <!-- Buscador -->
-        <form id="per-form" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:20px;">
-          <label style="flex:1;margin:0;">
-            <span class="lbl">Símbolo de bolsa</span>
-            <input id="per-ticker" placeholder="Ej: AAPL, TSLA, GOOGL, QQQ" style="text-transform:uppercase;letter-spacing:.05em;" />
-          </label>
-          <button type="submit" class="btn btn-primary" style="flex-shrink:0;white-space:nowrap;">Analizar →</button>
-        </form>
-        <div id="per-loading" style="display:none;font-size:13px;color:var(--text-3);padding:10px 0;"></div>
-        <div id="per-result" style="margin-bottom:20px;display:none;"></div>
-
-        <!-- El veredicto de compra vivía en la página IA, en dos cajas idénticas
-             que no explicaban por qué eran dos. Analizar una acción que no
-             tienes es una sola cosa, y esta es su página. -->
-        <div class="buy-slot" id="buy-slot-0" style="display:none;margin-bottom:20px;">
-          <div class="buy-slot-result" style="display:none;"></div>
-        </div>
-
-        <!-- Watchlist -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div>
-            <div style="font-size:13px;font-weight:700;"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Acciones y ETFs para explorar</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:1px;">Precios en vivo · Toca para analizar</div>
-          </div>
-        </div>
-        <div id="per-watchlist" style="display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
-    </div>
-
-  </div><!-- /pad -->
-</div><!-- /main-wrapper -->
-
-<!-- Bottom nav -->
-<nav class="bottom-nav">
-  <button class="bnav-btn active" data-page="dashboard" onclick="goTo('dashboard',null)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Resumen</button>
-  <button class="bnav-btn" data-page="portfolio" onclick="goTo('portfolio',null)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>Activos</button>
-  <button class="bnav-btn" data-page="ai" onclick="goTo('ai',null)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10M12 8v4l3 3"/><circle cx="19" cy="5" r="3"/></svg>IA</button>
-  <button class="bnav-btn" data-page="record" onclick="goTo('record',null)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Registrar</button>
-  <button class="bnav-btn" data-page="per" onclick="goTo('per',null)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>¿Cara?</button>
-</nav>
-
-<!-- Modal cambiar contraseña -->
-<div id="pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px;">
-  <div class="card" style="padding:28px;max-width:360px;width:100%;">
-    <div style="font-size:15px;font-weight:700;font-family:var(--font-display);margin-bottom:14px;">Cambiar contraseña</div>
-    <label style="display:block;margin-bottom:10px;"><span class="lbl">Nueva contraseña</span><input id="new-pwd" type="password" placeholder="Mínimo 6 caracteres" /></label>
-    <label style="display:block;margin-bottom:16px;"><span class="lbl">Confirmar contraseña</span><input id="new-pwd2" type="password" placeholder="Repite la contraseña" /></label>
-    <div style="display:flex;gap:8px;">
-      <button onclick="changePassword()" class="btn btn-primary" style="flex:1;">Guardar</button>
-      <button onclick="closePwdModal()" class="btn btn-ghost">Cancelar</button>
-    </div>
-    <p id="pwd-err" style="font-size:12px;color:var(--danger);margin-top:8px;display:none;"></p>
-  </div>
+  <main id="view" class="view" tabindex="-1"></main>
 </div>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
-<script>
-if (window.location.hash.includes('error=')) {
-  history.replaceState(null, '', window.location.pathname + window.location.search);
-}
-</script>
-<script type="module" src="src/bindings.js"></script>
+<script type="module" src="src/app.js"></script>
 </body>
 </html>

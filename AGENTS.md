@@ -1,4 +1,4 @@
-# InvestSmart — Project CLAUDE.md
+# InvestSmart — Project AGENTS.md
 
 ## What this project is
 A personal investment portfolio tracker for XTB users, built as a pure static web app (no build step), mobile-first.

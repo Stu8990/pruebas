@@ -76,7 +76,7 @@ async function getYahooCrumb(): Promise<{ crumb: string; cookie: string } | null
   } catch { return null; }
 }
 
-async function fetchTicker(ticker: string, crumb: string, cookie: string) {
+async function fetchTicker(ticker: string, crumb: string, cookie: string, monthStartIso: string | null) {
   try {
     const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}` +
       `?modules=price,summaryDetail,recommendationTrend&crumb=${encodeURIComponent(crumb)}`;
@@ -116,9 +116,14 @@ async function fetchTicker(ticker: string, crumb: string, cookie: string) {
       }
     } catch { /* news es opcional */ }
 
+    // Sólo si el cliente lo pide (una vez al mes): el dato no cambia en el mes.
+    const monthStartPrice = monthStartIso ? await fetchMonthStartPrice(ticker, crumb, cookie, monthStartIso) : undefined;
+
     return {
       ticker,
       name:          price.longName ?? price.shortName ?? ticker,
+      quoteType:     price.quoteType ?? null,
+      monthStartPrice,
       currentPrice:  price.regularMarketPrice?.raw ?? null,
       changePercent: price.regularMarketChangePercent?.raw != null
                        ? price.regularMarketChangePercent.raw * 100 : null,
@@ -136,6 +141,28 @@ async function fetchTicker(ticker: string, crumb: string, cookie: string) {
   } catch (err) {
     return { ticker, error: (err as Error).message, currentPrice: null, pe: null };
   }
+}
+
+// Cierre del último día hábil ANTES del primer día del mes en curso: es el
+// punto de partida para explicar cuánto se ganó o perdió en el mes. Opcional:
+// si Yahoo no responde, la app lo reconstruye con el historial del usuario.
+async function fetchMonthStartPrice(ticker: string, crumb: string, cookie: string, monthStartIso: string): Promise<number | null> {
+  try {
+    const monthStart = Date.parse(monthStartIso + 'T00:00:00Z') / 1000;
+    if (!Number.isFinite(monthStart)) return null;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}` +
+      `?period1=${monthStart - 12 * 86400}&period2=${monthStart}&interval=1d&crumb=${encodeURIComponent(crumb)}`;
+    const res = await fetch(url, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const r = json.chart?.result?.[0];
+    const ts: number[] = r?.timestamp ?? [];
+    const closes: (number | null)[] = r?.indicators?.quote?.[0]?.close ?? [];
+    for (let i = closes.length - 1; i >= 0; i--) {
+      if (ts[i] < monthStart && typeof closes[i] === 'number') return closes[i] as number;
+    }
+    return null;
+  } catch { return null; }
 }
 
 async function searchAssets(q: string, crumb: string, cookie: string) {
@@ -166,7 +193,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json() as { tickers?: unknown; search?: unknown };
+    const body = await req.json() as { tickers?: unknown; search?: unknown; monthStart?: unknown };
 
     // ── Modo búsqueda ────────────────────────────────
     if (body.search !== undefined) {
@@ -204,7 +231,9 @@ Deno.serve(async (req: Request) => {
     if (!auth)
       return new Response(JSON.stringify({ error: 'No se pudo autenticar con Yahoo Finance' }), { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-    const results = await Promise.all((tickers as string[]).map(t => fetchTicker(t, auth.crumb, auth.cookie)));
+    // Mes del cliente (su zona horaria), no el de UTC. Formato estricto AAAA-MM-01.
+    const monthStartIso = typeof body.monthStart === 'string' && /^\d{4}-(0[1-9]|1[0-2])-01$/.test(body.monthStart) ? body.monthStart : null;
+    const results = await Promise.all((tickers as string[]).map(t => fetchTicker(t, auth.crumb, auth.cookie, monthStartIso)));
     return new Response(JSON.stringify(results), { headers: { ...cors, 'Content-Type': 'application/json' } });
 
   } catch (err) {

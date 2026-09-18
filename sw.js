@@ -1,4 +1,4 @@
-const CACHE = 'investsmart-v28';
+const CACHE = 'investsmart-v30';
 const BASE = '/pruebas';
 const SHELL = [
   BASE + '/',
@@ -8,24 +8,20 @@ const SHELL = [
   BASE + '/icons/icon.svg',
   BASE + '/icons/icon-maskable.svg',
   BASE + '/src/config.js',
-  BASE + '/src/utils.js',
-  BASE + '/src/sync.js',
-  BASE + '/src/assets.js',
-  BASE + '/src/store.js',
   BASE + '/src/auth.js',
-  BASE + '/src/learn.js',
-  BASE + '/src/charts.js',
-  BASE + '/src/ui.js',
-  BASE + '/src/prices.js',
-  BASE + '/src/ai.js',
-  BASE + '/src/icons.js',
-  BASE + '/src/buy.js',
-  BASE + '/src/positions.js',
-  BASE + '/src/record.js',
-  BASE + '/src/bindings.js',
-  BASE + '/src/per.js',
-  BASE + '/src/onboarding.js',
+  BASE + '/src/data.js',
+  BASE + '/src/model.js',
+  BASE + '/src/format.js',
   BASE + '/src/app.js',
+  BASE + '/src/core/portfolio.js',
+  BASE + '/src/core/advice.js',
+  BASE + '/src/core/trades.js',
+  BASE + '/src/ui/sheet.js',
+  BASE + '/src/ui/chart.js',
+  BASE + '/src/views/home.js',
+  BASE + '/src/views/holdings.js',
+  BASE + '/src/views/plan.js',
+  BASE + '/src/views/more.js',
 ];
 
 self.addEventListener('install', event => {
