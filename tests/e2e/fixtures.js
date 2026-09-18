@@ -222,7 +222,7 @@ export async function mockBackend(page, scenario = {}) {
       const body = req.postDataJSON() ?? {};
       calls.ai.push(body);
       if (scenario.aiFails) return json({ error: 'Servicio no configurado' }, 500);
-      if (body.mode === 'advisor') return json({ answer: 'Respuesta de prueba del asesor.' });
+      if (body.mode === 'advisor') return json({ answer: scenario.aiAnswer ?? 'Respuesta de prueba del asesor.' });
       if (body.mode === 'explain') return json({ summary: 'Resumen de prueba de la IA.' });
       return json(scenario.ai ?? {
         insight: 'Insight de prueba.',

@@ -1,4 +1,4 @@
-const CACHE = 'investsmart-v30';
+const CACHE = 'investsmart-v32';
 const BASE = '/pruebas';
 const SHELL = [
   BASE + '/',
@@ -7,6 +7,10 @@ const SHELL = [
   BASE + '/manifest.json',
   BASE + '/icons/icon.svg',
   BASE + '/icons/icon-maskable.svg',
+  BASE + '/icons/icon-192.png',
+  BASE + '/icons/apple-touch-icon.png',
+  BASE + '/assets/auth-hero.webp',
+  BASE + '/assets/auth-hero-dark.webp',
   BASE + '/src/config.js',
   BASE + '/src/auth.js',
   BASE + '/src/data.js',
@@ -26,8 +30,12 @@ const SHELL = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
+    // cache: 'reload' salta la caché HTTP del navegador. GitHub Pages marca
+    // todo con max-age=600: sin esto, una versión nueva podía guardarse con
+    // el CSS o el JS de la anterior (HTML nuevo + estilos viejos = pantalla
+    // descuadrada al refrescar).
     caches.open(CACHE)
-      .then(cache => cache.addAll(SHELL))
+      .then(cache => cache.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -54,14 +62,14 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(cached => {
       // Stale-while-revalidate: serve cache immediately, update in background
       if (cached) {
-        fetch(event.request).then(res => {
+        fetch(event.request, { cache: 'no-cache' }).then(res => {
           if (res && res.status === 200 && res.type === 'basic') {
             caches.open(CACHE).then(c => c.put(event.request, res));
           }
         }).catch(() => {});
         return cached;
       }
-      return fetch(event.request).then(res => {
+      return fetch(event.request, { cache: 'no-cache' }).then(res => {
         if (!res || res.status !== 200 || res.type !== 'basic') return res;
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(event.request, clone));

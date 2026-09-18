@@ -1,7 +1,7 @@
 // Punto de entrada: acceso, navegación, eventos y ciclo de carga.
 // Sin handlers en línea: todo va por delegación con data-action.
 
-import { db, signIn, signUp, sendReset, changePassword, signOut } from './auth.js';
+import { db, landing, signIn, signUp, sendReset, changePassword, signOut } from './auth.js';
 import {
   state, resetState, isStale, currentGen, loadUserPrefs, loadPositions, loadHistory, loadMarket, quote, searchTickers,
   addTrade, deleteTrade, setCash, setProfile, snapshotToday, recordManualValue, deleteHistory,
@@ -17,8 +17,19 @@ import { renderPlan, planState } from './views/plan.js';
 import { renderMore } from './views/more.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const TABS = { inicio: renderHome, acciones: renderHoldings, plan: renderPlan, mas: renderMore };
+const TABS = { inicio: renderHome, acciones: renderHoldings, plan: renderPlan, mas: () => renderMore({ theme: getTheme() }) };
 const TITLES = { inicio: 'Inicio', acciones: 'Mis acciones', plan: 'Tu plan', mas: 'Más' };
+
+// ── Apariencia ─────────────────────────────────────────────
+// Clara por defecto (así viene en <html data-theme="light">). Se guarda en
+// este dispositivo; «auto» sigue al sistema.
+const THEME_KEY = 'investsmart-theme';
+function getTheme() { try { return localStorage.getItem(THEME_KEY) || 'light'; } catch { return 'light'; } }
+function applyTheme(t) {
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+}
+applyTheme(getTheme());
 
 // ── Toast ──────────────────────────────────────────────────
 let toastTimer = null;
@@ -182,7 +193,7 @@ async function startApp(user) {
   startTimer();
 }
 
-function showAuth() {
+function showAuth({ view = 'login', error = '' } = {}) {
   resetState();
   resetUi();
   stopTimer();
@@ -190,17 +201,38 @@ function showAuth() {
   $('#app').hidden = true;
   $('#auth').hidden = false;
   closeSheet();
+  authView(view, { focus: false });
+  if (error) formMsg($(`#form-${view}`), { error });
 }
 
+// Si se llega desde el enlace de «olvidé mi contraseña», Supabase ya deja la
+// sesión iniciada, pero antes de entrar hay que pedir la contraseña nueva.
+let recovering = landing.recovery;
+
 db.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') recovering = true;
+  if (session?.user && recovering) { showAuth({ view: 'reset' }); return; }
   if (session?.user) startApp(session.user);
-  else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') showAuth();
+  else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+    showAuth(landing.error && !showAuth.shownLandingError
+      ? { view: 'forgot', error: 'El enlace caducó o ya se usó. Pide uno nuevo aquí.' }
+      : {});
+    showAuth.shownLandingError = true;
+  }
 });
 
 // ── Acceso ─────────────────────────────────────────────────
-function authView(v) {
-  for (const id of ['login', 'signup', 'forgot']) $(`#form-${id}`).hidden = id !== v;
-  $(`#form-${v} input`)?.focus();
+function authView(v, { focus = true } = {}) {
+  for (const id of ['login', 'signup', 'forgot', 'reset']) $(`#form-${id}`).hidden = id !== v;
+  // Las pestañas sólo tienen sentido entre «iniciar sesión» y «crear cuenta».
+  const tabs = $('.auth__tabs');
+  tabs.hidden = v === 'forgot' || v === 'reset';
+  tabs.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  // El correo escrito en un formulario pasa al siguiente.
+  const email = [...document.querySelectorAll('#auth input[type=email]')].map(i => i.value).find(Boolean);
+  const target = $(`#form-${v} input[type=email]`);
+  if (email && target && !target.value) target.value = email;
+  if (focus) $(`#form-${v} input`)?.focus();
 }
 
 function formMsg(form, { error, info } = {}) {
@@ -229,6 +261,19 @@ $('#form-signup').addEventListener('submit', async e => {
   const r = await busy(f.querySelector('[type=submit]'), 'Creando…', () => signUp(f.email.value.trim(), f.password.value, f.password2.value));
   formMsg(f, r);
 });
+$('#form-reset').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.currentTarget;
+  const r = await busy(f.querySelector('[type=submit]'), 'Guardando…', () => changePassword(f.p1.value, f.p2.value));
+  if (r.error) { formMsg(f, r); return; }
+  recovering = false;
+  f.reset();
+  history.replaceState(null, '', location.pathname + location.search + '#inicio');
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) { toast('Contraseña guardada', 'good'); startApp(session.user); }
+  else authView('login');
+});
+
 $('#form-forgot').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.currentTarget;
@@ -440,6 +485,13 @@ async function checkCandidate(raw) {
 // ── Delegación de eventos ──────────────────────────────────
 const actions = {
   'auth-view': b => authView(b.dataset.view),
+  'toggle-pwd': b => {
+    const input = b.closest('.pwd').querySelector('input');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    b.setAttribute('aria-pressed', String(show));
+    b.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  },
   go: b => { location.hash = b.dataset.tab; },
   refresh: () => refreshPrices(),
   reload: async () => {
@@ -511,6 +563,11 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('change', async e => {
+  if (e.target.dataset.action === 'theme') {
+    try { localStorage.setItem(THEME_KEY, e.target.value); } catch { /* sólo esta vez */ }
+    applyTheme(e.target.value);
+    return;
+  }
   if (e.target.dataset.action === 'profile') {
     try { await setProfile(e.target.value); } catch (err) { toast(err.message, 'bad'); }
     render();

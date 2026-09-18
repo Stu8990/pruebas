@@ -276,18 +276,66 @@ test('si no llegan precios lo explica y ofrece reintentar', async ({ page }) => 
   page.__errors = page.__errors.filter(e => !e.includes('502'));
 });
 
-test('ninguna pantalla se desborda a lo ancho en un teléfono pequeño', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  await mockBackend(page);
-  for (const tab of ['inicio', 'acciones', 'plan', 'mas']) {
-    await page.goto('./#' + tab);
-    await expect(page.locator('#view')).not.toBeEmpty();
-    await page.waitForTimeout(300);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow, `desborde en ${tab}`).toBeLessThanOrEqual(0);
+test('el acceso y las hojas no se desbordan a lo ancho en teléfonos pequeños', async ({ page }) => {
+  // Sin service worker: en WebKit las peticiones que pasan por él esquivan el
+  // simulador de Playwright y llegarían al Supabase real.
+  await page.addInitScript(() => { if (navigator.serviceWorker) navigator.serviceWorker.register = () => Promise.resolve({ update() {} }); });
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  for (const width of [320, 360]) {
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto('./');
+    await expect(page.locator('#form-login')).toBeVisible();
+    expect(await overflow(), `acceso a ${width}px`).toBeLessThanOrEqual(0);
   }
+  await mockBackend(page);
+  await page.goto('./?con-sesion#acciones'); // URL distinta: recarga de verdad
+  await page.getByRole('button', { name: /NVIDIA/ }).first().click();
+  expect(await page.locator('dialog').evaluate(d => d.scrollWidth - d.clientWidth), 'hoja de detalle').toBeLessThanOrEqual(0);
+  await page.getByRole('dialog').getByRole('button', { name: 'Anotar compra' }).click();
+  expect(await page.locator('dialog').evaluate(d => d.scrollWidth - d.clientWidth), 'formulario').toBeLessThanOrEqual(0);
+  expect(await overflow(), 'página con hoja abierta').toBeLessThanOrEqual(0);
+  page.__errors = page.__errors.filter(e => !/Failed to load resource/.test(e));
 });
 
+// Se mide cada elemento contra el ancho de la pantalla. Medir sólo el ancho
+// del documento no basta: body tiene overflow-x:hidden, que en el emulador
+// oculta el desborde, pero Safari de iPhone lo ignora y agranda la página.
+async function wideElements(page) {
+  return page.evaluate(() => {
+    const W = document.documentElement.clientWidth;
+    return [...document.querySelectorAll('#view *, .tabs, .topbar')]
+      .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > W + 1 || r.left < -1); })
+      .map(el => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')} → ${Math.round(el.getBoundingClientRect().right)}px de ${W}`)
+      .slice(0, 5);
+  });
+}
+
+test('ninguna pantalla se desborda a lo ancho en un teléfono pequeño', async ({ page }) => {
+  // Respuesta de IA con cadenas largas sin espacios, como las reales.
+  await mockBackend(page, { aiAnswer: 'Tu cartera VOO/SCHD/NVDA/MSFT/AMZN/VISA/GOOGL/META está bien. Mira https://finance.yahoo.com/quote/NVDA/key-statistics?p=NVDA&.tsrc=fin-srch para más.' });
+  // Con las fuentes reales: la de respaldo es más estrecha y escondía el fallo.
+  await page.route('https://fonts.googleapis.com/**', r => r.continue());
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 700 });
+    for (const tab of ['inicio', 'acciones', 'plan', 'mas']) {
+      await page.goto(`./?w=${width}#${tab}`);
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.locator('#view')).not.toBeEmpty();
+      await expect(page.locator('.refresh')).toContainText('Precios');
+      if (tab === 'plan') {
+        await page.getByRole('button', { name: '$500' }).click();
+        await page.getByLabel('Símbolo').fill('AAPL');
+        await page.getByRole('button', { name: 'Revisar' }).click();
+        await expect(page.locator('.candidate')).toBeVisible();
+        await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+        await expect(page.locator('.answer')).toBeVisible();
+      }
+      expect(await wideElements(page), `${tab} a ${width}px`).toEqual([]);
+      const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(extra, `${tab} a ${width}px: la página es ${extra}px más ancha que la pantalla`).toBeLessThanOrEqual(0);
+    }
+  }
+});
 // Cuenta B: otro id, una sola posición (AAPL), y su carga tarda en llegar.
 async function routeAccountB(page) {
   // Cuenta B: otro id, una sola posición, y su carga tarda en llegar.
@@ -318,7 +366,7 @@ async function signOutAndInAsB(page) {
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page.locator('#form-login')).toBeVisible();
   await page.locator('#form-login').getByLabel('Correo').fill('b@test');
-  await page.locator('#form-login').getByLabel('Contraseña').fill('secreta');
+  await page.locator('#form-login').getByLabel('Contraseña', { exact: true }).fill('secreta');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.locator('#app')).toBeVisible();
 }
@@ -333,7 +381,7 @@ test('al cambiar de cuenta no se ve ni se guarda nada de la cuenta anterior', as
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page.locator('#form-login')).toBeVisible();
   await page.locator('#form-login').getByLabel('Correo').fill('b@test');
-  await page.locator('#form-login').getByLabel('Contraseña').fill('secreta');
+  await page.locator('#form-login').getByLabel('Contraseña', { exact: true }).fill('secreta');
   // Vigía: anota si la app visible muestra algo de A aunque sea un instante.
   await page.evaluate(() => {
     window.__leak = [];
@@ -377,6 +425,20 @@ test('una respuesta tardía de la IA pedida por la cuenta anterior no aparece en
   await expect(page.locator('.candidate')).toHaveCount(0);
 });
 
+test('la app es clara por defecto aunque el teléfono esté en modo oscuro, y se puede cambiar', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await open(page, 'mas');
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const light = await bg();
+  const [r, g, b] = light.match(/\d+/g).map(Number);
+  expect(r + g + b, `fondo ${light} debería ser claro`).toBeGreaterThan(600);
+  await page.getByText('Oscuro', { exact: true }).click();
+  await expect.poll(async () => (await bg()).match(/\d+/g).map(Number).reduce((a, x) => a + x, 0)).toBeLessThan(150);
+  await page.reload();
+  await expect(page.locator('#view')).not.toBeEmpty();
+  expect((await bg()).match(/\d+/g).map(Number).reduce((a, x) => a + x, 0)).toBeLessThan(150);
+});
+
 // Una prueba por pantalla: axe tarda varios segundos por análisis y, juntas,
 // superaban el límite de 30 s con la máquina cargada.
 for (const tab of ['inicio', 'acciones', 'plan', 'mas']) {
@@ -401,7 +463,7 @@ test('la pantalla de acceso valida y muestra errores claros', async ({ page }) =
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Tu cartera de XTB, explicada en simple.' })).toBeVisible();
   await page.locator('#form-login').getByLabel('Correo').fill('a@b.com');
-  await page.locator('#form-login').getByLabel('Contraseña').fill('malapass');
+  await page.locator('#form-login').getByLabel('Contraseña', { exact: true }).fill('malapass');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.locator('#form-login .form-msg')).toHaveText('Correo o contraseña incorrectos.');
   page.__errors = page.__errors.filter(e => !e.includes('400'));

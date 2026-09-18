@@ -4,6 +4,25 @@
 
 import { SUPA_URL, SUPA_KEY } from './config.js';
 
+// Lo que trae la URL al volver del correo de «olvidé mi contraseña». Se lee
+// ANTES de crear el cliente: Supabase consume y borra esos parámetros al
+// iniciar, y la app necesita saber que hay que pedir una contraseña nueva.
+function readLanding() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  return {
+    recovery: p.get('type') === 'recovery' && p.has('access_token'),
+    error: p.get('error_code') || p.get('error') || null,
+  };
+}
+export const landing = readLanding();
+
+// Dirección a la que debe volver el enlace del correo: esta misma app
+// (en producción https://stu8990.github.io/pruebas/). Sin esto Supabase usa
+// la «Site URL» del proyecto, que puede apuntar a localhost.
+export function appUrl() {
+  return location.origin + location.pathname.replace(/[^/]*$/, '');
+}
+
 const { createClient } = supabase;
 
 export const db = createClient(SUPA_URL, SUPA_KEY, {
@@ -39,9 +58,15 @@ export async function signUp(email, password, password2) {
 
 export async function sendReset(email) {
   if (!email) return { error: 'Escribe tu correo.' };
-  const { error } = await db.auth.resetPasswordForEmail(email);
-  if (error) return { error: `No se pudo enviar: ${error.message}` };
-  return { info: 'Enlace enviado. Revisa tu correo.' };
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: appUrl() });
+  if (error) {
+    const m = error.message?.toLowerCase() ?? '';
+    if (error.status === 429 || m.includes('rate limit') || m.includes('seconds')) {
+      return { error: 'Ya pediste un enlace hace poco. Espera un minuto y vuelve a intentarlo.' };
+    }
+    return { error: `No se pudo enviar: ${error.message}` };
+  }
+  return { info: `Te enviamos un enlace a ${email}. Ábrelo desde este teléfono. Si no llega en unos minutos, revisa la carpeta de spam.` };
 }
 
 export async function changePassword(p1, p2) {

@@ -4,25 +4,28 @@
 
 /* ── Tokens ─────────────────────────────────────────────── */
 :root {
-  --bg: #F1F4EF;
+  --bg: #F5F8F6;
   --surface: #FFFFFF;
-  --surface-2: #E7ECE5;
-  --ink: #12201A;
-  --ink-2: #3F4F47;
-  --ink-3: #5B6A62;
-  --line: #D3DBD4;
-  --brand: #0E3B2E;
-  --brand-2: #1B5A45;
-  --on-brand: #F1F4EF;
-  --up: #17744A;
-  --down: #B3361F;
-  --warn: #8A5A0E;
-  --good-bg: #DCEFE2;
-  --bad-bg: #F7DFD9;
-  --warn-bg: #F5E7CB;
-  --neutral-bg: #E4E9E3;
+  --surface-2: #EAF2F1;
+  --ink: #17323A;
+  --ink-2: #425D63;
+  --ink-3: #5B7075;
+  --line: #D2DFDD;
+  --brand: #176B70;
+  --brand-2: #12575C;
+  --on-brand: #FFFFFF;
+  --up: #1D7650;
+  --down: #B54137;
+  --warn: #8A5E15;
+  --good-bg: #DDF1E6;
+  --bad-bg: #F8E3DF;
+  --warn-bg: #F8ECD2;
+  --neutral-bg: #E6EFEE;
   --focus: #2B7FFF;
   --seg-on: #FFFFFF;
+  --hero-bg: #EAF3F1;
+  --hero-art: url('assets/auth-hero.webp');
+  --hero-ink: #17323A;
 
   --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -39,33 +42,37 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0B1411;
-    --surface: #111D18;
-    --surface-2: #182721;
-    --ink: #E3ECE6;
-    --ink-2: #B4C3BB;
-    --ink-3: #8FA098;
-    --line: #243730;
-    --brand: #8AD9B1;
-    --brand-2: #B5EBCF;
-    --on-brand: #0B1411;
-    --up: #62D196;
-    --down: #FF8C75;
+    --hero-art: url('assets/auth-hero-dark.webp');
+    --bg: #0E1D22;
+    --surface: #14272D;
+    --surface-2: #1B3238;
+    --ink: #E4EEEF;
+    --ink-2: #B3C6C9;
+    --ink-3: #8FA6AA;
+    --line: #27434B;
+    --brand: #6CC7C2;
+    --brand-2: #9BDCD8;
+    --on-brand: #0E1D22;
+    --up: #62D39C;
+    --down: #FF8F82;
     --warn: #E9B866;
-    --good-bg: #16362A;
-    --bad-bg: #3A1D17;
-    --warn-bg: #3A2C12;
-    --neutral-bg: #1C2B25;
+    --good-bg: #173A30;
+    --bad-bg: #3B201D;
+    --warn-bg: #3A2E14;
+    --neutral-bg: #1C3036;
     --shadow-sheet: 0 -8px 40px rgb(0 0 0 / .5);
-    --seg-on: #2C4238;
+    --seg-on: #2C4A53;
+    --hero-bg: #0F2A33;
+    --hero-ink: #E4EEEF;
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"] {
-  --bg: #0B1411; --surface: #111D18; --surface-2: #182721; --ink: #E3ECE6; --ink-2: #B4C3BB;
-  --ink-3: #8FA098; --line: #243730; --brand: #8AD9B1; --brand-2: #B5EBCF; --on-brand: #0B1411;
-  --up: #62D196; --down: #FF8C75; --warn: #E9B866; --good-bg: #16362A; --bad-bg: #3A1D17;
-  --warn-bg: #3A2C12; --neutral-bg: #1C2B25; --seg-on: #2C4238; color-scheme: dark;
+:root[data-theme="dark"] { --hero-art: url('assets/auth-hero-dark.webp');
+  --bg: #0E1D22; --surface: #14272D; --surface-2: #1B3238; --ink: #E4EEEF; --ink-2: #B3C6C9;
+  --ink-3: #8FA6AA; --line: #27434B; --brand: #6CC7C2; --brand-2: #9BDCD8; --on-brand: #0E1D22;
+  --up: #62D39C; --down: #FF8F82; --warn: #E9B866; --good-bg: #173A30; --bad-bg: #3B201D;
+  --warn-bg: #3A2E14; --neutral-bg: #1C3036; --seg-on: #2C4A53;
+  --hero-bg: #0F2A33; --hero-ink: #E4EEEF; color-scheme: dark;
 }
 
 /* ── Base ───────────────────────────────────────────────── */
@@ -79,6 +86,10 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
   overflow-x: hidden;
+  /* Cadenas largas sin espacios (enlaces, «VOO/SCHD/NVDA…» en respuestas de
+     la IA, nombres de Yahoo) se parten en vez de ensanchar la página: en
+     Safari de iPhone eso agrandaba toda la pantalla. */
+  overflow-wrap: anywhere;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; text-align: inherit; }
@@ -172,7 +183,8 @@ strong { font-weight: 650; }
   min-height: 40px; padding: 0 12px; border-radius: 999px;
   font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap;
 }
-.seg__opt input { position: absolute; opacity: 0; pointer-events: none; }
+.seg__opt { position: relative; }
+.seg__opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; }
 .seg__opt[aria-pressed="true"], .seg__opt:has(input:checked) { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
 .seg__opt:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 1px; }
 
@@ -197,12 +209,55 @@ strong { font-weight: 650; }
 .notice--bad { background: var(--bad-bg); color: var(--down); }
 
 /* ── Acceso ─────────────────────────────────────────────── */
-.auth { min-height: 100dvh; display: grid; place-items: center; padding: 24px var(--gutter); }
+/* Móvil: marca arriba y hoja con el formulario abajo, al alcance del pulgar. */
+.auth { min-height: 100dvh; display: flex; flex-direction: column; background: var(--hero-bg); }
 body[data-auth="pending"] .auth { visibility: hidden; }
-.auth__card { width: 100%; max-width: 420px; }
-.auth__title { font: 700 32px/1.1 var(--font-display); letter-spacing: -.02em; margin: 28px 0 10px; text-wrap: balance; }
-.auth__lead { color: var(--ink-2); font-size: 17px; margin-bottom: 28px; }
-.auth__links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
+.auth__hero {
+  flex: 1 0 auto; min-height: 34dvh;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 14px;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) var(--gutter) 40px;
+  color: var(--hero-ink);
+  background: var(--hero-art, none) right top / cover no-repeat, var(--hero-bg);
+}
+.brand--on-dark { color: var(--brand); }
+.brand--on-dark .brand__name { color: var(--hero-ink); }
+.auth__title { font: 700 30px/1.08 var(--font-display); letter-spacing: -.02em; text-wrap: balance; max-width: 16ch; }
+.auth__sample {
+  align-self: flex-start; max-width: 30ch; padding: 10px 14px; border-radius: 16px 16px 16px 4px;
+  font-size: 15px; line-height: 1.4; color: var(--hero-ink);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgb(23 50 58 / .08);
+}
+.auth__sample b { font-weight: 700; }
+.auth__sheet {
+  margin-top: -20px; position: relative;
+  padding: 22px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background: var(--bg); border-radius: 22px 22px 0 0;
+}
+.auth__sheet > * { max-width: 440px; margin-inline: auto; }
+.auth__tabs { margin-bottom: 18px; }
+.auth__h { font: 700 22px/1.2 var(--font-display); letter-spacing: -.01em; }
+.auth__forgot { margin-top: 2px; float: right; }
+.link--small { font-size: 14px; min-height: 40px; }
+.pwd { position: relative; }
+.pwd input { padding-right: 52px !important; }
+.pwd__toggle {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--ink-3);
+}
+.pwd__toggle:hover { color: var(--ink); }
+.pwd__hide, .pwd__toggle[aria-pressed="true"] .pwd__show { display: none; }
+.pwd__toggle[aria-pressed="true"] .pwd__hide { display: block; }
+#form-login .form-msg, #form-login > .btn { clear: both; }
+
+@media (min-width: 900px) {
+  .auth { flex-direction: row; }
+  .auth__hero { flex: 1 1 50%; min-height: 100dvh; justify-content: center; padding: 48px 56px; }
+  .auth__title { font-size: 44px; }
+  .auth__sheet { flex: 1 1 50%; margin: 0; border-radius: 0; display: flex; flex-direction: column; justify-content: center; padding: 48px; }
+  .auth__sheet > * { width: 100%; }
+}
 
 /* ── Estructura ─────────────────────────────────────────── */
 .app { min-height: 100dvh; }

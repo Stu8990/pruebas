@@ -23,3 +23,9 @@ test('el service worker precarga todos los módulos de src/ (si falta uno, la PW
     assert.doesNotThrow(() => statSync(join(root, p)), `sw.js lista ${p}, que no existe`);
   }
 });
+
+test('el service worker ignora la caché HTTP al guardar y revalidar (evita mezclar versiones)', () => {
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  assert.match(sw, /new Request\(u, \{ cache: 'reload' \}\)/);
+  assert.equal((sw.match(/fetch\(event\.request, \{ cache: 'no-cache' \}\)/g) ?? []).length, 2);
+});

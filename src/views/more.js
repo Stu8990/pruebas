@@ -3,7 +3,7 @@
 import { state } from '../data.js';
 import { money, signedMoney, shortDate, tone, esc } from '../format.js';
 
-export function renderMore() {
+export function renderMore({ theme = 'light' } = {}) {
   const hist = [...state.history].reverse().slice(0, 30);
   const rows = hist.map((r, i) => {
     const prev = hist[i + 1];
@@ -31,6 +31,15 @@ export function renderMore() {
       </div>
       <p class="muted small">La app guarda el valor total de tu cuenta una vez al día cuando la abres.</p>
       ${rows ? `<ul class="hlist">${rows}</ul>` : '<p class="muted">Sin registros todavía.</p>'}
+    </section>
+
+    <section class="block" aria-labelledby="look-title">
+      <h2 id="look-title" class="block__title">Apariencia</h2>
+      <div class="seg seg--block" role="radiogroup" aria-labelledby="look-title">
+        ${[['light', 'Claro'], ['dark', 'Oscuro'], ['auto', 'Automático']].map(([v, l]) => `
+          <label class="seg__opt"><input type="radio" name="theme" value="${v}" data-action="theme" ${theme === v ? 'checked' : ''}> ${l}</label>`).join('')}
+      </div>
+      <p class="muted small">Automático sigue la configuración de tu teléfono.</p>
     </section>
 
     <section class="block" aria-labelledby="acct-title">
