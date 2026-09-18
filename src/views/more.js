@@ -3,11 +3,35 @@
 import { state } from '../data.js';
 import { money, signedMoney, shortDate, tone, esc } from '../format.js';
 
-const PALETTES = [
-  ['jacaranda', 'Jacarandá', ['#6B3FA0', '#F2B8C6', '#F8F6FC']],
-  ['ambar', 'Ámbar', ['#7B5700', '#F2C38B', '#FAF8F4']],
-  ['guayaba', 'Guayaba', ['#9F2858', '#F6C2A6', '#FBF7F8']],
+// Las tres opciones de diseño. La vista previa se pinta con los colores y la
+// tipografía de cada una (no con los del diseño activo) para poder compararlas.
+const DESIGNS = [
+  { id: 'jacaranda', name: 'Jacarandá', desc: 'Violeta sereno. Tranquilo y moderno.',
+    bg: '#F0E7FA', ink: '#292238', brand: '#6B3FA0', up: '#237A4B', font: "'Bricolage Grotesque', sans-serif", r: '999px' },
+  { id: 'ambar', name: 'Ámbar', desc: 'Miel y cacao. Cálido y cercano.',
+    bg: '#F7E8B8', ink: '#30291F', brand: '#7B5700', up: '#2D774B', font: "'Fraunces', Georgia, serif", r: '8px' },
+  { id: 'guayaba', name: 'Guayaba', desc: 'Frambuesa y rosa. Con carácter.',
+    bg: '#F8DFE8', ink: '#33232A', brand: '#9F2858', up: '#26764C', font: "'Onest', sans-serif", r: '999px' },
 ];
+
+function designPicker(current) {
+  return `
+    <section class="block" aria-labelledby="design-title">
+      <h2 id="design-title" class="block__title">Diseño</h2>
+      <p class="muted small">Elige cómo se ve la app. Puedes cambiarlo cuando quieras.</p>
+      <div class="designs" role="radiogroup" aria-labelledby="design-title">${DESIGNS.map(d => `
+        <label class="design">
+          <input type="radio" name="palette" value="${d.id}" data-action="palette" ${current === d.id ? 'checked' : ''}>
+          <span class="design__preview" aria-hidden="true" style="--p-bg:${d.bg};--p-ink:${d.ink};--p-brand:${d.brand};--p-up:${d.up};--p-font:${d.font};--p-r:${d.r}">
+            <span class="design__line">Vas <b>ganando $533</b></span>
+            <span class="design__btn">Entrar</span>
+          </span>
+          <span class="design__name">${d.name}</span>
+          <span class="design__desc">${d.desc}</span>
+        </label>`).join('')}
+      </div>
+    </section>`;
+}
 
 export function renderMore({ theme = 'light', palette = 'jacaranda' } = {}) {
   const hist = [...state.history].reverse().slice(0, 30);
@@ -18,6 +42,7 @@ export function renderMore({ theme = 'light', palette = 'jacaranda' } = {}) {
   }).join('');
   return `
     <h1 class="title">Más</h1>
+    ${designPicker(palette)}
 
     <section class="block" aria-labelledby="how-title">
       <h2 id="how-title" class="block__title">Cómo funciona</h2>
@@ -40,18 +65,12 @@ export function renderMore({ theme = 'light', palette = 'jacaranda' } = {}) {
     </section>
 
     <section class="block" aria-labelledby="look-title">
-      <h2 id="look-title" class="block__title">Apariencia</h2>
-      <p class="field__label" id="palette-title">Estilo de color</p>
-      <div class="palettes" role="radiogroup" aria-labelledby="palette-title">${PALETTES.map(([v, l, sw]) => `
-        <label class="palette"><input type="radio" name="palette" value="${v}" data-action="palette" ${palette === v ? 'checked' : ''}>
-          <span class="palette__sw" aria-hidden="true">${sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${l}</label>`).join('')}
-      </div>
-      <p class="field__label" style="margin-top:16px">Tema</p>
+      <h2 id="look-title" class="block__title">Tema</h2>
       <div class="seg seg--block" role="radiogroup" aria-labelledby="look-title">
         ${[['light', 'Claro'], ['dark', 'Oscuro'], ['auto', 'Automático']].map(([v, l]) => `
           <label class="seg__opt"><input type="radio" name="theme" value="${v}" data-action="theme" ${theme === v ? 'checked' : ''}> ${l}</label>`).join('')}
       </div>
-      <p class="muted small">Automático sigue la configuración de tu teléfono.</p>
+      <p class="muted small">Claro u oscuro, en cualquiera de los tres diseños. Automático sigue la configuración de tu teléfono.</p>
     </section>
 
     <section class="block" aria-labelledby="acct-title">

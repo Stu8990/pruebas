@@ -46,6 +46,20 @@ test('el próximo aporte es lo primero que se ve y no hay que buscarlo', async (
   await expect(page.getByRole('button', { name: '$500' })).toBeInViewport();
 });
 
+test('Diseño es lo primero en Más y muestra las tres opciones con su vista previa', async ({ page }) => {
+  await mockBackend(page);
+  await page.goto('./#mas');
+  const first = page.locator('#view .block').first();
+  await expect(first.getByRole('heading', { level: 2 })).toHaveText('Diseño');
+  const options = first.locator('.design');
+  await expect(options).toHaveCount(3);
+  for (const name of ['Jacarandá', 'Ámbar', 'Guayaba']) {
+    const opt = options.filter({ hasText: name });
+    await expect(opt.locator('.design__preview')).toBeVisible();
+    await expect(opt.locator('.design__desc')).not.toBeEmpty();
+  }
+});
+
 test('se puede elegir el estilo de color y queda guardado', async ({ page }) => {
   await mockBackend(page);
   await page.goto('./#mas');
