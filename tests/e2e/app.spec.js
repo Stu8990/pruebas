@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, mockBackend, TODAY } from './fixtures.js';
+import { test, expect, mockBackend, TODAY, LONG_POSITIONS } from './fixtures.js';
 
 // Cada prueba falla si la página registra errores de JavaScript.
 test.beforeEach(async ({ page }) => {
@@ -10,6 +10,12 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   expect(page.__errors, 'errores en consola').toEqual([]);
 });
+
+// El Plan pliega «Revisar otra acción» y la IA: se abren antes de usarlas.
+async function openTool(page, name) {
+  const d = page.locator('details.tool', { has: page.locator('summary', { hasText: name }) });
+  if (!(await d.evaluate(el => el.open))) await d.locator('summary').click();
+}
 
 async function open(page, hash = 'inicio', scenario) {
   const calls = await mockBackend(page, scenario);
@@ -118,6 +124,7 @@ test('pide el precio de inicio de mes con el mes del usuario, y sólo la primera
 test('actualizar precios no borra lo que el usuario está escribiendo', async ({ page }) => {
   await open(page, 'plan');
   await page.getByLabel('¿Cuánto vas a invertir?').fill('750');
+  await openTool(page, 'Revisar otra acción');
   await page.getByLabel('Símbolo').fill('MSF');
   await page.getByLabel('Símbolo').focus();
   await page.getByRole('button', { name: /Precios|Actualizar/ }).dispatchEvent('click');
@@ -213,18 +220,20 @@ test('el plan reparte el aporte completo sin tocar lo que conviene recortar', as
   const total = amounts.reduce((s, t) => s + Number(t.replace(/[$,]/g, '')), 0);
   expect(Math.abs(total - 500)).toBeLessThanOrEqual(2); // redondeo a dólares enteros
   await expect(page.locator('.buys')).not.toContainText('NVIDIA');
-  await expect(page.getByRole('heading', { name: '¿Vendo algo?' }).locator('..')).toContainText('NVIDIA');
+  await expect(page.locator('#attention')).toContainText('NVIDIA');
 });
 
 test('cambiar de perfil cambia las recomendaciones y se guarda en la cuenta', async ({ page }) => {
   const calls = await open(page, 'plan');
+  await page.getByRole('button', { name: 'Cambiar perfil' }).click();
   await page.getByText('Agresivo', { exact: true }).click();
-  await expect(page.locator('#profile-title ~ p')).toContainText('no más de 30% en una sola empresa');
+  await expect(page.locator('#profile')).toContainText('no más de 30% en una sola empresa');
   await expect.poll(() => (calls.userUpdates ?? []).some(u => u.data?.profile === 'agresivo')).toBe(true);
 });
 
 test('revisar otra acción da un solo veredicto con explicación', async ({ page }) => {
   await open(page, 'plan');
+  await openTool(page, 'Revisar otra acción');
   await page.getByLabel('Símbolo').fill('aapl');
   await page.getByRole('button', { name: 'Revisar' }).click();
   const c = page.locator('.candidate');
@@ -235,15 +244,17 @@ test('revisar otra acción da un solo veredicto con explicación', async ({ page
 
 test('si la IA falla, lo dice y el resto del plan sigue funcionando', async ({ page }) => {
   await open(page, 'plan', { aiFails: true });
+  await openTool(page, 'Pregúntale a la IA');
   await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
   await expect(page.locator('.notice--bad')).toContainText('No pude responder: Servicio no configurado');
-  await expect(page.getByRole('heading', { name: '¿Vendo algo?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Atención ahora' })).toBeVisible();
   // El 500 simulado de la Edge Function aparece como recurso fallido: es esperado.
   page.__errors = page.__errors.filter(e => !e.includes('500'));
 });
 
 test('al enviar una pregunta a la IA la caja queda vacía para la siguiente', async ({ page }) => {
   await open(page, 'plan');
+  await openTool(page, 'Pregúntale a la IA');
   await page.getByLabel('Tu pregunta').fill('¿Vendo NVIDIA?');
   await page.getByRole('button', { name: 'Preguntar' }).click();
   await expect(page.locator('.answer__q')).toHaveText('¿Vendo NVIDIA?');
@@ -252,6 +263,7 @@ test('al enviar una pregunta a la IA la caja queda vacía para la siguiente', as
 
 test('la IA recibe las recomendaciones calculadas por la app', async ({ page }) => {
   const calls = await open(page, 'plan');
+  await openTool(page, 'Pregúntale a la IA');
   await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
   await expect(page.locator('.answer')).toContainText('Respuesta de prueba del asesor.');
   const body = calls.ai.at(-1);
@@ -312,7 +324,12 @@ async function wideElements(page) {
 
 test('ninguna pantalla se desborda a lo ancho en un teléfono pequeño', async ({ page }) => {
   // Respuesta de IA con cadenas largas sin espacios, como las reales.
-  await mockBackend(page, { aiAnswer: 'Tu cartera VOO/SCHD/NVDA/MSFT/AMZN/VISA/GOOGL/META está bien. Mira https://finance.yahoo.com/quote/NVDA/key-statistics?p=NVDA&.tsrc=fin-srch para más.' });
+  // Cartera como la del usuario: 11 posiciones, nombres largos de Yahoo, y
+  // una respuesta de IA con cadenas largas sin espacios.
+  await mockBackend(page, {
+    positions: LONG_POSITIONS,
+    aiAnswer: 'Tu cartera VOO/SCHD/NVDA/MSFT/AMZN/VISA/GOOGL/META está bien. Mira https://finance.yahoo.com/quote/NVDA/key-statistics?p=NVDA&.tsrc=fin-srch para más.',
+  });
   // Con las fuentes reales: la de respaldo es más estrecha y escondía el fallo.
   await page.route('https://fonts.googleapis.com/**', r => r.continue());
   for (const width of [320, 360, 390]) {
@@ -324,9 +341,13 @@ test('ninguna pantalla se desborda a lo ancho en un teléfono pequeño', async (
       await expect(page.locator('.refresh')).toContainText('Precios');
       if (tab === 'plan') {
         await page.getByRole('button', { name: '$500' }).click();
+        await page.getByRole('button', { name: 'Cambiar perfil' }).click();
+        await openTool(page, 'Revisar otra acción');
         await page.getByLabel('Símbolo').fill('AAPL');
-        await page.getByRole('button', { name: 'Revisar' }).click();
+        await page.getByRole('button', { name: 'Revisar', exact: true }).click();
         await expect(page.locator('.candidate')).toBeVisible();
+        expect(await wideElements(page), `plan (candidato) a ${width}px`).toEqual([]);
+        await openTool(page, 'Pregúntale a la IA');
         await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
         await expect(page.locator('.answer')).toBeVisible();
       }
@@ -413,13 +434,15 @@ test('una respuesta tardía de la IA pedida por la cuenta anterior no aparece en
     if (body?.tickers?.includes('AAPL') && body.tickers.length === 1) await new Promise(r => setTimeout(r, 1200));
     return route.fallback();
   });
+  await openTool(page, 'Pregúntale a la IA');
   await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+  await openTool(page, 'Revisar otra acción');
   await page.getByLabel('Símbolo').fill('AAPL');
-  await page.getByRole('button', { name: 'Revisar' }).click();
+  await page.getByRole('button', { name: 'Revisar', exact: true }).click();
   await routeAccountB(page);
   await signOutAndInAsB(page);
   await page.evaluate(() => { location.hash = 'plan'; });
-  await expect(page.getByRole('heading', { name: 'Pregúntale a la IA' })).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole('heading', { name: 'Atención ahora' })).toBeVisible({ timeout: 8000 });
   await page.waitForTimeout(1500);
   await expect(page.locator('.answer')).toHaveCount(0);
   await expect(page.locator('.candidate')).toHaveCount(0);

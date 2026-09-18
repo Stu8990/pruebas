@@ -198,3 +198,18 @@ test('evaluateCandidate sin precio no recomienda comprar', () => {
   const s = setup({ VOO: P(10, 100) }, { VOO: { currentPrice: 100 } });
   assert.equal(evaluateCandidate({ ...s, ticker: 'ZZZ', quote: {} }).action, 'sin_datos');
 });
+
+test('planContribution propone como máximo 3 compras y reparte todo el aporte', () => {
+  const pos = { VOO: P(10, 100), SCHD: P(2, 100) }, mk = { VOO: { currentPrice: 100 }, SCHD: { currentPrice: 100 } };
+  for (const t of ['A', 'B', 'C', 'D', 'E', 'F', 'G']) { pos[t] = P(1, 100); mk[t] = { currentPrice: 100 }; }
+  const s = setup(pos, mk);
+  const plan = planContribution({ ...s, amount: 500 });
+  assert.ok(plan.buys.length <= 3, `propuso ${plan.buys.length} compras`);
+  near(plan.buys.reduce((a, b) => a + b.usd, 0), 500, 0.01);
+  // ninguna acción individual pasa su tope (20%) tras el aporte
+  const T = s.summary.stocksValue + 500;
+  for (const b of plan.buys) {
+    const h = s.summary.holdings.find(x => x.ticker === b.ticker);
+    if (h && !isFund(b.ticker, mk[b.ticker])) assert.ok((h.value + b.usd) / T <= 0.2 + 1e-9, b.ticker);
+  }
+});

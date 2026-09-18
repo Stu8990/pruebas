@@ -1,4 +1,4 @@
-const CACHE = 'investsmart-v32';
+const CACHE = 'investsmart-v33';
 const BASE = '/pruebas';
 const SHELL = [
   BASE + '/',
@@ -9,8 +9,6 @@ const SHELL = [
   BASE + '/icons/icon-maskable.svg',
   BASE + '/icons/icon-192.png',
   BASE + '/icons/apple-touch-icon.png',
-  BASE + '/assets/auth-hero.webp',
-  BASE + '/assets/auth-hero-dark.webp',
   BASE + '/src/config.js',
   BASE + '/src/auth.js',
   BASE + '/src/data.js',

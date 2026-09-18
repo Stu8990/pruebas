@@ -3,7 +3,13 @@
 import { state } from '../data.js';
 import { money, signedMoney, shortDate, tone, esc } from '../format.js';
 
-export function renderMore({ theme = 'light' } = {}) {
+const PALETTES = [
+  ['jacaranda', 'Jacarandá', ['#6B3FA0', '#F2B8C6', '#F8F6FC']],
+  ['ambar', 'Ámbar', ['#7B5700', '#F2C38B', '#FAF8F4']],
+  ['guayaba', 'Guayaba', ['#9F2858', '#F6C2A6', '#FBF7F8']],
+];
+
+export function renderMore({ theme = 'light', palette = 'jacaranda' } = {}) {
   const hist = [...state.history].reverse().slice(0, 30);
   const rows = hist.map((r, i) => {
     const prev = hist[i + 1];
@@ -35,6 +41,12 @@ export function renderMore({ theme = 'light' } = {}) {
 
     <section class="block" aria-labelledby="look-title">
       <h2 id="look-title" class="block__title">Apariencia</h2>
+      <p class="field__label" id="palette-title">Estilo de color</p>
+      <div class="palettes" role="radiogroup" aria-labelledby="palette-title">${PALETTES.map(([v, l, sw]) => `
+        <label class="palette"><input type="radio" name="palette" value="${v}" data-action="palette" ${palette === v ? 'checked' : ''}>
+          <span class="palette__sw" aria-hidden="true">${sw.map(c => `<i style="background:${c}"></i>`).join('')}</span>${l}</label>`).join('')}
+      </div>
+      <p class="field__label" style="margin-top:16px">Tema</p>
       <div class="seg seg--block" role="radiogroup" aria-labelledby="look-title">
         ${[['light', 'Claro'], ['dark', 'Oscuro'], ['auto', 'Automático']].map(([v, l]) => `
           <label class="seg__opt"><input type="radio" name="theme" value="${v}" data-action="theme" ${theme === v ? 'checked' : ''}> ${l}</label>`).join('')}

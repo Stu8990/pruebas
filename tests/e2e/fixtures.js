@@ -20,6 +20,7 @@ export const CASH = 150;
 // Precio de cada activo en tres momentos: 1 jul, 31 ago (cierre de agosto) y hoy.
 // Septiembre es malo para NVDA y AMZN: eso es lo que la app debe saber explicar.
 const PATH = {
+  IWDA: [100, 102, 104], PG: [168, 170, 165], KO: [68, 69, 70], PEP: [155, 152, 150], MNST: [54, 56, 57],
   VOO:  [520, 545, 538],
   AMZN: [205, 214, 199],
   MSFT: [440, 455, 452],
@@ -38,7 +39,21 @@ const MARKET = {
   SCHD: { name: 'Schwab US Dividend Equity ETF', pe: 16.2, forwardPe: null, week52High: 29.4, week52Low: 25.8, analystRating: null },
   AAPL: { name: 'Apple Inc.',            pe: 31.0, forwardPe: 28.0, week52High: 260, week52Low: 190, analystRating: 'MANTENER' },
 };
-const PRICE_NOW = { AAPL: 231 };
+// Cartera "real": nombres largos como los que devuelve Yahoo.
+export const LONG_POSITIONS = {
+  ...POSITIONS,
+  IWDA: { purchases: [{ date: '', shares: 3, price: 95 }] },
+  PG:   { purchases: [{ date: '', shares: 2, price: 150 }] },
+  KO:   { purchases: [{ date: '', shares: 4, price: 60 }] },
+  PEP:  { purchases: [{ date: '', shares: 2, price: 160 }] },
+  MNST: { purchases: [{ date: '', shares: 5, price: 55 }] },
+};
+MARKET.IWDA = { name: 'iShares Core MSCI World UCITS ETF USD (Acc)', pe: 21, forwardPe: 18, week52High: 110, week52Low: 88, analystRating: null };
+MARKET.PG   = { name: 'The Procter & Gamble Company', pe: 25, forwardPe: 23, week52High: 180, week52Low: 150, analystRating: 'MANTENER' };
+MARKET.KO   = { name: 'The Coca-Cola Company', pe: 24, forwardPe: 22, week52High: 73, week52Low: 58, analystRating: 'COMPRAR' };
+MARKET.PEP  = { name: 'PepsiCo, Inc.', pe: 22, forwardPe: 19, week52High: 180, week52Low: 140, analystRating: 'MANTENER' };
+MARKET.MNST = { name: 'Monster Beverage Corporation', pe: 33, forwardPe: 29, week52High: 62, week52Low: 45, analystRating: 'COMPRAR' };
+const PRICE_NOW = { AAPL: 231, IWDA: 104, PG: 165, KO: 70, PEP: 150, MNST: 57 };
 const CHANGE_TODAY = { VOO: -0.4, AMZN: -1.8, MSFT: 0.3, NVDA: -2.9, V: 0.6, SCHD: 0.1, AAPL: 0.5 };
 
 export function yf(t) { return YF[t] ?? t; }

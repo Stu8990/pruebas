@@ -17,7 +17,7 @@ import { renderPlan, planState } from './views/plan.js';
 import { renderMore } from './views/more.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const TABS = { inicio: renderHome, acciones: renderHoldings, plan: renderPlan, mas: () => renderMore({ theme: getTheme() }) };
+const TABS = { inicio: renderHome, acciones: renderHoldings, plan: renderPlan, mas: () => renderMore({ theme: getTheme(), palette: getPalette() }) };
 const TITLES = { inicio: 'Inicio', acciones: 'Mis acciones', plan: 'Tu plan', mas: 'Más' };
 
 // ── Apariencia ─────────────────────────────────────────────
@@ -30,6 +30,12 @@ function applyTheme(t) {
   else document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
 }
 applyTheme(getTheme());
+
+const PALETTE_KEY = 'investsmart-palette';
+const PALETTES = ['jacaranda', 'ambar', 'guayaba'];
+function getPalette() { try { const p = localStorage.getItem(PALETTE_KEY); return PALETTES.includes(p) ? p : 'jacaranda'; } catch { return 'jacaranda'; } }
+function applyPalette(p) { document.documentElement.dataset.palette = PALETTES.includes(p) ? p : 'jacaranda'; }
+applyPalette(getPalette());
 
 // ── Toast ──────────────────────────────────────────────────
 let toastTimer = null;
@@ -166,7 +172,7 @@ setInterval(updateRefreshLabel, 30_000);
 
 // ── Arranque ───────────────────────────────────────────────
 function resetUi() {
-  Object.assign(planState, { amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '' });
+  Object.assign(planState, { amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '', editingProfile: false, showAllAttention: false, openTool: null });
   lastM = null;
   closeSheet();
   $('#view').innerHTML = '';
@@ -510,6 +516,8 @@ const actions = {
   export: () => exportData(),
   signout: async () => { await signOut(); toast('Sesión cerrada'); },
   amount: b => { planState.amount = b.dataset.amount; render(); },
+  'edit-profile': () => { planState.editingProfile = !planState.editingProfile; render(); },
+  'attention-all': () => { planState.showAllAttention = true; render(); },
   ask: b => ask(b.dataset.q),
   'pick-ticker': b => {
     const f = $('#trade-form');
@@ -563,16 +571,31 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('change', async e => {
+  if (e.target.dataset.action === 'palette') {
+    try { localStorage.setItem(PALETTE_KEY, e.target.value); } catch { /* sólo esta vez */ }
+    applyPalette(e.target.value);
+    return;
+  }
   if (e.target.dataset.action === 'theme') {
     try { localStorage.setItem(THEME_KEY, e.target.value); } catch { /* sólo esta vez */ }
     applyTheme(e.target.value);
     return;
   }
   if (e.target.dataset.action === 'profile') {
-    try { await setProfile(e.target.value); } catch (err) { toast(err.message, 'bad'); }
+    planState.editingProfile = false;
+    try { await setProfile(e.target.value); } catch (err) { if (!isStale(err)) toast(err.message, 'bad'); }
     render();
   }
 });
+
+// Qué herramienta del Plan está abierta, para que un re-render no la cierre.
+// ('toggle' no burbujea: se escucha en captura.)
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (!(d instanceof HTMLDetailsElement) || !d.dataset.tool) return;
+  if (d.open) planState.openTool = d.dataset.tool;
+  else if (planState.openTool === d.dataset.tool) planState.openTool = null;
+}, true);
 
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-form]');

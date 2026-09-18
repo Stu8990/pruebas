@@ -6,7 +6,10 @@ import { PROFILES, planContribution, evaluateCandidate } from '../core/advice.js
 import { money, plainPct, esc } from '../format.js';
 import { marketExplain } from './holdings.js';
 
-export const planState = { amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '' };
+export const planState = {
+  amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '',
+  editingProfile: false, showAllAttention: false, openTool: null,
+};
 
 export function renderPlan(m) {
   if (!m.hasPositions) {
@@ -21,22 +24,29 @@ export function renderPlan(m) {
     <h1 class="title">Tu plan</h1>
     ${profileBlock()}
     ${contributionBlock(m)}
-    ${sellBlock(m)}
-    ${allBlock(m)}
-    ${candidateBlock(m)}
-    ${aiBlock()}
+    ${attentionBlock(m)}
+    <div class="tools">
+      ${candidateBlock(m)}
+      ${aiBlock()}
+    </div>
     <p class="muted small disclaimer">Son reglas generales para ordenar tu cartera (no concentrar, no perseguir precios altos, reforzar lo que está por debajo de su peso). No son asesoría financiera personalizada; la decisión final es tuya.</p>`;
 }
 
+// Perfil en una línea; el selector sólo aparece al pulsar «Cambiar».
 function profileBlock() {
   const p = PROFILES[state.profile];
-  const opts = Object.entries(PROFILES).map(([k, v]) => `
-    <label class="seg__opt"><input type="radio" name="profile" value="${k}" ${k === state.profile ? 'checked' : ''} data-action="profile"> ${esc(v.label)}</label>`).join('');
+  const editor = planState.editingProfile ? `
+      <div class="seg seg--block" role="radiogroup" aria-label="Perfil de riesgo">${Object.entries(PROFILES).map(([k, v]) => `
+        <label class="seg__opt"><input type="radio" name="profile" value="${k}" ${k === state.profile ? 'checked' : ''} data-action="profile"> ${esc(v.label)}</label>`).join('')}
+      </div>` : '';
   return `
-    <section class="block" aria-labelledby="profile-title">
-      <h2 id="profile-title" class="block__title">¿Cuánto riesgo aceptas?</h2>
-      <div class="seg seg--block" role="radiogroup" aria-labelledby="profile-title">${opts}</div>
-      <p class="muted small">${esc(p.label)}: un ${p.fundPct}% de tu dinero en fondos que reparten el riesgo y no más de ${p.cap}% en una sola empresa.</p>
+    <section id="profile" class="profile" aria-label="Perfil de riesgo">
+      <div class="profile__row">
+        <p><span class="muted">Perfil:</span> <strong>${esc(p.label)}</strong></p>
+        <button type="button" class="link link--small" data-action="edit-profile" aria-expanded="${planState.editingProfile}" aria-label="Cambiar perfil">${planState.editingProfile ? 'Listo' : 'Cambiar'}</button>
+      </div>
+      ${editor}
+      <p class="muted small">Un ${p.fundPct}% de tu dinero en fondos que reparten el riesgo y no más de ${p.cap}% en una sola empresa.</p>
     </section>`;
 }
 
@@ -51,16 +61,16 @@ function contributionBlock(m) {
         return `
           <li class="buy">
             <span class="buy__amt num">${money(b.usd)}</span>
-            <span class="buy__what">en <strong>${esc(nameOf(b.ticker))}</strong>${b.isNew ? ' <span class="chip chip--good">nuevo</span>' : ''}</span>
+            <span class="buy__what"><strong>${esc(nameOf(b.ticker))}</strong>${b.isNew ? ' <span class="chip chip--good">nuevo</span>' : ''}</span>
             <span class="buy__why">${b.isNew
-              ? 'Un fondo que reparte tu dinero entre 500 empresas.'
-              : `Hoy pesa ${plainPct(h?.weight ?? 0)} de tu dinero en acciones; lo ideal para tu perfil es ${plainPct(b.target)}.`}</span>
-            <button class="link" data-action="trade" data-kind="buy" data-ticker="${esc(b.ticker)}" data-amount="${b.usd}">Anotar cuando la compres</button>
+              ? 'Fondo con las 500 empresas más grandes de EE. UU.'
+              : `Pesa ${plainPct(h?.weight ?? 0)}; lo ideal es ${plainPct(b.target)}.`}
+              <button class="link link--small" data-action="trade" data-kind="buy" data-ticker="${esc(b.ticker)}" data-amount="${b.usd}">Anotar compra</button></span>
           </li>`;
       }).join('')}</ol>
       ${plan.note ? `<p class="notice">${esc(plan.note)}</p>` : ''}`;
   return `
-    <section class="block" aria-labelledby="contrib-title">
+    <section class="card card--hero" aria-labelledby="contrib-title">
       <h2 id="contrib-title" class="block__title">¿Dónde pongo mi próximo aporte?</h2>
       <form class="field" data-form="contribution">
         <label class="field__label" for="contrib-amount">¿Cuánto vas a invertir?</label>
@@ -75,37 +85,40 @@ function contributionBlock(m) {
     </section>`;
 }
 
-function sellBlock(m) {
-  const list = Object.entries(m.verdicts).filter(([, v]) => v.action === 'recortar' || v.action === 'revisar');
-  const body = !m.summary.complete
-    ? `<p class="muted">Faltan precios de hoy para evaluarlo.</p>`
-    : !list.length
-      ? `<p>No hace falta vender nada. Ninguna acción pesa demasiado ni tiene señales de alarma.</p>`
-      : `<ul class="todos">${list.map(([t, v]) => `
-          <li><button class="todo todo--${esc(v.tone)}" data-action="holding" data-ticker="${esc(t)}">
-            <span class="chip chip--${esc(v.tone)}">${esc(v.label)}</span>
-            <span class="todo__who">${esc(nameOf(t))}${v.amount ? ` · unos ${money(v.amount)}` : ''}</span>
-            <span class="todo__why">${esc(v.reasons[0])}</span>
-          </button></li>`).join('')}</ul>`;
-  return `
-    <section class="block" aria-labelledby="sell-title">
-      <h2 id="sell-title" class="block__title">¿Vendo algo?</h2>
-      ${body}
-    </section>`;
-}
+// Sólo lo que pide hacer algo; «Mantener» se resume en una frase. La lista
+// completa ya está en Acciones y repetirla aquí alargaba la pantalla.
+const URGENCY = { revisar: 0, recortar: 1, esperar: 2, comprar: 3 };
+const SHOWN = 3;
 
-function allBlock(m) {
-  if (!m.summary.holdings.length) return '';
+function attentionBlock(m) {
+  if (!m.summary.complete) {
+    return `
+      <section id="attention" class="block" aria-labelledby="att-title">
+        <h2 id="att-title" class="block__title">Atención ahora</h2>
+        <p class="muted">Faltan precios de hoy para evaluar tu cartera.</p>
+      </section>`;
+  }
+  const items = Object.entries(m.verdicts)
+    .filter(([, v]) => v.action in URGENCY)
+    .sort(([, a], [, b]) => URGENCY[a.action] - URGENCY[b.action] || (b.amount ?? 0) - (a.amount ?? 0));
+  const calm = m.summary.holdings.length - items.length;
+  const shown = planState.showAllAttention ? items : items.slice(0, SHOWN);
+  const list = shown.map(([t, v]) => `
+    <li><button class="todo" data-action="holding" data-ticker="${esc(t)}">
+      <span class="chip chip--${esc(v.tone)}">${esc(v.label)}</span>
+      <span class="todo__who">${esc(nameOf(t))}${v.amount ? ` · unos ${money(v.amount)}` : ''}</span>
+      <span class="todo__why">${esc(v.reasons[0])}</span>
+    </button></li>`).join('');
+  const more = items.length > shown.length
+    ? `<button type="button" class="btn btn--quiet btn--block" data-action="attention-all">Ver ${items.length - shown.length} recomendaciones más</button>` : '';
+  const calmTxt = !items.length
+    ? 'No hace falta hacer nada: ninguna acción pesa demasiado ni tiene señales de alarma.'
+    : calm === 1 ? 'La otra está para mantener.' : calm > 1 ? `Las otras ${calm} están para mantener.` : '';
   return `
-    <section class="block" aria-labelledby="all-title">
-      <h2 id="all-title" class="block__title">Qué hacer con cada una</h2>
-      <ul class="verdicts">${m.summary.holdings.map(h => {
-        const v = m.verdicts[h.ticker];
-        return `<li><button class="vrow" data-action="holding" data-ticker="${esc(h.ticker)}">
-          <span class="vrow__name">${esc(nameOf(h.ticker))}</span>
-          <span class="chip chip--${esc(v.tone)}">${esc(v.label)}</span>
-        </button></li>`;
-      }).join('')}</ul>
+    <section id="attention" class="block" aria-labelledby="att-title">
+      <h2 id="att-title" class="block__title">Atención ahora</h2>
+      ${items.length ? `<ul class="todos">${list}</ul>${more}` : ''}
+      ${calmTxt ? `<p class="calm">${calmTxt} <a class="link link--small" href="#acciones">Ver todas en Acciones</a></p>` : ''}
     </section>`;
 }
 
@@ -127,8 +140,9 @@ function candidateBlock(m) {
       </div>`;
   }
   return `
-    <section class="block" aria-labelledby="cand-title">
-      <h2 id="cand-title" class="block__title">¿Me conviene otra acción?</h2>
+    <details class="tool" name="tools" data-tool="candidate" ${planState.openTool === 'candidate' ? 'open' : ''}>
+      <summary class="tool__head"><span id="cand-title">Revisar otra acción</span></summary>
+      <p class="muted small">¿Te interesa una empresa o un ETF? Te digo si encaja en tu cartera y cuánto poner como máximo.</p>
       <form class="field" data-form="candidate">
         <label class="field__label" for="cand-ticker">Símbolo</label>
         <div class="field__row">
@@ -137,7 +151,7 @@ function candidateBlock(m) {
         </div>
       </form>
       <div aria-live="polite">${result}</div>
-    </section>`;
+    </details>`;
 }
 
 const QUESTIONS = ['¿Debo vender algo?', '¿Por qué bajé este mes?', '¿Cuál es mi mayor riesgo?', '¿Qué significa el PER de mis acciones?'];
@@ -148,8 +162,8 @@ function aiBlock() {
   else if (planState.aiError) out = `<p class="notice notice--bad">${esc(planState.aiError)}</p>`;
   else if (planState.ai) out = `<div class="answer"><p class="answer__q">${esc(planState.ai.q)}</p><p class="answer__a">${esc(planState.ai.a)}</p></div>`;
   return `
-    <section class="block" aria-labelledby="ai-title">
-      <h2 id="ai-title" class="block__title">Pregúntale a la IA</h2>
+    <details class="tool" name="tools" data-tool="ai" ${planState.openTool === 'ai' ? 'open' : ''}>
+      <summary class="tool__head"><span id="ai-title">Pregúntale a la IA</span></summary>
       <p class="muted small">Responde con tus números y las recomendaciones de arriba. Puede equivocarse.</p>
       <div class="chips">${QUESTIONS.map(q => `<button type="button" class="chip-btn" data-action="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <form class="field" data-form="ask">
@@ -160,5 +174,5 @@ function aiBlock() {
         </div>
       </form>
       <div aria-live="polite">${out}</div>
-    </section>`;
+    </details>`;
 }

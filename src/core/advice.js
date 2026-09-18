@@ -30,6 +30,7 @@ const LABELS = {
   revisar:  { label: 'Revisar: ¿vender?',         tone: 'bad' },
 };
 
+const MAX_BUYS = 3;      // compras como máximo en un plan de aporte
 const MIN_TRIM = 25;     // no se propone vender por menos de esto
 const MIN_GAP_PP = 5;    // «comprar más» sólo si está claramente por debajo (5 puntos)
 
@@ -181,9 +182,25 @@ export function planContribution({ summary, market = {}, profile = 'equilibrado'
     for (const d of funds) d.usd += w > 0 ? (d.target / w) * rest : rest / funds.length;
   }
 
+  // Como mucho MAX_BUYS compras: repartir $500 en ocho sitios no es un plan
+  // que un principiante vaya a seguir. Se quedan las de más peso (con al menos
+  // un fondo) y lo del resto pasa a los fondos, que no tienen tope.
+  const ranked = [...dest].filter(d => d.usd > 0).sort((a, b) => b.usd - a.usd);
+  let kept = ranked.slice(0, MAX_BUYS);
+  if (!kept.some(d => d.fund)) {
+    const bestFund = ranked.find(d => d.fund) ?? funds.sort((a, b) => b.target - a.target)[0];
+    kept = [...kept.slice(0, MAX_BUYS - 1), bestFund];
+  }
+  const dropped = dest.filter(d => !kept.includes(d) && d.usd > 0);
+  const moved = dropped.reduce((s, d) => s + d.usd, 0);
+  for (const d of dropped) d.usd = 0;
+  const keptFunds = kept.filter(d => d.fund);
+  const wKept = keptFunds.reduce((s, d) => s + d.target, 0);
+  for (const d of keptFunds) d.usd += wKept > 0 ? (d.target / wKept) * moved : moved / keptFunds.length;
+
   // Sin montos ridículos: lo menor a $10 (o 5% del aporte) se suma al fondo mayor.
   const min = Math.min(10, A * 0.05);
-  const sink = [...funds].sort((a, b) => b.usd - a.usd)[0];
+  const sink = [...keptFunds].sort((a, b) => b.usd - a.usd)[0];
   for (const d of dest) {
     if (d !== sink && d.usd > 0 && d.usd < min) { sink.usd += d.usd; d.usd = 0; }
   }
