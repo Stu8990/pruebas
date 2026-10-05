@@ -30,19 +30,19 @@ sw.js                 # Service worker: CACHE version + SHELL list (a unit test 
 src/
   config.js           # SUPA_URL, SUPA_KEY, EDGE_BASE, ASSET_META (display names, VISA→V)
   auth.js             # db (THE single Supabase client) + signIn/signUp/sendReset/changePassword/signOut (no DOM)
-  data.js             # state + all I/O: positions, history, market, cash/profile (user_metadata), snapshotToday()
+  data.js             # state + all I/O: positions, history, market, cash/plan/profile (user_metadata), setPlan(), snapshotToday()
   model.js            # derives summary / month attribution / verdicts / actions from state
   format.js           # money(), signedMoney(), pct(), esc() — every number/text shown goes through here
   app.js              # bootstrap, hash router, data-action delegation, forms, AI, price refresh, SW registration
   core/portfolio.js   # PURE: ledger (avg-cost, buys+sales), summarize(), monthAttribution()
-  core/plan.js        # PURE: DEFAULT_PLAN, planStatus(), monthlyBuys(), planVerdicts(), vsIndex()
+  core/plan.js        # PURE: normalizePlan/parsePlanForm/enginePlan, planStatus(), monthlyBuys(), planVerdicts(), vsIndex()
   core/advice.js      # PURE: evaluateCandidate() for tickers outside the plan (legacy profiles)
   core/trades.js      # PURE: validateTrade(), applyTrade(), removeTrade()
   ui/sheet.js         # bottom sheet on native <dialog>
   ui/chart.js         # SVG value chart
   views/home.js       # Inicio: aporte del mes · hacia tu plan · pendiente · ¿cómo voy? (vs S&P) · ¿por qué subí/bajé? · curva
   views/holdings.js   # Acciones: list, detail sheet, buy/sell form
-  views/plan.js       # Plan: el plan acordado, lo que se vende, otra acción, IA
+  views/plan.js       # Plan: el plan de la cuenta (+ editor en hoja), lo que se vende, otra acción, IA
   views/more.js       # Más: cómo funciona, historial, cuenta
 supabase/functions/   # market-data, ai-analysis, xtb-sync (not deployed; see risks)
 tests/unit/           # node:test
@@ -60,12 +60,14 @@ Dependency direction: `core/*` (pure, no imports from app) ← `data` ← `model
 - `sessions`: one row per day with `valor_total_usd` and `rendimientos` (% gain vs avg cost per ticker at that date).
   Written by `snapshotToday()` (insert, or update if today exists — never duplicates). Legacy rows may contain
   `_capitalInjected`; it is ignored by the new code. Duplicated dates are deduplicated on read (last wins).
-- `auth.users.user_metadata`: `last_cash` (uninvested cash in XTB) and legacy `profile` (no longer shown).
+- `auth.users.user_metadata`: `last_cash` (uninvested cash in XTB), `plan` (each account's own plan, see below) and legacy `profile` (no longer shown).
 
 ## Rules engine (src/core/plan.js) — the user's plan is data
-- `DEFAULT_PLAN` = the plan agreed on 2026-10-02 (`/mnt/project-files/finanzas/plan-portafolio-final.md`): S&P 500 67 % (VOO or CSPX; new money → CSPX),
-  emerging 15 % (EIMI), MSFT/Visa/JNJ 5.5 % each, NVDA frozen (no buys, trim above 10 %), exit list (EUNL.DE→EIMI and KO→MSFT now;
-  SCHD, PEP, PG, MNST, AMZN with limit orders before 2026-12-31). If the plan changes, change it here and in that file, nowhere else.
+- Each account stores its own plan in `user_metadata.plan`: `{ v:1, monthly, targets:[{ticker,pct}], frozen:[{ticker,max}],
+  exits:[{ticker,now}], deadline, nonUS }`. Created/edited in the Plan tab (sheet `planForm` → `parsePlanForm` → `setPlan`).
+  `enginePlan()` adds alias groups (CSPX/VOO/IVV… = «S&P 500», VISA/V) and fund vs stock (`isFund`, Yahoo quoteType).
+  No plan → no buy/sell advice anywhere: Inicio and Plan invite to create one, verdicts are `{}`, the AI gets `facts.plan = null`.
+  Never hardcode one user's plan in code. Stuart's plan (2026-10-02) lives only in his account and in the E2E fixture `PLAN`.
 - Frozen weight takes space from the funds (proportionally), so goals + frozen (up to its cap) = 100 %.
 - `monthlyBuys`: the contribution goes to the 2–3 targets furthest below goal (measured on value + contribution, exit money included),
   never to exit or frozen tickers; amounts < $10 merge into the first; sums exactly.

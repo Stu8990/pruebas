@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { summarize } from '../../src/core/portfolio.js';
-import { planVerdicts, VERDICT_LABELS } from '../../src/core/plan.js';
+import { planVerdicts, enginePlan, VERDICT_LABELS } from '../../src/core/plan.js';
 
 // La Edge Function ai-analysis descarta veredictos cuya etiqueta no conoce. Si
 // alguien cambia una etiqueta en plan.js sin actualizarla allí, la IA dejaría
@@ -16,10 +16,14 @@ test('las etiquetas de veredicto del motor están permitidas en ai-analysis', ()
     { CSPX: P(3, 100), MSFT: P(1, 100), VISA: P(1, 100), NVDA: P(1, 100), SCHD: P(1, 100), TSLA: P(1, 100) },
     { CSPX: P(1, 100), NVDA: P(5, 100) },
   ];
+  const plan = enginePlan({
+    targets: [{ ticker: 'CSPX', pct: 80 }, { ticker: 'MSFT', pct: 5 }, { ticker: 'VISA', pct: 5 }],
+    frozen: [{ ticker: 'NVDA', max: 10 }], exits: [{ ticker: 'SCHD', now: false }], deadline: '2026-12-31',
+  });
   const seen = new Set();
   for (const positions of cases) {
     const market = Object.fromEntries(Object.keys(positions).map(t => [t, px(t)]));
-    for (const v of Object.values(planVerdicts({ summary: summarize({ positions, market }) }))) seen.add(v.label);
+    for (const v of Object.values(planVerdicts({ summary: summarize({ positions, market }), plan }))) seen.add(v.label);
   }
   assert.ok(seen.size >= 5, `sólo se generaron ${[...seen]}`);
   for (const label of VERDICT_LABELS) assert.ok(allowed.has(label), `ai-analysis no permite «${label}»`);

@@ -504,15 +504,18 @@ Deno.serve(async (req: Request) => {
       const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? v : null;
       const rawFacts = (body.facts ?? {}) as Record<string, unknown>;
       const tk = (v: unknown) => clean(v, 10).toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
-      const rawPlan = (rawFacts.plan ?? {}) as Record<string, unknown>;
+      // facts.plan === null: la cuenta todavía no creó su plan en la app.
+      const hasPlan = !!rawFacts.plan && typeof rawFacts.plan === 'object';
+      const rawPlan = (hasPlan ? rawFacts.plan : {}) as Record<string, unknown>;
       const arr = (v: unknown, n: number) => Array.isArray(v) ? (v as Record<string, unknown>[]).slice(0, n) : [];
       const plan = {
         targets: arr(rawPlan.targets, 10).map(t => ({ label: clean(t.label, 30), buy: tk(t.buy), weight: num(t.weight), goal: num(t.goal) })),
         frozen: arr(rawPlan.frozen, 5).map(f => ({ ticker: tk(f.ticker), weight: num(f.weight), max: num(f.max) })),
-        exits: arr(rawPlan.exits, 20).map(e => ({ ticker: tk(e.ticker), usd: num(e.usd), now: e.now === true, swapTo: e.swapTo ? tk(e.swapTo) : '', gainPct: num(e.gainPct) })),
+        exits: arr(rawPlan.exits, 20).map(e => ({ ticker: tk(e.ticker), usd: num(e.usd), now: e.now === true, gainPct: num(e.gainPct) })),
         deadline: /^\d{4}-\d{2}-\d{2}$/.test(String(rawPlan.deadline)) ? String(rawPlan.deadline) : '',
         daysLeft: num(rawPlan.daysLeft),
         monthly: num(rawPlan.monthly),
+        nonUS: rawPlan.nonUS === true,
         monthlyBuys: arr(rawPlan.monthlyBuys, 5).map(b => ({ ticker: tk(b.ticker), usd: num(b.usd) })),
         vsIndex: rawPlan.vsIndex && typeof rawPlan.vsIndex === 'object'
           ? { index: num((rawPlan.vsIndex as Record<string, unknown>).index), rest: num((rawPlan.vsIndex as Record<string, unknown>).rest) } : null,
@@ -521,7 +524,7 @@ Deno.serve(async (req: Request) => {
       const planStr = [
         plan.targets.length ? `Objetivos (peso hoy → objetivo): ${plan.targets.map(t => `${t.label} ${t.weight}% → ${t.goal}% (dinero nuevo a ${t.buy})`).join('; ')}` : '',
         plan.frozen.length ? `Congeladas (se mantienen sin comprar; si pasan del tope se vende el exceso): ${plan.frozen.map(f => `${f.ticker} ${f.weight}% (tope ${f.max}%)`).join(', ')}` : '',
-        plan.exits.length ? `Lista de venta${plan.deadline ? ` (fecha tope ${plan.deadline}, quedan ${plan.daysLeft} días)` : ''}: ${plan.exits.map(e => `${e.ticker} ~$${e.usd}${e.now ? ' (vender ya' + (e.swapTo ? ` → ${e.swapTo}` : '') + ')' : ''}${e.gainPct != null ? ` va ${pf(e.gainPct)}` : ''}`).join(', ')}. Con órdenes limitadas cerca del precio de compra; si llega la fecha, se vende igual.` : '',
+        plan.exits.length ? `Lista de venta${plan.deadline ? ` (fecha tope ${plan.deadline}, quedan ${plan.daysLeft} días)` : ''}: ${plan.exits.map(e => `${e.ticker} ~$${e.usd}${e.now ? ' (vender ya)' : ''}${e.gainPct != null ? ` va ${pf(e.gainPct)}` : ''}`).join(', ')}. Con órdenes limitadas cerca del precio de compra; si llega la fecha, se vende igual. El dinero va a lo que esté más bajo en el plan.` : '',
         plan.monthlyBuys.length ? `Aporte de este mes ($${plan.monthly}): ${plan.monthlyBuys.map(b => `${b.ticker} $${b.usd}`).join(', ')}. Regla: a las 2-3 posiciones más por debajo de su objetivo; nunca a algo de la lista de venta.` : '',
         plan.vsIndex ? `Contra el índice (ganancia sobre lo pagado): S&P 500 que tiene ${pf(plan.vsIndex.index)}; todo lo demás ${pf(plan.vsIndex.rest)}. Revisión cada 6-12 meses; si en 2-3 años sus acciones no le ganan, pasarlas al ETF.` : '',
       ].filter(Boolean).join('\n');
@@ -546,7 +549,9 @@ Deno.serve(async (req: Request) => {
           : [],
       };
       const factsStr = [
-        planStr ? `PLAN DEL USUARIO (acordado el 2 oct 2026; es la fuente de verdad para qué comprar y vender):\n${planStr}` : '',
+        hasPlan
+          ? `PLAN DEL USUARIO (lo definió él mismo en la app; es la fuente de verdad para qué comprar y vender):\n${planStr || '(sin datos del plan)'}`
+          : 'PLAN DEL USUARIO: todavía no creó su plan en la app.',
         facts.totalGain != null ? `Ganancia total real (sin contar aportes): ${facts.totalGain >= 0 ? '+' : ''}$${facts.totalGain.toFixed(2)}${facts.realized ? ` (incluye $${facts.realized.toFixed(2)} ya realizados al vender)` : ''}` : '',
         facts.cash != null ? `Efectivo sin invertir: $${facts.cash.toFixed(2)}` : '',
         facts.today != null ? `Cambio de hoy: ${facts.today >= 0 ? '+' : ''}$${facts.today.toFixed(2)}` : '',
@@ -594,9 +599,11 @@ ${histSummary ? `HISTORIAL: ${histStr}` : ''}
 REGLAS:
 - Responde EXCLUSIVAMENTE en JSON: { "answer": "string" }. Máximo 120 palabras.
 - Cita datos concretos (ticker + número) de los DATOS DEL USUARIO. No inventes cifras, precios objetivo ni noticias.
-- Si preguntan qué comprar o vender, responde con el PLAN DEL USUARIO y las RECOMENDACIONES DE LA APP (montos y tickers exactos) y explica el porqué. Nunca sugieras comprar algo de la lista de venta ni una acción congelada. Si la pregunta empuja a lo contrario, explica con respeto por qué el plan dice lo que dice.
+${hasPlan
+  ? '- Si preguntan qué comprar o vender, responde con el PLAN DEL USUARIO y las RECOMENDACIONES DE LA APP (montos y tickers exactos) y explica el porqué. Nunca sugieras comprar algo de la lista de venta ni una acción congelada. Si la pregunta empuja a lo contrario, explica con respeto por qué el plan dice lo que dice.'
+  : '- El usuario NO tiene plan: no le digas qué ticker comprar o vender ni con cuánto. Explica sus números y, si pregunta qué hacer, dile que cree su plan en la pestaña Plan (qué quiere tener y en qué proporción) y da sólo ideas generales (por ejemplo, que un núcleo en un ETF amplio y diversificado es lo habitual para empezar).'}
 - Empieza por la respuesta (qué hacer o el dato), en 1-2 frases; después, el porqué. Sin introducciones.
-- HECHOS FIJOS que puedes usar: el usuario vive en Ecuador (no residente en EE. UU.) y usa XTB. ETF domiciliados en EE. UU. (VOO, SCHD) y acciones de EE. UU.: 30% de retención sobre dividendos. ETF irlandeses UCITS (CSPX, EIMI): 15% dentro del fondo y no cuentan para el impuesto de herencia de EE. UU. (umbral de 60,000 USD para no residentes). CSPX y EIMI acumulan dividendos (no los pagan).
+- HECHOS FIJOS que puedes usar: ${plan.nonUS ? 'el usuario dice que no reside en EE. UU.' : 'no sabes si el usuario reside en EE. UU.; si pregunta por impuestos, aclara que lo siguiente aplica a no residentes'}. Para no residentes en EE. UU.: ETF domiciliados en EE. UU. (VOO, SCHD) y acciones de EE. UU. retienen 30% de los dividendos; ETF irlandeses UCITS (CSPX, EIMI), 15% dentro del fondo, y no cuentan para el impuesto de herencia de EE. UU. (umbral de 60,000 USD para no residentes). CSPX y EIMI acumulan dividendos (no los pagan).
 - Si la pregunta pide un dato que no está ni en los DATOS ni en los HECHOS FIJOS (noticias, precios futuros), dilo en una frase y responde sólo con lo que sí hay.
 - El dinero aportado nunca es ganancia: usa la ganancia total real de los DATOS.
 - Explica cualquier término (PER, ETF, rango de 52 semanas) en una frase simple.

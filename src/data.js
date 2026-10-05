@@ -7,6 +7,7 @@ import { EDGE_BASE, ASSET_META } from './config.js';
 import { summarize, monthStart } from './core/portfolio.js';
 import { applyTrade, removeTrade, validateTrade, sameTrade } from './core/trades.js';
 import { PROFILES } from './core/advice.js';
+import { normalizePlan } from './core/plan.js';
 
 function fresh() {
   return {
@@ -17,6 +18,7 @@ function fresh() {
     history: [],
     cash: 0,
     profile: 'equilibrado',
+    plan: null,          // plan guardado del usuario (user_metadata.plan) o null
     status: { positions: 'idle', market: 'idle', history: 'idle' },
     errors: {},
   };
@@ -85,6 +87,7 @@ export async function loadUserPrefs() {
   let profile = meta.profile;
   if (!PROFILES[profile]) { try { profile = localStorage.getItem(profileKey(uid)); } catch { profile = null; } }
   state.profile = PROFILES[profile] ? profile : 'equilibrado';
+  state.plan = normalizePlan(meta.plan);
 }
 
 export async function loadPositions() {
@@ -235,6 +238,17 @@ export async function setCash(amount) {
   if (!stillCurrent(gen)) throw new StaleLoad();
   if (error) throw new Error('No se pudo guardar el efectivo.');
   state.cash = n;
+}
+
+// El plan vive en user_metadata (cada cuenta el suyo, sin tabla nueva).
+export async function setPlan(plan) {
+  const gen = generation;
+  const clean = normalizePlan(plan);
+  if (!clean) throw new Error('El plan necesita al menos un objetivo.');
+  const { error } = await db.auth.updateUser({ data: { plan: clean } });
+  if (!stillCurrent(gen)) throw new StaleLoad();
+  if (error) throw new Error('No se pudo guardar tu plan. Revisa tu conexión e inténtalo de nuevo.');
+  state.plan = clean;
 }
 
 export async function setProfile(profile) {

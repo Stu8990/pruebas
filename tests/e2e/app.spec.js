@@ -246,7 +246,7 @@ test('el aporte se reparte completo y nunca va a lo que se vende ni a lo congela
   await expect(buys).toContainText('JNJ');
 });
 
-test('el Plan muestra el plan acordado: objetivos y lo que se vende con fecha', async ({ page }) => {
+test('el Plan muestra el plan guardado: objetivos y lo que se vende con fecha', async ({ page }) => {
   await open(page, 'plan');
   await expect(page.locator('.plandef')).toContainText('S&P 500 (CSPX)');
   await expect(page.locator('.plandef')).toContainText('67%');
@@ -473,7 +473,9 @@ test('una respuesta tardía de la IA pedida por la cuenta anterior no aparece en
   await routeAccountB(page);
   await signOutAndInAsB(page);
   await page.evaluate(() => { location.hash = 'plan'; });
-  await expect(page.getByRole('heading', { name: 'Lo que vas a vender' })).toBeVisible({ timeout: 8000 });
+  // B no tiene plan: ve la invitación a crearlo, nunca el plan de A.
+  await expect(page.getByRole('heading', { name: 'Todavía no tienes un plan' })).toBeVisible({ timeout: 8000 });
+  await expect(page.locator('.plandef')).toHaveCount(0);
   await page.waitForTimeout(1500);
   await expect(page.locator('.answer')).toHaveCount(0);
   await expect(page.locator('.candidate')).toHaveCount(0);

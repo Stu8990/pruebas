@@ -4,17 +4,17 @@
 import { db, landing, signIn, signUp, sendReset, changePassword, signOut } from './auth.js';
 import {
   state, resetState, isStale, currentGen, loadUserPrefs, loadPositions, loadHistory, loadMarket, quote, searchTickers,
-  addTrade, deleteTrade, setCash, snapshotToday, recordManualValue, deleteHistory,
+  addTrade, deleteTrade, setCash, setPlan, snapshotToday, recordManualValue, deleteHistory,
   edge, nameOf, todayStr,
 } from './data.js';
 import { model } from './model.js';
-import { monthlyBuys } from './core/plan.js';
+import { monthlyBuys, parsePlanForm, enginePlan, STARTER_PLAN } from './core/plan.js';
 import { validateTrade, TICKER_RE, parseNum } from './core/trades.js';
 import { monthName, timeAgo, esc } from './format.js';
 import { openSheet, closeSheet, sheetBody, isSheetOpen } from './ui/sheet.js';
 import { renderHome, setRange } from './views/home.js';
 import { renderHoldings, holdingSheet, tradeForm } from './views/holdings.js';
-import { renderPlan, planState } from './views/plan.js';
+import { renderPlan, planState, planForm } from './views/plan.js';
 import { renderMore } from './views/more.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -369,6 +369,30 @@ function openCash() {
   });
 }
 
+// El plan de esta cuenta. Va en una hoja: la vista se re-renderiza con cada
+// actualización de precios y borraría lo que el usuario está escribiendo.
+function openPlanEditor() {
+  const stored = state.plan ?? STARTER_PLAN;
+  const held = model().summary.holdings.map(h => h.ticker);
+  openSheet(state.plan ? 'Editar tu plan' : 'Crea tu plan', planForm({ stored, held, engine: enginePlan(stored, state.market) }));
+  $('#plan-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.currentTarget;
+    const get = name => {
+      const el = f.elements.namedItem(name);
+      if (!el) return null;
+      return el.type === 'checkbox' ? (el.checked ? 'on' : '') : el.value;
+    };
+    const r = parsePlanForm(get, held);
+    if (r.error) { formMsg(f, { error: r.error }); return; }
+    try {
+      await busy(f.querySelector('[type=submit]'), 'Guardando…', () => setPlan(r.plan));
+      planState.amount = '';
+      closeSheet(); toast('Plan guardado', 'good'); render();
+    } catch (err) { if (!isStale(err)) formMsg(f, { error: err.message }); }
+  });
+}
+
 function openPassword() {
   openSheet('Cambiar contraseña', `
     <form id="pwd-form" class="stack" novalidate>
@@ -430,16 +454,18 @@ function exportData() {
 // ── IA ─────────────────────────────────────────────────────
 // El plan y lo que se deriva de él, ya calculado: la IA lo explica, no lo decide.
 function planFacts(m) {
+  if (!m.plan) return null; // sin plan: la IA no recomienda comprar ni vender
   const st = m.status;
-  const buys = monthlyBuys({ summary: m.summary, plan: m.plan, amount: m.plan.monthly }).buys;
+  const buys = m.plan.monthly ? monthlyBuys({ summary: m.summary, plan: m.plan, amount: m.plan.monthly }).buys : [];
   const r1 = n => Math.round(n * 10) / 10;
   return {
     targets: st.complete ? st.targets.map(t => ({ label: t.label, buy: t.buy, weight: r1(t.weight), goal: r1(t.goal) })) : [],
     frozen: st.frozen.map(f => ({ ticker: f.ticker, weight: r1(f.weight), max: f.max })),
-    exits: st.exits.map(e => ({ ticker: e.ticker, usd: Math.round(e.value), now: !!e.now, swapTo: e.swapTo ?? null, gainPct: e.gainPct === null ? null : r1(e.gainPct) })),
+    exits: st.exits.map(e => ({ ticker: e.ticker, usd: Math.round(e.value), now: !!e.now, gainPct: e.gainPct === null ? null : r1(e.gainPct) })),
     deadline: st.deadline,
     daysLeft: st.daysLeft,
     monthly: m.plan.monthly,
+    nonUS: m.plan.nonUS,
     monthlyBuys: buys.map(b => ({ ticker: b.ticker, usd: Math.round(b.usd) })),
     vsIndex: m.vsIndex ? { index: r1(m.vsIndex.index.gainPct), rest: r1(m.vsIndex.rest.gainPct) } : null,
   };
@@ -528,6 +554,7 @@ const actions = {
   holding: b => openHolding(b.dataset.ticker),
   trade: b => openTrade({ kind: b.dataset.kind, ticker: b.dataset.ticker ?? '', amount: b.dataset.amount ?? '' }),
   cash: () => openCash(),
+  'edit-plan': () => openPlanEditor(),
   password: () => openPassword(),
   manual: () => openManual(),
   wipe: () => openWipe(),

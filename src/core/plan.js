@@ -1,39 +1,119 @@
-// Tu plan de inversión como dato, y lo que se deriva de él: cuánto falta para
-// cada peso objetivo, dónde poner el aporte del mes, qué falta vender y qué
-// hacer con cada acción. Funciones puras: sin DOM, sin red, sin estado.
+// El plan de inversión de cada usuario, como dato, y lo que se deriva de él:
+// cuánto falta para cada peso objetivo, dónde poner el aporte del mes, qué
+// falta vender y qué hacer con cada acción. Funciones puras: sin DOM, sin red,
+// sin estado.
 //
 // Reemplaza a los perfiles genéricos (conservador/equilibrado/agresivo): esos
 // trataban cualquier ETF como «base estable» y mandaban el aporte a posiciones
-// que el plan decidió vender.
+// que el usuario había decidido vender. Sin plan no hay consejos de compra o
+// venta: la app pide crearlo.
+//
+// Dos formas del plan:
+// - Guardada (user_metadata.plan), la que edita el usuario:
+//   { v: 1, monthly, targets: [{ ticker, pct }], frozen: [{ ticker, max }],
+//     exits: [{ ticker, now }], deadline: 'AAAA-MM-DD' | '', nonUS }
+// - Del motor (enginePlan): con grupos, etiquetas y qué se compra en cada uno.
+
+import { isFund } from './advice.js';
+import { TICKER_RE, parseNum } from './trades.js';
+
+// Símbolos que cuentan como el mismo objetivo: tener VOO y comprar CSPX es
+// seguir llenando «S&P 500». Visa se guarda como VISA pero también puede ser V.
+const SAME = [
+  { label: 'S&P 500', tickers: ['CSPX', 'VOO', 'SPY', 'IVV', 'SPLG', 'VUAA', 'SXR8'] },
+  { label: 'Visa', tickers: ['VISA', 'V'] },
+];
 
 /**
- * Plan acordado el 2 oct 2026 (/mnt/project-files/finanzas/plan-portafolio-final.md).
- * - targets: pesos objetivo sobre todo lo invertido. Varios símbolos pueden
- *   contar para el mismo objetivo (VOO y CSPX son ambos S&P 500); `buy` es en
- *   qué se pone el dinero nuevo. Los fondos suman 82 y las acciones 16,5 (el plan
- *   dice «~5-6% c/u»); el 1,5 que falta es para lo congelado.
- * - frozen: se mantiene sin comprar más; si pasa de `max` %, vender el exceso.
- * - exit: se vende antes de `deadline`; `swapTo` dice a dónde va el dinero.
+ * Plantilla para empezar: núcleo indexado. Sin acciones, sin ventas: lo que
+ * ya tienes aparece en el editor para que decidas qué hacer con cada cosa.
  */
-export const DEFAULT_PLAN = {
-  targets: [
-    { key: 'sp500', label: 'S&P 500', pct: 67, tickers: ['CSPX', 'VOO'], buy: 'CSPX' },
-    { key: 'em',    label: 'Emergentes', pct: 15, tickers: ['EIMI'], buy: 'EIMI' },
-    { key: 'msft',  label: 'Microsoft', pct: 5.5, stock: true, tickers: ['MSFT'], buy: 'MSFT' },
-    { key: 'visa',  label: 'Visa', pct: 5.5, stock: true, tickers: ['VISA', 'V'], buy: 'VISA' },
-    { key: 'jnj',   label: 'Johnson & Johnson', pct: 5.5, stock: true, tickers: ['JNJ'], buy: 'JNJ' },
-  ],
-  frozen: [{ ticker: 'NVDA', max: 10 }],
-  exit: {
-    deadline: '2026-12-31',
-    items: [
-      { ticker: 'EUNL.DE', swapTo: 'EIMI', now: true },
-      { ticker: 'KO', swapTo: 'MSFT', now: true },
-      { ticker: 'SCHD' }, { ticker: 'PEP' }, { ticker: 'PG' }, { ticker: 'MNST' }, { ticker: 'AMZN' },
-    ],
-  },
-  monthly: 100,
+export const STARTER_PLAN = {
+  v: 1, monthly: 100, targets: [{ ticker: 'CSPX', pct: 80 }, { ticker: 'EIMI', pct: 20 }],
+  frozen: [], exits: [], deadline: '', nonUS: true,
 };
+
+const MAX_TARGETS = 12;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Deja un plan guardado en forma válida, o null si no sirve. */
+export function normalizePlan(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.targets)) return null;
+  const tk = v => String(v ?? '').trim().toUpperCase();
+  const seen = new Set();
+  const once = t => TICKER_RE.test(t) && !seen.has(t) && seen.add(t);
+  const targets = raw.targets.map(t => ({ ticker: tk(t?.ticker), pct: +t?.pct }))
+    .filter(t => t.pct > 0 && t.pct <= 100 && once(t.ticker)).slice(0, MAX_TARGETS);
+  if (!targets.length) return null;
+  const frozen = (Array.isArray(raw.frozen) ? raw.frozen : []).map(f => ({ ticker: tk(f?.ticker), max: +f?.max > 0 ? Math.min(100, +f.max) : 10 }))
+    .filter(f => once(f.ticker));
+  const exits = (Array.isArray(raw.exits) ? raw.exits : []).map(e => ({ ticker: tk(e?.ticker), now: e?.now === true }))
+    .filter(e => once(e.ticker));
+  const deadline = DATE_RE.test(String(raw.deadline)) ? String(raw.deadline) : '';
+  return { v: 1, monthly: +raw.monthly > 0 ? +raw.monthly : 0, targets, frozen, exits, deadline, nonUS: raw.nonUS !== false };
+}
+
+/**
+ * Lee el formulario del editor. `held` son los símbolos que el usuario tiene;
+ * para cada uno el formulario trae role-<TICKER> y max-<TICKER>.
+ * Devuelve { plan } o { error } con un mensaje para el usuario.
+ */
+export function parsePlanForm(get, held) {
+  const targets = [];
+  for (let i = 0; get(`t-${i}`) !== null; i++) {
+    const ticker = String(get(`t-${i}`) ?? '').trim().toUpperCase();
+    const raw = String(get(`p-${i}`) ?? '').trim();
+    if (!ticker && !raw) continue;
+    if (!TICKER_RE.test(ticker)) return { error: `«${ticker || '(vacío)'}» no es un símbolo válido. Ej.: CSPX, MSFT, BRK-B.` };
+    const pct = parseNum(raw);
+    if (!(pct > 0 && pct <= 100)) return { error: `Escribe el peso de ${ticker} entre 0 y 100.` };
+    if (targets.some(t => t.ticker === ticker)) return { error: `${ticker} está dos veces en tus objetivos.` };
+    targets.push({ ticker, pct });
+  }
+  if (!targets.length) return { error: 'Agrega al menos un objetivo (por ejemplo, CSPX con 80%).' };
+  const sum = targets.reduce((s, t) => s + t.pct, 0);
+  if (sum > 100.001) return { error: `Tus objetivos suman ${Math.round(sum * 10) / 10}%: no pueden pasar de 100%.` };
+
+  const frozen = [], exits = [];
+  for (const t of held) {
+    if (targets.some(x => x.ticker === t)) continue;
+    const role = get(`role-${t}`);
+    if (role === 'frozen') {
+      const max = parseNum(get(`max-${t}`));
+      frozen.push({ ticker: t, max: max > 0 && max <= 100 ? max : 10 });
+    } else if (role === 'now') exits.push({ ticker: t, now: true });
+    else if (role === 'later') exits.push({ ticker: t, now: false });
+  }
+  const deadline = String(get('deadline') ?? '').trim();
+  if (exits.some(e => !e.now) && !DATE_RE.test(deadline)) return { error: 'Pon la fecha tope para las ventas que no son inmediatas.' };
+  const monthly = parseNum(get('monthly'));
+  return { plan: normalizePlan({
+    v: 1, monthly: monthly > 0 ? monthly : 0, targets, frozen, exits,
+    deadline: exits.some(e => !e.now) ? deadline : '', nonUS: get('nonUS') === 'on',
+  }) };
+}
+
+/**
+ * Plan guardado → plan del motor. null si no hay plan. `market` sirve para
+ * saber si un símbolo es fondo (quoteType de Yahoo) cuando no es uno conocido.
+ */
+export function enginePlan(stored, market = {}) {
+  const p = normalizePlan(stored);
+  if (!p) return null;
+  return {
+    targets: p.targets.map(t => {
+      const group = SAME.find(g => g.tickers.includes(t.ticker));
+      return {
+        key: t.ticker, label: group?.label ?? t.ticker, pct: t.pct, stock: !isFund(t.ticker, market[t.ticker]),
+        tickers: group ? [t.ticker, ...group.tickers.filter(x => x !== t.ticker)] : [t.ticker], buy: t.ticker,
+      };
+    }),
+    frozen: p.frozen,
+    exit: { deadline: p.deadline, items: p.exits.map(e => ({ ticker: e.ticker, now: e.now })) },
+    monthly: p.monthly,
+    nonUS: p.nonUS,
+  };
+}
 
 const MAX_BUYS = 3;   // el plan dice «las 2-3 posiciones más por debajo»
 const MIN_BUY = 10;   // XTB permite fracciones, pero $3 en un sitio no es un plan
@@ -53,7 +133,7 @@ function index(plan) {
 }
 
 /** Qué papel tiene un símbolo en el plan: 'target' | 'frozen' | 'exit' | 'outside'. */
-export function roleOf(ticker, plan = DEFAULT_PLAN) {
+export function roleOf(ticker, plan) {
   return index(plan)[ticker] ?? { kind: 'outside' };
 }
 
@@ -65,11 +145,11 @@ export function daysUntil(deadline, today) {
  * ¿Cómo voy respecto al plan? Con precios incompletos los pesos son falsos y
  * `complete` es falso: la vista no debe mostrar barras ni montos.
  * Lo congelado ocupa espacio mientras lo tengas: si NVDA pesa 9%, los fondos
- * (S&P 500 y emergentes) ceden ese espacio en proporción y las acciones
- * mantienen su objetivo. Así objetivos + congelado (hasta su tope) suman 100%.
- * Con cada aporte NVDA pesa menos y los fondos vuelven hacia 67% y 15%.
+ * ceden ese espacio en proporción y las acciones mantienen su objetivo. Así
+ * objetivos + congelado (hasta su tope) suman 100% cuando los objetivos suman
+ * 100%. Con cada aporte lo congelado pesa menos y los fondos vuelven a su meta.
  */
-export function planStatus({ summary, plan = DEFAULT_PLAN, today }) {
+export function planStatus({ summary, plan, today }) {
   const idx = index(plan);
   const S = summary.stocksValue;
   const priced = summary.holdings.filter(h => h.value !== null);
@@ -84,7 +164,7 @@ export function planStatus({ summary, plan = DEFAULT_PLAN, today }) {
   const frozenPct = frozen.reduce((s, f) => s + Math.min(f.weight, f.max), 0);
   const stockPct = plan.targets.filter(t => t.stock).reduce((s, t) => s + t.pct, 0);
   const fundPct = plan.targets.filter(t => !t.stock).reduce((s, t) => s + t.pct, 0);
-  const fundScale = Math.max(0, 100 - stockPct - frozenPct) / fundPct;
+  const fundScale = fundPct > 0 ? Math.max(0, 100 - stockPct - frozenPct) / fundPct : 0;
 
   const targets = plan.targets.map(t => {
     const hs = priced.filter(h => t.tickers.includes(h.ticker));
@@ -104,7 +184,7 @@ export function planStatus({ summary, plan = DEFAULT_PLAN, today }) {
     complete: summary.complete,
     targets, frozen, exits, outside, exitWeight,
     deadline: plan.exit.deadline,
-    daysLeft: today ? daysUntil(plan.exit.deadline, today) : null,
+    daysLeft: today && plan.exit.deadline ? daysUntil(plan.exit.deadline, today) : null,
   };
 }
 
@@ -116,7 +196,7 @@ export function planStatus({ summary, plan = DEFAULT_PLAN, today }) {
  * vuelve al plan cuando vendas).
  * Invariante: la suma de las compras es exactamente `amount`.
  */
-export function monthlyBuys({ summary, plan = DEFAULT_PLAN, amount }) {
+export function monthlyBuys({ summary, plan, amount }) {
   const A = Number(amount);
   if (!fin(A) || !(A > 0)) return { buys: [], note: null };
   if (!summary.complete) return { buys: [], note: 'Faltan precios de hoy: vuelve a intentarlo cuando se actualicen.' };
@@ -165,7 +245,7 @@ export const VERDICT_LABELS = Object.values(LABELS).map(l => l.label);
  * Qué hacer con cada acción según el plan. Misma forma que antes:
  * { [ticker]: { action, label, tone, amount?, reasons[] } }.
  */
-export function planVerdicts({ summary, plan = DEFAULT_PLAN, today }) {
+export function planVerdicts({ summary, plan, today }) {
   const st = planStatus({ summary, plan, today });
   const out = {};
   for (const h of summary.holdings) {
@@ -174,8 +254,7 @@ export function planVerdicts({ summary, plan = DEFAULT_PLAN, today }) {
     if (role.kind === 'exit') {
       const e = role.exit;
       const when = e.now ? 'ya' : `antes del ${fmtDate(plan.exit.deadline)}`;
-      const to = e.swapTo ? ` y pasar el dinero a ${e.swapTo}` : ' y pasar el dinero a lo que esté más bajo en tu plan';
-      const reasons = [`Tu plan dice venderla ${when}${to}.`];
+      const reasons = [`Tu plan dice venderla ${when} y pasar el dinero a lo que esté más bajo en tu plan.`];
       if (!e.now && h.gainPct !== null && h.gainPct < 0) reasons.push(`Va ${pct0(h.gainPct)}: una orden limitada cerca de tu precio de compra (${usd(h.avgPrice)}) evita vender en el peor momento. Si llega la fecha, se vende igual.`);
       say('vender', reasons, h.value);
       continue;
@@ -184,14 +263,14 @@ export function planVerdicts({ summary, plan = DEFAULT_PLAN, today }) {
     if (role.kind === 'frozen') {
       const f = st.frozen.find(x => x.ticker === h.ticker);
       if (summary.complete && f?.trim) {
-        say('recortar', [`Pesa ${pct0(f.weight)} y tu plan pone el tope en ${f.max}%. Vender unos ${usd(f.trim)} y pasarlos al S&P 500.`], f.trim);
+        say('recortar', [`Pesa ${pct0(f.weight)} y tu plan pone el tope en ${f.max}%. Vender unos ${usd(f.trim)} y pasarlos a ${plan.targets[0].label}.`], f.trim);
       } else {
         say('congelada', [`Se queda, pero sin comprar más. Pesa ${pct0(f?.weight ?? h.weight ?? 0)}; si pasa de ${role.frozen.max}%, se vende el exceso.`]);
       }
       continue;
     }
     if (role.kind === 'outside') {
-      say('fuera', ['No está en tu plan. Decide si la agregas a tus objetivos o la vendes para pasarla al S&P 500.']);
+      say('fuera', [`No está en tu plan. Decide si la agregas a tus objetivos o la vendes para pasarla a ${plan.targets[0].label}.`]);
       continue;
     }
     const t = st.targets.find(x => x.key === role.target.key);
@@ -212,11 +291,13 @@ export function planVerdicts({ summary, plan = DEFAULT_PLAN, today }) {
 
 /**
  * Lo que tienes en el S&P 500 contra todo lo demás, en % sobre lo que pagaste.
+ * Sólo si el plan tiene un objetivo de S&P 500 (si no, no hay índice que comparar).
  * Es la pregunta de la revisión semestral (¿mis acciones le ganan al índice?)
  * con los datos que hay: no necesita fechas de compra.
  */
-export function vsIndex({ summary, plan = DEFAULT_PLAN }) {
-  const core = plan.targets[0];
+export function vsIndex({ summary, plan }) {
+  const core = plan.targets.find(t => t.label === 'S&P 500');
+  if (!core) return null;
   const priced = summary.holdings.filter(h => h.value !== null);
   const pick = f => {
     const hs = priced.filter(f);

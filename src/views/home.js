@@ -18,13 +18,22 @@ export function renderHome(m) {
   if (!m.hasPositions) return legacyHome(m);
   if (!m.pricesReady && state.status.market !== 'error') return loadingHome();
   return `
-    ${monthCard(m)}
-    ${progressBlock(m)}
-    ${pendingBlock(m)}
+    ${m.plan ? `${monthCard(m)}${progressBlock(m)}${pendingBlock(m)}` : planCta()}
     ${hero(m)}
     ${monthSection(m)}
     ${historySection(m)}
   `;
+}
+
+// Cuenta sin plan: sin plan no hay a dónde mandar el aporte, así que lo
+// primero es crearlo. Nada de consejos con el plan de otro.
+function planCta() {
+  return `
+    <section class="card card--hero plan-month" aria-labelledby="cta-title">
+      <h1 id="cta-title" class="block__title">Crea tu plan y te digo dónde poner cada aporte</h1>
+      <p>Elige qué quieres tener y en qué proporción, y qué hacer con lo que ya tienes. Toma un minuto y lo puedes cambiar cuando quieras.</p>
+      <button class="btn btn--primary btn--block" data-action="edit-plan">Crear mi plan</button>
+    </section>`;
 }
 
 function emptyHome() {
@@ -97,7 +106,7 @@ function indexLine(m) {
 // ── Mi plan ────────────────────────────────────────────────
 
 function monthCard(m) {
-  const amt = planState.amount || String(m.plan.monthly);
+  const amt = planState.amount || (m.plan.monthly ? String(m.plan.monthly) : '');
   const r = monthlyBuys({ summary: m.summary, plan: m.plan, amount: amt });
   const n = Number(amt);
   const title = Number.isFinite(n) && n > 0 ? `Este mes pon tus ${money(n)} así` : '¿Cuánto vas a aportar?';
@@ -175,22 +184,22 @@ function pendingBlock(m) {
   const items = [];
   for (const e of now) {
     items.push(todo({ ticker: e.ticker, chip: 'Ya', tone: 'warn',
-      who: `Vender ${nameOf(e.ticker)}${e.swapTo ? ` → ${e.swapTo}` : ''}`,
-      why: `Unos ${money(e.value)}. ${e.swapTo ? `Con lo que salga, compra ${e.swapTo}.` : ''}` }));
+      who: `Vender ${nameOf(e.ticker)}`,
+      why: `Unos ${money(e.value)}. Con lo que salga, compra lo que esté más bajo en tu plan.` }));
   }
   if (later.length) {
     const d = st.daysLeft;
     items.push(`
       <li><div class="todo todo--static">
         <span class="chip chip--warn">${d > 0 ? `${d} días` : 'Vencido'}</span>
-        <span class="todo__who">Vender ${later.length} posiciones antes del ${esc(fmtDate(st.deadline))}</span>
+        <span class="todo__who">Vender ${later.length === 1 ? 'una posición' : `${later.length} posiciones`} antes del ${esc(fmtDate(st.deadline))}</span>
         <span class="todo__why">${later.map(e => `<button class="link link--small" data-action="holding" data-ticker="${esc(e.ticker)}">${esc(nameOf(e.ticker))}</button>`).join(' · ')}</span>
         <span class="todo__why">Pon órdenes limitadas cerca de tu precio de compra. Si llega la fecha, se venden igual. El dinero va a lo que esté más bajo en tu plan.</span>
       </div></li>`);
   }
   for (const f of st.frozen.filter(x => x.trim)) {
     items.push(todo({ ticker: f.ticker, chip: 'Vender una parte', tone: 'warn',
-      who: nameOf(f.ticker), why: `Pesa ${plainPct(f.weight)} y el tope es ${f.max}%. Vende unos ${money(f.trim)} y pásalos al S&P 500.` }));
+      who: nameOf(f.ticker), why: `Pesa ${plainPct(f.weight)} y el tope es ${f.max}%. Vende unos ${money(f.trim)} y pásalos a ${m.plan.targets[0].label}.` }));
   }
   for (const o of st.outside) {
     items.push(todo({ ticker: o.ticker, chip: 'Fuera de tu plan', tone: 'neutral',
