@@ -7,6 +7,14 @@ export const EDGE_BASE = `${SUPA_URL}/functions/v1`;
 // (Visa se guardaba como VISA, pero en Yahoo es V).
 export const ASSET_META = {
   VOO:  { full: 'Vanguard S&P 500' },
+  // ETF irlandeses (UCITS) del plan: en Yahoo cotizan en Londres, en USD.
+  CSPX: { full: 'iShares S&P 500 (CSPX)', yfTicker: 'CSPX.L' },
+  EIMI: { full: 'iShares Emergentes (EIMI)', yfTicker: 'EIMI.L' },
+  'EUNL.DE': { full: 'iShares MSCI World (EUNL)' },
+  JNJ:  { full: 'Johnson & Johnson' },
+  KO:   { full: 'Coca-Cola' },
+  PEP:  { full: 'PepsiCo' },
+  PG:   { full: 'Procter & Gamble' },
   AMZN: { full: 'Amazon' },
   MSFT: { full: 'Microsoft' },
   MNST: { full: 'Monster Beverage' },

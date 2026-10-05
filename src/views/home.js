@@ -1,9 +1,13 @@
-// Inicio: responde, en este orden, ¿cómo voy?, ¿por qué subí o bajé este mes?
-// y ¿qué hago ahora? Todo en frases, con las cifras dentro.
+// Inicio: tu plan primero. En este orden: dónde pongo el aporte de este mes,
+// cuánto me falta para el plan, qué tengo pendiente, ¿cómo voy? (contra el
+// S&P 500), ¿por qué subí o bajé este mes? y la curva. Todo en frases, con las
+// cifras dentro.
 
 import { state, nameOf } from '../data.js';
-import { money, signedMoney, pct, tone, monthName, esc } from '../format.js';
+import { money, signedMoney, pct, plainPct, tone, monthName, esc } from '../format.js';
 import { valueChart } from '../ui/chart.js';
+import { monthlyBuys, fmtDate } from '../core/plan.js';
+import { planState } from './plan.js';
 
 const RANGES = { '1m': 31, '3m': 92, 'todo': Infinity };
 let range = '3m';
@@ -14,9 +18,11 @@ export function renderHome(m) {
   if (!m.hasPositions) return legacyHome(m);
   if (!m.pricesReady && state.status.market !== 'error') return loadingHome();
   return `
+    ${monthCard(m)}
+    ${progressBlock(m)}
+    ${pendingBlock(m)}
     ${hero(m)}
     ${monthSection(m)}
-    ${actionsSection(m)}
     ${historySection(m)}
   `;
 }
@@ -59,8 +65,8 @@ function hero(m) {
     ? `<p class="notice notice--warn">Falta el precio de ${esc(s.missingPrices.join(', '))}; las cifras no lo incluyen.${pricesError ? ' <button class="link" data-action="refresh">Reintentar</button>' : ''}</p>`
     : '';
   return `
-    <section class="hero" aria-labelledby="hero-title">
-      <h1 id="hero-title" class="sr-only">Cómo voy</h1>
+    <section class="block hero" aria-labelledby="hero-title">
+      <h2 id="hero-title" class="block__title">¿Cómo voy?</h2>
       <p class="hero__line">Tienes <strong class="num">${money(s.total)}</strong>${s.cash > 0 ? ` <span class="hero__aside">(${money(s.cash)} en efectivo)</span>` : ''}.</p>
       <p class="hero__line">Pusiste ${money(s.invested)} en acciones y vas <strong class="num ${tone(g)}">${verb} ${money(Math.abs(g))}</strong> <span class="${tone(g)}">(${pct(s.totalGainPct)})</span>.</p>
       ${s.realized ? `<p class="muted small">Incluye ${signedMoney(s.realized)} que ya ganaste al vender.</p>` : ''}
@@ -70,7 +76,140 @@ function hero(m) {
         <div class="period"><dt>En ${esc(monthName(m.today))}</dt><dd class="num ${tone(month)}">${month === null ? '—' : signedMoney(month)}</dd></div>
         <div class="period"><dt>Desde que empezaste</dt><dd class="num ${tone(g)}">${signedMoney(g)}</dd></div>
       </dl>
+      ${indexLine(m)}
     </section>`;
+}
+
+// ¿Mis acciones le ganan al índice? Con lo que hay: tu S&P 500 contra todo lo
+// demás, en % sobre lo que pagaste. No necesita fechas de compra.
+function indexLine(m) {
+  const v = m.vsIndex;
+  if (!v) return '';
+  const ahead = v.diffPp >= 0;
+  return `
+    <div class="vsindex" id="vsindex">
+      <p>Tu ${esc(v.label)} va <strong class="num ${tone(v.index.gainPct)}">${pct(v.index.gainPct)}</strong>; todo lo demás, <strong class="num ${tone(v.rest.gainPct)}">${pct(v.rest.gainPct)}</strong>.
+      ${ahead ? 'Tus otras posiciones le ganan al índice por ahora.' : 'Por ahora el índice solo lo hace mejor.'}</p>
+      <p class="muted small">Revísalo cada 6 meses. Si en 2–3 años tus acciones no le ganan al ${esc(v.label)}, pásalas al fondo.</p>
+    </div>`;
+}
+
+// ── Mi plan ────────────────────────────────────────────────
+
+function monthCard(m) {
+  const amt = planState.amount || String(m.plan.monthly);
+  const r = monthlyBuys({ summary: m.summary, plan: m.plan, amount: amt });
+  const n = Number(amt);
+  const title = Number.isFinite(n) && n > 0 ? `Este mes pon tus ${money(n)} así` : '¿Cuánto vas a aportar?';
+  const list = !r.buys.length
+    ? `<p class="muted">${esc(r.note ?? 'Escribe un monto mayor que 0.')}</p>`
+    : `
+      <ol class="buys">${r.buys.map(b => `
+        <li class="buy">
+          <span class="buy__amt num">${money(b.usd)}</span>
+          <span class="buy__what"><strong>${esc(b.ticker)}</strong> · ${esc(b.label)}${b.isNew ? ' <span class="chip chip--good">nuevo</span>' : ''}</span>
+          <span class="buy__why">Pesa ${plainPct(b.weight)}; tu objetivo es ${plainPct(b.goal)}.
+            <button class="link link--small" data-action="trade" data-kind="buy" data-ticker="${esc(b.ticker)}" data-amount="${b.usd}">Anotar compra</button></span>
+        </li>`).join('')}</ol>`;
+  return `
+    <section class="card card--hero plan-month" aria-labelledby="month-plan-title">
+      <h1 id="month-plan-title" class="block__title">${esc(title)}</h1>
+      <div aria-live="polite">${list}</div>
+      <form class="field" data-form="contribution">
+        <div class="chips" role="group" aria-label="Monto del aporte">${[100, 250, 500].map(v => `<button type="button" class="chip-btn" data-action="amount" data-amount="${v}" aria-pressed="${String(v) === amt}">$${v}</button>`).join('')}</div>
+        <label class="field__label" for="contrib-amount">¿Cuánto vas a invertir?</label>
+        <div class="field__row">
+          <span class="field__prefix" aria-hidden="true">$</span>
+          <input id="contrib-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" value="${esc(amt)}" placeholder="100">
+          <button class="btn btn--quiet" type="submit">Calcular</button>
+        </div>
+      </form>
+      <p class="muted small">Regla de tu plan: el aporte va a lo que está más por debajo de su objetivo, nunca a lo que vas a vender.</p>
+    </section>`;
+}
+
+// Todas las filas comparten escala (la del mayor peso u objetivo), para que
+// una barra más larga sea de verdad más dinero. La marca es el objetivo.
+function goalRow({ name, weight, goal, max, val, cls = '' }) {
+  return `
+    <li class="goal ${cls}">
+      <span class="goal__name">${esc(name)}</span>
+      <span class="goal__val num">${val ?? `${plainPct(weight)} <span aria-hidden="true">→</span><span class="sr-only">, objetivo</span> ${plainPct(goal)}`}</span>
+      <span class="goal__track" aria-hidden="true">
+        <span class="goal__fill" style="--w:${(weight / max * 100).toFixed(1)}%"></span>
+        <span class="goal__mark" style="--g:${(goal / max * 100).toFixed(1)}%"></span>
+      </span>
+    </li>`;
+}
+
+function progressBlock(m) {
+  const st = m.status;
+  if (!st.complete) {
+    return `
+      <section class="block" aria-labelledby="progress-title">
+        <h2 id="progress-title" class="block__title">Hacia tu plan</h2>
+        <p class="muted">Faltan precios de hoy para medir tus pesos.</p>
+      </section>`;
+  }
+  const max = Math.max(...st.targets.map(t => Math.max(t.weight, t.goal)), ...st.frozen.map(f => Math.max(f.weight, f.max)), st.exitWeight, 1) * 1.08;
+  const rows = st.targets.map(t => goalRow({ name: t.label, weight: t.weight, goal: t.goal, max }));
+  for (const f of st.frozen) {
+    rows.push(goalRow({ name: `${nameOf(f.ticker)} (sin comprar)`, weight: f.weight, goal: f.max, max, cls: 'goal--frozen',
+      val: `${plainPct(f.weight)} <span class="muted">· tope ${plainPct(f.max)}</span>` }));
+  }
+  if (st.exits.length) rows.push(goalRow({ name: 'Por vender', weight: st.exitWeight, goal: 0, max, cls: 'goal--exit', val: `${plainPct(st.exitWeight)} <span aria-hidden="true">→</span><span class="sr-only">, objetivo</span> 0%` }));
+  const fz = st.frozen.find(f => f.weight >= 1);
+  const core = st.targets[0];
+  return `
+    <section class="block" aria-labelledby="progress-title">
+      <h2 id="progress-title" class="block__title">Hacia tu plan</h2>
+      <ul class="goals">${rows.join('')}</ul>
+      ${fz && core.goal < core.pct - 0.5 ? `<p class="muted small">${esc(nameOf(fz.ticker))} ocupa ${plainPct(fz.weight)} mientras la tengas; por eso el ${esc(core.label)} apunta a ${plainPct(core.goal)} y no a ${plainPct(core.pct)}. Con cada aporte vuelve a subir.</p>` : ''}
+    </section>`;
+}
+
+function pendingBlock(m) {
+  const st = m.status;
+  const now = st.exits.filter(e => e.now);
+  const later = st.exits.filter(e => !e.now);
+  const items = [];
+  for (const e of now) {
+    items.push(todo({ ticker: e.ticker, chip: 'Ya', tone: 'warn',
+      who: `Vender ${nameOf(e.ticker)}${e.swapTo ? ` → ${e.swapTo}` : ''}`,
+      why: `Unos ${money(e.value)}. ${e.swapTo ? `Con lo que salga, compra ${e.swapTo}.` : ''}` }));
+  }
+  if (later.length) {
+    const d = st.daysLeft;
+    items.push(`
+      <li><div class="todo todo--static">
+        <span class="chip chip--warn">${d > 0 ? `${d} días` : 'Vencido'}</span>
+        <span class="todo__who">Vender ${later.length} posiciones antes del ${esc(fmtDate(st.deadline))}</span>
+        <span class="todo__why">${later.map(e => `<button class="link link--small" data-action="holding" data-ticker="${esc(e.ticker)}">${esc(nameOf(e.ticker))}</button>`).join(' · ')}</span>
+        <span class="todo__why">Pon órdenes limitadas cerca de tu precio de compra. Si llega la fecha, se venden igual. El dinero va a lo que esté más bajo en tu plan.</span>
+      </div></li>`);
+  }
+  for (const f of st.frozen.filter(x => x.trim)) {
+    items.push(todo({ ticker: f.ticker, chip: 'Vender una parte', tone: 'warn',
+      who: nameOf(f.ticker), why: `Pesa ${plainPct(f.weight)} y el tope es ${f.max}%. Vende unos ${money(f.trim)} y pásalos al S&P 500.` }));
+  }
+  for (const o of st.outside) {
+    items.push(todo({ ticker: o.ticker, chip: 'Fuera de tu plan', tone: 'neutral',
+      who: nameOf(o.ticker), why: 'No está en tus objetivos. Decide si la agregas al plan o la vendes.' }));
+  }
+  return `
+    <section class="block" aria-labelledby="pending-title">
+      <h2 id="pending-title" class="block__title">Pendiente</h2>
+      ${items.length ? `<ul class="todos">${items.join('')}</ul>` : '<p class="calm">Nada pendiente: todo lo que tienes está en tu plan.</p>'}
+    </section>`;
+}
+
+function todo({ ticker, chip, tone: t, who, why }) {
+  return `
+    <li><button class="todo" data-action="holding" data-ticker="${esc(ticker)}">
+      <span class="chip chip--${esc(t)}">${esc(chip)}</span>
+      <span class="todo__who">${esc(who)}</span>
+      <span class="todo__why">${esc(why)}</span>
+    </button></li>`;
 }
 
 function monthSection(m) {
@@ -108,26 +247,6 @@ function monthSection(m) {
       <p>${down ? 'Perdiste' : 'Ganaste'} <strong class="num ${tone(mo.total)}">${money(Math.abs(mo.total))}</strong> este mes por cambios de precio. ${why}</p>
       <ul class="bars" aria-label="Ganancia o pérdida de cada acción en ${esc(mes)}">${rows}</ul>
       <p class="muted small">${down ? 'Bajar un mes es normal en bolsa: no significa que hiciste algo mal. ' : ''}El dinero que agregaste no cuenta como ganancia.${mo.source === 'history' ? ' Algunas cifras son aproximadas (calculadas con tus registros).' : ''}</p>
-    </section>`;
-}
-
-function actionsSection(m) {
-  const items = m.actions.map(a => {
-    const open = a.ticker ? `data-action="holding" data-ticker="${esc(a.ticker)}"` : a.kind === 'vacio' ? 'data-action="trade" data-kind="buy"' : 'data-action="go" data-tab="plan"';
-    return `
-      <li>
-        <button class="todo todo--${esc(a.tone)}" ${open}>
-          <span class="chip chip--${esc(a.tone)}">${esc(a.label)}</span>
-          ${a.ticker ? `<span class="todo__who">${esc(nameOf(a.ticker))}${a.amount ? ` · unos ${money(a.amount)}` : ''}</span>` : ''}
-          <span class="todo__why">${esc(a.reason)}</span>
-        </button>
-      </li>`;
-  }).join('');
-  return `
-    <section class="block" aria-labelledby="todo-title">
-      <h2 id="todo-title" class="block__title">¿Qué hago ahora?</h2>
-      <ul class="todos">${items}</ul>
-      <button class="btn btn--quiet btn--block" data-action="go" data-tab="plan">¿Dónde pongo mi próximo aporte?</button>
     </section>`;
 }
 

@@ -253,5 +253,18 @@ export async function mockBackend(page, scenario = {}) {
   return calls;
 }
 
-export const test = base;
+// Sin acceso a jsDelivr (p. ej. un sandbox sin red), SUPABASE_UMD apunta a una
+// copia local del mismo archivo (npm pack @supabase/supabase-js@<versión>); el
+// SRI de index.html la valida igual. Sin la variable, nada cambia.
+export const test = base.extend({
+  page: async ({ page }, use) => {
+    if (process.env.SUPABASE_UMD) {
+      await page.route('https://cdn.jsdelivr.net/npm/@supabase/**', r => r.fulfill({
+        status: 200, contentType: 'text/javascript', path: process.env.SUPABASE_UMD,
+        headers: { 'access-control-allow-origin': '*' },
+      }));
+    }
+    await use(page);
+  },
+});
 export { expect };

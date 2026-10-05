@@ -1,8 +1,10 @@
-// Plan: qué compro con mi próximo aporte, qué vendo, qué hago con cada acción,
-// si me conviene otra acción, y preguntas libres a la IA.
+// Plan: el plan acordado (objetivos, lo congelado, lo que se vende), si me
+// conviene otra acción, y preguntas libres a la IA. El aporte del mes y el
+// avance están en Inicio.
 
 import { state, nameOf } from '../data.js';
-import { PROFILES, planContribution, evaluateCandidate } from '../core/advice.js';
+import { evaluateCandidate } from '../core/advice.js';
+import { fmtDate, roleOf } from '../core/plan.js';
 import { money, plainPct, esc } from '../format.js';
 import { marketExplain } from './holdings.js';
 
@@ -16,109 +18,42 @@ export function renderPlan(m) {
     return `
       <section class="empty">
         <h1 class="display">Tu plan aparece cuando anotes tus acciones.</h1>
-        <p class="lead">Con lo que tienes en XTB calculo qué comprar con tu próximo aporte y si conviene vender algo.</p>
+        <p class="lead">Con lo que tienes en XTB calculo qué comprar con tu próximo aporte y qué te falta vender.</p>
         <button class="btn btn--primary btn--block" data-action="trade" data-kind="buy">Anotar una compra</button>
       </section>`;
   }
   return `
     <h1 class="title">Tu plan</h1>
-    ${profileBlock()}
-    ${contributionBlock(m)}
-    ${attentionBlock(m)}
+    ${planDefinition(m)}
     <div class="tools">
       ${candidateBlock(m)}
       ${aiBlock()}
     </div>
-    <p class="muted small disclaimer">Son reglas generales para ordenar tu cartera (no concentrar, no perseguir precios altos, reforzar lo que está por debajo de su peso). No son asesoría financiera personalizada; la decisión final es tuya.</p>`;
+    <p class="muted small disclaimer">Es el plan que acordaste el 2 oct 2026. Información general, no asesoría financiera personalizada; la decisión final es tuya.</p>`;
 }
 
-// Perfil en una línea; el selector sólo aparece al pulsar «Cambiar».
-function profileBlock() {
-  const p = PROFILES[state.profile];
-  const editor = planState.editingProfile ? `
-      <div class="seg seg--block" role="radiogroup" aria-label="Perfil de riesgo">${Object.entries(PROFILES).map(([k, v]) => `
-        <label class="seg__opt"><input type="radio" name="profile" value="${k}" ${k === state.profile ? 'checked' : ''} data-action="profile"> ${esc(v.label)}</label>`).join('')}
-      </div>` : '';
+// El plan como lo acordaste: qué tienes que tener, qué se queda sin comprar y
+// qué se vende. Lo que cada cosa pesa hoy está en Inicio.
+function planDefinition(m) {
+  const p = m.plan;
+  const funds = p.targets.filter(t => !t.stock);
+  const stocks = p.targets.filter(t => t.stock);
+  const row = (name, val) => `<li class="plandef__row"><span>${esc(name)}</span><span class="num">${esc(val)}</span></li>`;
   return `
-    <section id="profile" class="profile" aria-label="Perfil de riesgo">
-      <div class="profile__row">
-        <p><span class="muted">Perfil:</span> <strong>${esc(p.label)}</strong></p>
-        <button type="button" class="link link--small" data-action="edit-profile" aria-expanded="${planState.editingProfile}" aria-label="Cambiar perfil">${planState.editingProfile ? 'Listo' : 'Cambiar'}</button>
-      </div>
-      ${editor}
-      <p class="muted small">Un ${p.fundPct}% de tu dinero en fondos que reparten el riesgo y no más de ${p.cap}% en una sola empresa.</p>
-    </section>`;
-}
-
-function contributionBlock(m) {
-  const amt = planState.amount;
-  const plan = amt ? planContribution({ summary: m.summary, market: state.market, profile: state.profile, amount: amt }) : null;
-  const result = !plan ? '' : !plan.buys.length
-    ? `<p class="muted">${esc(plan.note ?? 'Escribe un monto mayor que 0.')}</p>`
-    : `
-      <ol class="buys">${plan.buys.map(b => {
-        const h = m.summary.holdings.find(x => x.ticker === b.ticker);
-        return `
-          <li class="buy">
-            <span class="buy__amt num">${money(b.usd)}</span>
-            <span class="buy__what"><strong>${esc(nameOf(b.ticker))}</strong>${b.isNew ? ' <span class="chip chip--good">nuevo</span>' : ''}</span>
-            <span class="buy__why">${b.isNew
-              ? 'Fondo con las 500 empresas más grandes de EE. UU.'
-              : `Pesa ${plainPct(h?.weight ?? 0)}; lo ideal es ${plainPct(b.target)}.`}
-              <button class="link link--small" data-action="trade" data-kind="buy" data-ticker="${esc(b.ticker)}" data-amount="${b.usd}">Anotar compra</button></span>
-          </li>`;
-      }).join('')}</ol>
-      ${plan.note ? `<p class="notice">${esc(plan.note)}</p>` : ''}`;
-  return `
-    <section class="card card--hero" aria-labelledby="contrib-title">
-      <h2 id="contrib-title" class="block__title">¿Dónde pongo mi próximo aporte?</h2>
-      <form class="field" data-form="contribution">
-        <label class="field__label" for="contrib-amount">¿Cuánto vas a invertir?</label>
-        <div class="field__row">
-          <span class="field__prefix" aria-hidden="true">$</span>
-          <input id="contrib-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" value="${esc(amt)}" placeholder="100">
-          <button class="btn btn--primary" type="submit">Calcular</button>
-        </div>
-        <div class="chips">${[100, 250, 500].map(v => `<button type="button" class="chip-btn" data-action="amount" data-amount="${v}">$${v}</button>`).join('')}</div>
-      </form>
-      <div aria-live="polite">${result}</div>
-    </section>`;
-}
-
-// Sólo lo que pide hacer algo; «Mantener» se resume en una frase. La lista
-// completa ya está en Acciones y repetirla aquí alargaba la pantalla.
-const URGENCY = { revisar: 0, recortar: 1, esperar: 2, comprar: 3 };
-const SHOWN = 3;
-
-function attentionBlock(m) {
-  if (!m.summary.complete) {
-    return `
-      <section id="attention" class="block" aria-labelledby="att-title">
-        <h2 id="att-title" class="block__title">Atención ahora</h2>
-        <p class="muted">Faltan precios de hoy para evaluar tu cartera.</p>
-      </section>`;
-  }
-  const items = Object.entries(m.verdicts)
-    .filter(([, v]) => v.action in URGENCY)
-    .sort(([, a], [, b]) => URGENCY[a.action] - URGENCY[b.action] || (b.amount ?? 0) - (a.amount ?? 0));
-  const calm = m.summary.holdings.length - items.length;
-  const shown = planState.showAllAttention ? items : items.slice(0, SHOWN);
-  const list = shown.map(([t, v]) => `
-    <li><button class="todo" data-action="holding" data-ticker="${esc(t)}">
-      <span class="chip chip--${esc(v.tone)}">${esc(v.label)}</span>
-      <span class="todo__who">${esc(nameOf(t))}${v.amount ? ` · unos ${money(v.amount)}` : ''}</span>
-      <span class="todo__why">${esc(v.reasons[0])}</span>
-    </button></li>`).join('');
-  const more = items.length > shown.length
-    ? `<button type="button" class="btn btn--quiet btn--block" data-action="attention-all">Ver ${items.length - shown.length} recomendaciones más</button>` : '';
-  const calmTxt = !items.length
-    ? 'No hace falta hacer nada: ninguna acción pesa demasiado ni tiene señales de alarma.'
-    : calm === 1 ? 'La otra está para mantener.' : calm > 1 ? `Las otras ${calm} están para mantener.` : '';
-  return `
-    <section id="attention" class="block" aria-labelledby="att-title">
-      <h2 id="att-title" class="block__title">Atención ahora</h2>
-      ${items.length ? `<ul class="todos">${list}</ul>${more}` : ''}
-      ${calmTxt ? `<p class="calm">${calmTxt} <a class="link link--small" href="#acciones">Ver todas en Acciones</a></p>` : ''}
+    <section class="block block--flush" aria-labelledby="def-title">
+      <h2 id="def-title" class="sr-only">Objetivos</h2>
+      <ul class="plandef">
+        ${funds.map(t => row(`${t.label} (${t.buy})`, plainPct(t.pct))).join('')}
+        ${row(`Acciones: ${stocks.map(t => t.label).join(', ')}`, `${plainPct(stocks[0]?.pct ?? 0, 1)} c/u`)}
+        ${p.frozen.map(f => row(`${nameOf(f.ticker)}: se queda sin comprar`, `tope ${f.max}%`)).join('')}
+      </ul>
+      <p class="muted small">Cada mes, el aporte de ${money(p.monthly)} va a las 2–3 posiciones más por debajo de su objetivo.</p>
+    </section>
+    <section class="block" aria-labelledby="exit-title">
+      <h2 id="exit-title" class="block__title">Lo que vas a vender</h2>
+      <p>${p.exit.items.filter(e => e.now).map(e => `${esc(nameOf(e.ticker))} → ${esc(e.swapTo)}`).filter((x, i, a) => a.indexOf(x) === i).join(' · ')}: <strong>ya</strong>.</p>
+      <p>${p.exit.items.filter(e => !e.now).map(e => esc(nameOf(e.ticker))).join(', ')}: con órdenes limitadas, antes del <strong>${esc(fmtDate(p.exit.deadline))}</strong>.</p>
+      <p class="muted small">Por qué: SCHD y VOO retienen 30% de los dividendos a no residentes; los ETF irlandeses (CSPX, EIMI), 15%. Y menos acciones sueltas es menos riesgo de que una sola empresa te hunda.</p>
     </section>`;
 }
 
@@ -128,10 +63,19 @@ function candidateBlock(m) {
   if (planState.candidateLoading) result = '<p class="muted">Buscando…</p>';
   else if (planState.candidateError) result = `<p class="notice notice--bad">${esc(planState.candidateError)}</p>`;
   else if (c) {
-    const r = evaluateCandidate({ summary: m.summary, market: state.market, profile: state.profile, ticker: c.key, quote: c.quote });
+    const role = roleOf(c.key, m.plan);
+    const r = role.kind === 'outside' || !m.verdicts[c.key]
+      ? evaluateCandidate({ summary: m.summary, market: state.market, profile: state.profile, ticker: c.key, quote: c.quote })
+      : { ...m.verdicts[c.key], owned: true };
+    const note = role.kind === 'outside'
+      ? '<p class="notice">No está en tu plan. Si la compras, ese dinero no va a tus objetivos: decide primero si la agregas al plan.</p>'
+      : role.kind === 'exit' ? '<p class="notice notice--warn">Está en tu lista de venta.</p>'
+      : role.kind === 'frozen' ? '<p class="notice">Tu plan la mantiene sin comprar más.</p>'
+      : `<p class="notice">Está en tu plan: cuenta para ${esc(role.target.label)}.</p>`;
     result = `
       <div class="candidate">
         <p class="candidate__name"><strong>${esc(c.quote.name ?? c.key)}</strong> <span class="muted">${esc(c.key)} · ${money(c.quote.currentPrice, { cents: true })}</span></p>
+        ${note}
         <div class="verdict verdict--${esc(r.tone)}">
           <p class="verdict__label">${esc(r.owned ? `Ya la tienes: ${r.label}` : r.label)}</p>
           <ul class="verdict__why">${r.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
@@ -154,7 +98,7 @@ function candidateBlock(m) {
     </details>`;
 }
 
-const QUESTIONS = ['¿Debo vender algo?', '¿Por qué bajé este mes?', '¿Cuál es mi mayor riesgo?', '¿Qué significa el PER de mis acciones?'];
+const QUESTIONS = ['¿Por qué CSPX y no VOO?', '¿Qué vendo primero y cómo?', '¿Le gano al S&P 500?', '¿Por qué bajé este mes?'];
 
 function aiBlock() {
   let out = '';
@@ -164,7 +108,7 @@ function aiBlock() {
   return `
     <details class="tool" name="tools" data-tool="ai" ${planState.openTool === 'ai' ? 'open' : ''}>
       <summary class="tool__head"><span id="ai-title">Pregúntale a la IA</span></summary>
-      <p class="muted small">Responde con tus números y las recomendaciones de arriba. Puede equivocarse.</p>
+      <p class="muted small">Responde con tus números y tu plan. No cambia el plan: lo explica. Puede equivocarse.</p>
       <div class="chips">${QUESTIONS.map(q => `<button type="button" class="chip-btn" data-action="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <form class="field" data-form="ask">
         <label class="sr-only" for="ask-q">Tu pregunta</label>

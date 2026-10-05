@@ -35,13 +35,14 @@ src/
   format.js           # money(), signedMoney(), pct(), esc() — every number/text shown goes through here
   app.js              # bootstrap, hash router, data-action delegation, forms, AI, price refresh, SW registration
   core/portfolio.js   # PURE: ledger (avg-cost, buys+sales), summarize(), monthAttribution()
-  core/advice.js      # PURE: PROFILES, verdicts(), planContribution(), todayActions(), evaluateCandidate()
+  core/plan.js        # PURE: DEFAULT_PLAN, planStatus(), monthlyBuys(), planVerdicts(), vsIndex()
+  core/advice.js      # PURE: evaluateCandidate() for tickers outside the plan (legacy profiles)
   core/trades.js      # PURE: validateTrade(), applyTrade(), removeTrade()
   ui/sheet.js         # bottom sheet on native <dialog>
   ui/chart.js         # SVG value chart
-  views/home.js       # Inicio: ¿cómo voy? · ¿por qué subí/bajé? · ¿qué hago? · curva
+  views/home.js       # Inicio: aporte del mes · hacia tu plan · pendiente · ¿cómo voy? (vs S&P) · ¿por qué subí/bajé? · curva
   views/holdings.js   # Acciones: list, detail sheet, buy/sell form
-  views/plan.js       # Plan: perfil, próximo aporte, ¿vendo algo?, otra acción, IA
+  views/plan.js       # Plan: el plan acordado, lo que se vende, otra acción, IA
   views/more.js       # Más: cómo funciona, historial, cuenta
 supabase/functions/   # market-data, ai-analysis, xtb-sync (not deployed; see risks)
 tests/unit/           # node:test
@@ -59,15 +60,18 @@ Dependency direction: `core/*` (pure, no imports from app) ← `data` ← `model
 - `sessions`: one row per day with `valor_total_usd` and `rendimientos` (% gain vs avg cost per ticker at that date).
   Written by `snapshotToday()` (insert, or update if today exists — never duplicates). Legacy rows may contain
   `_capitalInjected`; it is ignored by the new code. Duplicated dates are deduplicated on read (last wins).
-- `auth.users.user_metadata`: `last_cash` (uninvested cash in XTB) and `profile` (conservador/equilibrado/agresivo).
+- `auth.users.user_metadata`: `last_cash` (uninvested cash in XTB) and legacy `profile` (no longer shown).
 
-## Rules engine (src/core/advice.js) — keep it explainable
-- Profiles: funds target 70/50/30 %, max per single stock 15/20/30 %.
-- **Revisar** only if analysts = VENDER, or loss ≤ −30 % AND analysts = MANTENER. A loss alone never triggers selling.
-- **Vender una parte** if a stock's weight > cap and the excess ≥ $25 (amount = excess).
-- **No compres más** if not a fund, (forwardPe || pe) > 35 and price ≥ 90 % of its 52-week range.
-- **Comprar más** if weight < target − 5 pp.
-- `planContribution`: fills gaps to targets, never pushes a stock over its cap, remainder to funds (VOO if none), sums exactly.
+## Rules engine (src/core/plan.js) — the user's plan is data
+- `DEFAULT_PLAN` = the plan agreed on 2026-10-02 (`/mnt/project-files/finanzas/plan-portafolio-final.md`): S&P 500 67 % (VOO or CSPX; new money → CSPX),
+  emerging 15 % (EIMI), MSFT/Visa/JNJ 5.5 % each, NVDA frozen (no buys, trim above 10 %), exit list (EUNL.DE→EIMI and KO→MSFT now;
+  SCHD, PEP, PG, MNST, AMZN with limit orders before 2026-12-31). If the plan changes, change it here and in that file, nowhere else.
+- Frozen weight takes space from the funds (proportionally), so goals + frozen (up to its cap) = 100 %.
+- `monthlyBuys`: the contribution goes to the 2–3 targets furthest below goal (measured on value + contribution, exit money included),
+  never to exit or frozen tickers; amounts < $10 merge into the first; sums exactly.
+- `planVerdicts` labels must stay in `ALLOWED_ACTIONS` of ai-analysis (unit test `ai-contract` enforces it).
+- `vsIndex`: gain % on the S&P 500 holdings vs everything else (no purchase dates needed).
+- `src/core/advice.js` (generic profiles, analyst/PE signals) only backs «Revisar otra acción» for tickers outside the plan. The profile UI was removed.
 - With missing prices (`summary.complete === false`) no weight-based advice is given.
 - Month attribution: `shares_at_start × (p_now − p_start) + Σ buys_in_month × (p_now − p_buy) + Σ sells_in_month × (p_sell − p_now)`.
   `p_start` = `monthStartPrice` from market-data, fallback: last session of previous month × avg cost at that date.
@@ -83,7 +87,8 @@ Dependency direction: `core/*` (pure, no imports from app) ← `data` ← `model
 { search: 'Apple' }       → [{ ticker, name, exchange, type }]
 // ai-analysis
 { mode: 'advisor', question, positions, portfolio, facts } → { answer }
-// facts = engine output (verdicts, month attribution, real gain). The prompt forbids contradicting it.
+// facts = engine output (plan status, monthly buys, exits, vsIndex, verdicts, month attribution, real gain)
+// plus fixed tax facts in the prompt. The prompt forbids contradicting the plan.
 ```
 Security: JWT required, ticker whitelist `/^[A-Z0-9.\-]{1,10}$/`, max 20 tickers, rate limits via `api_usage`.
 **Edge Functions must be redeployed after changes:** `npx supabase functions deploy <name> --project-ref fjufxwkhjgbkhqvpmryb`.
@@ -121,6 +126,7 @@ Push `master`; Pages serves the repo root under `/pruebas/`. No build step. Bump
   hash BEFORE creating the client (Supabase clears it) and the app shows «Crea tu contraseña nueva» before entering.
   Supabase → Authentication → URL Configuration must list `https://stu8990.github.io/pruebas/` (Site URL and Redirect URLs).
 - The auth hero uses `--hero-art` (per design image) over a gradient built from palette tokens; dark theme uses only the gradient. Icons in `icons/` (SVG + PNG).
-- Plan view: compact profile, contribution card, «Atención ahora» (max 3 non-Mantener verdicts + count of the rest), tools in `<details name="tools">`. `planContribution` returns at most 3 buys (MAX_BUYS).
+- Inicio opens with the month's contribution (h1), then goal bars (shared scale), then «Pendiente». Plan view: plan definition, exit list, tools in `<details name="tools">`.
+- E2E without network to jsDelivr: `SUPABASE_UMD=<path to supabase.js from npm pack @supabase/supabase-js@2.112.3>` makes the fixtures serve it locally (SRI still checked).
 - Visa is stored as `VISA` but is `V` in Yahoo (`ASSET_META.VISA.yfTicker`).
 - `xtb-sync` stores broker credentials: do not deploy until its table has encryption + RLS reviewed.

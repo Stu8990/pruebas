@@ -504,6 +504,37 @@ body[data-auth="pending"] .auth { visibility: hidden; }
 .suggest__opt:hover, .suggest__opt:focus-visible { background: var(--surface-2); }
 
 /* ── Plan ───────────────────────────────────────────────── */
+/* Inicio → Mi plan: aporte del mes, avance hacia los objetivos, pendientes. */
+.plan-month { margin-top: 8px; }
+.plan-month .block__title { font-size: 24px; }
+.plan-month .chips { margin-top: 16px; }
+.plan-month .field__label { margin-top: 12px; }
+.plan-month .chip-btn[aria-pressed="true"] { border-color: var(--brand); color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+.plan-month > .muted { margin-top: 12px; }
+
+.goals { display: grid; gap: 14px; margin: 6px 0 12px; }
+.goal { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; column-gap: 12px; align-items: baseline; font-size: 15px; }
+.goal__name { color: var(--ink-2); overflow-wrap: anywhere; }
+.goal__val { font-weight: 700; white-space: nowrap; }
+.goal__track { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 99px; background: var(--surface-2); }
+.goal__fill { position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: 99px; background: var(--brand); }
+.goal__mark { position: absolute; top: -4px; bottom: -4px; left: var(--g); width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); }
+.goal--frozen .goal__fill { background: var(--ink-3); }
+.goal--exit .goal__fill { background: var(--warn); }
+.goal--exit .goal__mark { display: none; }
+
+.todo--static { cursor: default; }
+.todo__who { text-wrap: balance; }
+.todo--static .link { min-height: 32px; }
+
+.vsindex { margin-top: 18px; padding: 14px 16px; border-radius: var(--r-m); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 6px; }
+.vsindex strong { font-weight: 800; }
+
+.plandef { display: grid; margin: 4px 0 10px; }
+.plandef__row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.plandef__row span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.plandef__row .num { font-weight: 700; white-space: nowrap; }
+
 .buys { display: grid; gap: 10px; margin-top: 14px; counter-reset: buy; }
 .buy {
   display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: baseline;

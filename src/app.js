@@ -4,10 +4,11 @@
 import { db, landing, signIn, signUp, sendReset, changePassword, signOut } from './auth.js';
 import {
   state, resetState, isStale, currentGen, loadUserPrefs, loadPositions, loadHistory, loadMarket, quote, searchTickers,
-  addTrade, deleteTrade, setCash, setProfile, snapshotToday, recordManualValue, deleteHistory,
+  addTrade, deleteTrade, setCash, snapshotToday, recordManualValue, deleteHistory,
   edge, nameOf, todayStr,
 } from './data.js';
 import { model } from './model.js';
+import { monthlyBuys } from './core/plan.js';
 import { validateTrade, TICKER_RE, parseNum } from './core/trades.js';
 import { monthName, timeAgo, esc } from './format.js';
 import { openSheet, closeSheet, sheetBody, isSheetOpen } from './ui/sheet.js';
@@ -172,7 +173,7 @@ setInterval(updateRefreshLabel, 30_000);
 
 // ── Arranque ───────────────────────────────────────────────
 function resetUi() {
-  Object.assign(planState, { amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '', editingProfile: false, showAllAttention: false, openTool: null });
+  Object.assign(planState, { amount: '', candidate: null, candidateError: '', candidateLoading: false, ai: null, aiLoading: false, aiError: '', openTool: null });
   lastM = null;
   closeSheet();
   $('#view').innerHTML = '';
@@ -427,6 +428,23 @@ function exportData() {
 }
 
 // ── IA ─────────────────────────────────────────────────────
+// El plan y lo que se deriva de él, ya calculado: la IA lo explica, no lo decide.
+function planFacts(m) {
+  const st = m.status;
+  const buys = monthlyBuys({ summary: m.summary, plan: m.plan, amount: m.plan.monthly }).buys;
+  const r1 = n => Math.round(n * 10) / 10;
+  return {
+    targets: st.complete ? st.targets.map(t => ({ label: t.label, buy: t.buy, weight: r1(t.weight), goal: r1(t.goal) })) : [],
+    frozen: st.frozen.map(f => ({ ticker: f.ticker, weight: r1(f.weight), max: f.max })),
+    exits: st.exits.map(e => ({ ticker: e.ticker, usd: Math.round(e.value), now: !!e.now, swapTo: e.swapTo ?? null, gainPct: e.gainPct === null ? null : r1(e.gainPct) })),
+    deadline: st.deadline,
+    daysLeft: st.daysLeft,
+    monthly: m.plan.monthly,
+    monthlyBuys: buys.map(b => ({ ticker: b.ticker, usd: Math.round(b.usd) })),
+    vsIndex: m.vsIndex ? { index: r1(m.vsIndex.index.gainPct), rest: r1(m.vsIndex.rest.gainPct) } : null,
+  };
+}
+
 async function ask(q) {
   q = String(q ?? '').trim().slice(0, 400);
   if (!q || planState.aiLoading) return;
@@ -450,7 +468,7 @@ async function ask(q) {
       }),
       portfolio: { totalInvested: +s.invested.toFixed(2), totalValue: +s.stocksValue.toFixed(2) },
       facts: {
-        profile: state.profile,
+        plan: planFacts(m),
         cash: +s.cash.toFixed(2),
         totalGain: +s.totalGain.toFixed(2),
         realized: +s.realized.toFixed(2),
@@ -516,8 +534,6 @@ const actions = {
   export: () => exportData(),
   signout: async () => { await signOut(); toast('Sesión cerrada'); },
   amount: b => { planState.amount = b.dataset.amount; render(); },
-  'edit-profile': () => { planState.editingProfile = !planState.editingProfile; render(); },
-  'attention-all': () => { planState.showAllAttention = true; render(); },
   ask: b => ask(b.dataset.q),
   'pick-ticker': b => {
     const f = $('#trade-form');
@@ -580,11 +596,6 @@ document.addEventListener('change', async e => {
     try { localStorage.setItem(THEME_KEY, e.target.value); } catch { /* sólo esta vez */ }
     applyTheme(e.target.value);
     return;
-  }
-  if (e.target.dataset.action === 'profile') {
-    planState.editingProfile = false;
-    try { await setProfile(e.target.value); } catch (err) { if (!isStale(err)) toast(err.message, 'bad'); }
-    render();
   }
 });
 
