@@ -13,7 +13,7 @@ export const PROFILES = {
 const KNOWN_FUNDS = new Set([
   'VOO', 'SPY', 'IVV', 'SPLG', 'VTI', 'ITOT', 'SCHB', 'SCHX', 'QQQ', 'QQQM', 'SCHD', 'VIG', 'VYM',
   'DIA', 'IWM', 'VT', 'VXUS', 'VEA', 'VWO', 'IEFA', 'IEMG', 'BND', 'AGG', 'VUG', 'VTV', 'SCHG',
-  'CSPX', 'VUAA', 'VWCE', 'IWDA', 'SXR8', 'EUNL',
+  'CSPX', 'EIMI', 'VUAA', 'VWCE', 'IWDA', 'SXR8', 'EUNL', 'EUNL.DE',
 ]);
 export const DEFAULT_FUND = 'VOO';
 

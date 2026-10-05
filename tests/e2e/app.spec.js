@@ -24,16 +24,32 @@ async function open(page, hash = 'inicio', scenario) {
   return calls;
 }
 
-test('Inicio responde cómo voy, por qué bajé en el mes y qué hacer', async ({ page }) => {
+test('Inicio empieza por el plan: aporte del mes, avance y pendientes', async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole('heading', { level: 1, name: 'Este mes pon tus $100 así' })).toBeVisible();
+  const buys = page.locator('.plan-month .buy');
+  await expect(buys.first()).toContainText('CSPX');
+  await expect(buys.first()).toContainText('nuevo');
+  await expect(page.locator('.plan-month .buys')).not.toContainText('NVDA');
+  await expect(page.locator('.plan-month .buys')).not.toContainText('SCHD');
+  const goals = page.locator('.goals');
+  await expect(goals).toContainText('S&P 500');
+  await expect(goals).toContainText('Por vender');
+  const pending = page.locator('section', { has: page.getByRole('heading', { name: 'Pendiente' }) });
+  await expect(pending).toContainText('Vender 2 posiciones antes del 31 dic');
+  await expect(pending).toContainText('104 días');
+  await expect(pending).toContainText('Vender una parte');
+  await expect(pending).toContainText('Pesa 32% y el tope es 10%');
+});
+
+test('Inicio responde cómo voy, contra el índice, y por qué bajé en el mes', async ({ page }) => {
   await open(page);
   const hero = page.locator('.hero');
   await expect(hero).toContainText('Tienes $4,079');
   await expect(hero).toContainText('Pusiste $3,096 en acciones y vas ganando $533');
+  await expect(page.locator('#vsindex')).toContainText('Tu S&P 500 va +12.1%; todo lo demás, +18.4%');
   await expect(page.getByRole('heading', { name: '¿Por qué bajaste en septiembre?' })).toBeVisible();
   await expect(page.locator('#month-title + p')).toContainText('Casi todo viene de NVIDIA (−$176)');
-  await expect(page.getByRole('heading', { name: '¿Qué hago ahora?' })).toBeVisible();
-  await expect(page.locator('.todo').first()).toContainText('Vender una parte');
-  await expect(page.locator('.todo').first()).toContainText('NVIDIA');
 });
 
 test('guarda el registro de hoy una sola vez con el valor total', async ({ page }) => {
@@ -95,7 +111,7 @@ test('si otro dispositivo guarda en el mismo instante, reintenta y no pierde nin
 });
 
 test('elegir un monto rápido reemplaza lo que se había escrito', async ({ page }) => {
-  await open(page, 'plan');
+  await open(page, 'inicio');
   await page.getByLabel('¿Cuánto vas a invertir?').fill('750');
   await page.getByRole('button', { name: '$500' }).click();
   await expect(page.getByLabel('¿Cuánto vas a invertir?')).toHaveValue('500');
@@ -122,14 +138,20 @@ test('pide el precio de inicio de mes con el mes del usuario, y sólo la primera
 });
 
 test('actualizar precios no borra lo que el usuario está escribiendo', async ({ page }) => {
-  await open(page, 'plan');
+  await open(page, 'inicio');
   await page.getByLabel('¿Cuánto vas a invertir?').fill('750');
+  await page.getByLabel('¿Cuánto vas a invertir?').focus();
+  await page.getByRole('button', { name: /Precios|Actualizar/ }).dispatchEvent('click');
+  await expect(page.locator('#toast')).toContainText('Precios actualizados');
+  await expect(page.getByLabel('¿Cuánto vas a invertir?')).toHaveValue('750');
+  await expect(page.getByLabel('¿Cuánto vas a invertir?')).toBeFocused();
+
+  await page.goto('./#plan');
   await openTool(page, 'Revisar otra acción');
   await page.getByLabel('Símbolo').fill('MSF');
   await page.getByLabel('Símbolo').focus();
   await page.getByRole('button', { name: /Precios|Actualizar/ }).dispatchEvent('click');
   await expect(page.locator('#toast')).toContainText('Precios actualizados');
-  await expect(page.getByLabel('¿Cuánto vas a invertir?')).toHaveValue('750');
   await expect(page.getByLabel('Símbolo')).toHaveValue('MSF');
   await expect(page.getByLabel('Símbolo')).toBeFocused();
 });
@@ -149,8 +171,8 @@ test('abrir una acción muestra el veredicto con sus razones y lo que dicen los 
   await page.getByRole('button', { name: /NVIDIA/ }).first().click();
   const sheet = page.getByRole('dialog', { name: 'NVIDIA' });
   await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText('Vender una parte: unos $442');
-  await expect(sheet).toContainText('Pesa 32% de tu dinero en acciones');
+  await expect(sheet).toContainText('Vender una parte: unos $805');
+  await expect(sheet).toContainText('Pesa 32% y tu plan pone el tope en 10%');
   await expect(sheet).toContainText('¿Está cara?');
   await expect(sheet).toContainText('Analistas:');
   await page.keyboard.press('Escape');
@@ -211,24 +233,27 @@ test('una venta registrada reduce las acciones y suma la ganancia cobrada', asyn
   await expect(page.locator('.hero')).toContainText('Incluye +$120 que ya ganaste al vender');
 });
 
-test('el plan reparte el aporte completo sin tocar lo que conviene recortar', async ({ page }) => {
-  await open(page, 'plan');
+test('el aporte se reparte completo y nunca va a lo que se vende ni a lo congelado', async ({ page }) => {
+  await open(page, 'inicio');
   await page.getByRole('button', { name: '$500' }).click();
-  const buys = page.locator('.buy');
-  await expect(buys.first()).toBeVisible();
-  const amounts = await page.locator('.buy__amt').allTextContents();
+  await expect(page.getByRole('heading', { level: 1, name: 'Este mes pon tus $500 así' })).toBeVisible();
+  const amounts = await page.locator('.plan-month .buy__amt').allTextContents();
+  expect(amounts.length).toBe(3);
   const total = amounts.reduce((s, t) => s + Number(t.replace(/[$,]/g, '')), 0);
   expect(Math.abs(total - 500)).toBeLessThanOrEqual(2); // redondeo a dólares enteros
-  await expect(page.locator('.buys')).not.toContainText('NVIDIA');
-  await expect(page.locator('#attention')).toContainText('NVIDIA');
+  const buys = page.locator('.plan-month .buys');
+  for (const t of ['NVDA', 'AMZN', 'SCHD']) await expect(buys).not.toContainText(t);
+  await expect(buys).toContainText('JNJ');
 });
 
-test('cambiar de perfil cambia las recomendaciones y se guarda en la cuenta', async ({ page }) => {
-  const calls = await open(page, 'plan');
-  await page.getByRole('button', { name: 'Cambiar perfil' }).click();
-  await page.getByText('Agresivo', { exact: true }).click();
-  await expect(page.locator('#profile')).toContainText('no más de 30% en una sola empresa');
-  await expect.poll(() => (calls.userUpdates ?? []).some(u => u.data?.profile === 'agresivo')).toBe(true);
+test('el Plan muestra el plan guardado: objetivos y lo que se vende con fecha', async ({ page }) => {
+  await open(page, 'plan');
+  await expect(page.locator('.plandef')).toContainText('S&P 500 (CSPX)');
+  await expect(page.locator('.plandef')).toContainText('67%');
+  await expect(page.locator('.plandef')).toContainText('NVIDIA: se queda sin comprar');
+  await expect(page.getByRole('heading', { name: 'Lo que vas a vender' })).toBeVisible();
+  await expect(page.locator('#view')).toContainText('antes del 31 dic');
+  await expect(page.locator('#profile')).toHaveCount(0);
 });
 
 test('revisar otra acción da un solo veredicto con explicación', async ({ page }) => {
@@ -245,9 +270,9 @@ test('revisar otra acción da un solo veredicto con explicación', async ({ page
 test('si la IA falla, lo dice y el resto del plan sigue funcionando', async ({ page }) => {
   await open(page, 'plan', { aiFails: true });
   await openTool(page, 'Pregúntale a la IA');
-  await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+  await page.getByRole('button', { name: '¿Qué vendo primero y cómo?' }).click();
   await expect(page.locator('.notice--bad')).toContainText('No pude responder: Servicio no configurado');
-  await expect(page.getByRole('heading', { name: 'Atención ahora' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lo que vas a vender' })).toBeVisible();
   // El 500 simulado de la Edge Function aparece como recurso fallido: es esperado.
   page.__errors = page.__errors.filter(e => !e.includes('500'));
 });
@@ -261,15 +286,22 @@ test('al enviar una pregunta a la IA la caja queda vacía para la siguiente', as
   await expect(page.getByLabel('Tu pregunta')).toHaveValue('');
 });
 
-test('la IA recibe las recomendaciones calculadas por la app', async ({ page }) => {
+test('la IA recibe el plan y las recomendaciones calculadas por la app', async ({ page }) => {
   const calls = await open(page, 'plan');
   await openTool(page, 'Pregúntale a la IA');
-  await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+  await page.getByRole('button', { name: '¿Qué vendo primero y cómo?' }).click();
   await expect(page.locator('.answer')).toContainText('Respuesta de prueba del asesor.');
   const body = calls.ai.at(-1);
   expect(body.mode).toBe('advisor');
   expect(body.facts.verdicts.find(v => v.ticker === 'NVDA').action).toBe('Vender una parte');
+  expect(body.facts.verdicts.find(v => v.ticker === 'SCHD').action).toBe('Vender (plan)');
   expect(body.facts.monthTotal).toBeLessThan(0);
+  const plan = body.facts.plan;
+  expect(plan.targets.find(t => t.label === 'S&P 500').buy).toBe('CSPX');
+  expect(plan.exits.map(e => e.ticker).sort()).toEqual(['AMZN', 'SCHD']);
+  expect(plan.deadline).toBe('2026-12-31');
+  expect(plan.monthlyBuys.map(b => b.ticker)).toEqual(['CSPX', 'EIMI']);
+  expect(plan.vsIndex.index).toBeCloseTo(12.1, 1);
 });
 
 test('usuario nuevo ve cómo empezar, no un tablero vacío', async ({ page }) => {
@@ -339,16 +371,15 @@ test('ninguna pantalla se desborda a lo ancho en un teléfono pequeño', async (
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('#view')).not.toBeEmpty();
       await expect(page.locator('.refresh')).toContainText('Precios');
+      if (tab === 'inicio') await page.getByRole('button', { name: '$500' }).click();
       if (tab === 'plan') {
-        await page.getByRole('button', { name: '$500' }).click();
-        await page.getByRole('button', { name: 'Cambiar perfil' }).click();
         await openTool(page, 'Revisar otra acción');
         await page.getByLabel('Símbolo').fill('AAPL');
         await page.getByRole('button', { name: 'Revisar', exact: true }).click();
         await expect(page.locator('.candidate')).toBeVisible();
         expect(await wideElements(page), `plan (candidato) a ${width}px`).toEqual([]);
         await openTool(page, 'Pregúntale a la IA');
-        await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+        await page.getByRole('button', { name: '¿Qué vendo primero y cómo?' }).click();
         await expect(page.locator('.answer')).toBeVisible();
       }
       expect(await wideElements(page), `${tab} a ${width}px`).toEqual([]);
@@ -435,14 +466,16 @@ test('una respuesta tardía de la IA pedida por la cuenta anterior no aparece en
     return route.fallback();
   });
   await openTool(page, 'Pregúntale a la IA');
-  await page.getByRole('button', { name: '¿Debo vender algo?' }).click();
+  await page.getByRole('button', { name: '¿Qué vendo primero y cómo?' }).click();
   await openTool(page, 'Revisar otra acción');
   await page.getByLabel('Símbolo').fill('AAPL');
   await page.getByRole('button', { name: 'Revisar', exact: true }).click();
   await routeAccountB(page);
   await signOutAndInAsB(page);
   await page.evaluate(() => { location.hash = 'plan'; });
-  await expect(page.getByRole('heading', { name: 'Atención ahora' })).toBeVisible({ timeout: 8000 });
+  // B no tiene plan: ve la invitación a crearlo, nunca el plan de A.
+  await expect(page.getByRole('heading', { name: 'Todavía no tienes un plan' })).toBeVisible({ timeout: 8000 });
+  await expect(page.locator('.plandef')).toHaveCount(0);
   await page.waitForTimeout(1500);
   await expect(page.locator('.answer')).toHaveCount(0);
   await expect(page.locator('.candidate')).toHaveCount(0);

@@ -119,6 +119,15 @@ function fakeJwt() {
   return `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: USER_ID, exp: 4102444800, role: 'authenticated' })}.sig`;
 }
 
+// El plan guardado de la cuenta de prueba (user_metadata.plan): el de Stuart.
+export const PLAN = {
+  v: 1, monthly: 100, nonUS: true, deadline: '2026-12-31',
+  targets: [{ ticker: 'CSPX', pct: 67 }, { ticker: 'EIMI', pct: 15 }, { ticker: 'MSFT', pct: 5.5 }, { ticker: 'VISA', pct: 5.5 }, { ticker: 'JNJ', pct: 5.5 }],
+  frozen: [{ ticker: 'NVDA', max: 10 }],
+  exits: [{ ticker: 'EUNL.DE', now: true }, { ticker: 'KO', now: true },
+    ...['SCHD', 'PEP', 'PG', 'MNST', 'AMZN'].map(ticker => ({ ticker, now: false }))],
+};
+
 export const USER = {
   id: USER_ID, aud: 'authenticated', role: 'authenticated', email: 'demo@investsmart.test',
   user_metadata: { last_cash: CASH + 300 }, app_metadata: {}, created_at: '2026-03-01T00:00:00Z',
@@ -126,9 +135,11 @@ export const USER = {
 
 /**
  * Deja la página con sesión iniciada y el backend simulado.
- * scenario: { history, positions, aiFails, ai }
+ * scenario: { history, positions, aiFails, ai, plan } (plan: null = cuenta sin plan)
  */
 export async function mockBackend(page, scenario = {}) {
+  const user = JSON.parse(JSON.stringify(USER));
+  if (scenario.plan !== null) user.user_metadata.plan = scenario.plan ?? PLAN;
   const history   = [...(scenario.history ?? buildHistory())];
   const positions = scenario.positions ?? POSITIONS;
   const calls = { ai: [], market: [], inserts: [] };
@@ -153,7 +164,7 @@ export async function mockBackend(page, scenario = {}) {
     ref: REF, today: TODAY,
     session: {
       access_token: fakeJwt(), refresh_token: 'r', token_type: 'bearer',
-      expires_in: 3600, expires_at: 4102444800, user: USER,
+      expires_in: 3600, expires_at: 4102444800, user,
     },
   });
 
@@ -171,8 +182,12 @@ export async function mockBackend(page, scenario = {}) {
     }
     const p = url.pathname;
     if (p === '/auth/v1/user') {
-      if (req.method() === 'PUT') { calls.userUpdates = [...(calls.userUpdates ?? []), req.postDataJSON()]; }
-      return json(USER);
+      if (req.method() === 'PUT') {
+        const body = req.postDataJSON();
+        calls.userUpdates = [...(calls.userUpdates ?? []), body];
+        Object.assign(user.user_metadata, body.data ?? {});
+      }
+      return json(user);
     }
     if (p === '/auth/v1/logout') return json({});
     if (p.startsWith('/auth/v1/token')) return json({});
@@ -253,5 +268,18 @@ export async function mockBackend(page, scenario = {}) {
   return calls;
 }
 
-export const test = base;
+// Sin acceso a jsDelivr (p. ej. un sandbox sin red), SUPABASE_UMD apunta a una
+// copia local del mismo archivo (npm pack @supabase/supabase-js@<versión>); el
+// SRI de index.html la valida igual. Sin la variable, nada cambia.
+export const test = base.extend({
+  page: async ({ page }, use) => {
+    if (process.env.SUPABASE_UMD) {
+      await page.route('https://cdn.jsdelivr.net/npm/@supabase/**', r => r.fulfill({
+        status: 200, contentType: 'text/javascript', path: process.env.SUPABASE_UMD,
+        headers: { 'access-control-allow-origin': '*' },
+      }));
+    }
+    await use(page);
+  },
+});
 export { expect };
