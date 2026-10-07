@@ -5,8 +5,9 @@ import { db, landing, signIn, signUp, sendReset, changePassword, signOut } from 
 import {
   state, resetState, isStale, currentGen, loadUserPrefs, loadPositions, loadHistory, loadMarket, quote, searchTickers,
   addTrade, deleteTrade, setCash, setPlan, snapshotToday, recordManualValue, deleteHistory,
-  edge, nameOf, todayStr,
+  edge, nameOf, ownTicker, todayStr,
 } from './data.js';
+import { ASSET_META } from './config.js';
 import { model } from './model.js';
 import { monthlyBuys, parsePlanForm, enginePlan, STARTER_PLAN } from './core/plan.js';
 import { validateTrade, TICKER_RE, parseNum } from './core/trades.js';
@@ -303,6 +304,18 @@ function openTrade({ kind = 'buy', ticker = '', amount = '' } = {}) {
   wireTradeForm(f);
 }
 
+// Yahoo devuelve sus símbolos (CSPX.L, V); la app guarda los suyos (CSPX,
+// VISA). Se traducen, se quitan repetidos y lo que coincide exacto con lo
+// escrito va primero.
+function suggestions(q, res) {
+  const Q = q.trim().toUpperCase();
+  const seen = new Set();
+  const out = res.map(r => ({ ...r, ticker: ownTicker(r.ticker) }))
+    .filter(r => !seen.has(r.ticker) && seen.add(r.ticker));
+  if (ASSET_META[Q] && !seen.has(Q)) out.unshift({ ticker: Q, name: ASSET_META[Q].full });
+  return out.sort((a, b) => (b.ticker === Q) - (a.ticker === Q)).slice(0, 6);
+}
+
 function wireTradeForm(f) {
   let t = null;
   const box = $('[data-suggest]', f);
@@ -319,8 +332,8 @@ function wireTradeForm(f) {
     if (q.length < 2 || state.positions[q.toUpperCase()]) { box.hidden = true; return; }
     t = setTimeout(async () => {
       try {
-        const res = await searchTickers(q);
-        box.innerHTML = res.slice(0, 6).map(r => `
+        const res = suggestions(q, await searchTickers(q));
+        box.innerHTML = res.map(r => `
           <button type="button" class="suggest__opt" data-action="pick-ticker" data-ticker="${esc(r.ticker)}">
             <strong>${esc(r.ticker)}</strong> <span>${esc(r.name)}</span></button>`).join('');
         box.hidden = !res.length;
@@ -330,6 +343,7 @@ function wireTradeForm(f) {
   f.addEventListener('submit', async e => {
     e.preventDefault();
     const input = Object.fromEntries(new FormData(f));
+    input.ticker = ownTicker(input.ticker); // CSPX.L escrito a mano también es CSPX
     // La venta no puede ser de algo sin fecha futura; validateTrade lo comprueba todo.
     const r = validateTrade(input, state.positions, todayStr());
     if (!r.ok) { formMsg(f, { error: r.error }); return; }
