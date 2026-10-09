@@ -524,3 +524,42 @@ test('la pantalla de acceso valida y muestra errores claros', async ({ page }) =
   await expect(page.locator('#form-login .form-msg')).toHaveText('Correo o contraseña incorrectos.');
   page.__errors = page.__errors.filter(e => !e.includes('400'));
 });
+
+test('el buscador traduce los símbolos de Yahoo: CSPX.L se guarda como CSPX', async ({ page }) => {
+  const calls = await open(page, 'acciones');
+  await page.route('**/functions/v1/market-data', route => {
+    const body = route.request().postDataJSON();
+    if (!body?.search) return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify([
+      { ticker: 'CSPX.L', name: 'iShares Core S&P 500 UCITS ETF USD (Acc)' },
+      { ticker: 'CSPX.AS', name: 'iShares Core S&P 500 UCITS ETF USD (Acc)' },
+      { ticker: 'CSPXN.MX', name: 'iShares VII Public Limited Company' },
+    ]) });
+  });
+  await page.getByRole('button', { name: 'Anotar compra' }).first().click();
+  const f = page.locator('#trade-form');
+  await f.getByLabel('Acción o ETF').fill('CSPX');
+  const first = f.locator('.suggest__opt').first();
+  await expect(first.locator('strong')).toHaveText('CSPX');
+  await expect(f.locator('.suggest__opt strong', { hasText: /^CSPX\.L$/ })).toHaveCount(0);
+  await first.click();
+  await expect(f.getByLabel('Acción o ETF')).toHaveValue('CSPX');
+  await f.getByLabel('Precio por acción (USD)').fill('838.54');
+  await f.getByLabel('Número de acciones').fill('0.193');
+  await f.getByRole('button', { name: 'Guardar compra' }).click();
+  await expect(page.locator('#toast')).toContainText('Compra de CSPX guardada');
+  expect(Object.keys(calls.store.row.data)).toContain('CSPX');
+  expect(Object.keys(calls.store.row.data)).not.toContain('CSPX.L');
+});
+
+test('escribir CSPX.L a mano también se guarda como CSPX', async ({ page }) => {
+  const calls = await open(page, 'acciones');
+  await page.getByRole('button', { name: 'Anotar compra' }).first().click();
+  const f = page.locator('#trade-form');
+  await f.getByLabel('Acción o ETF').fill('cspx.l');
+  await f.getByLabel('Precio por acción (USD)').fill('838.54');
+  await f.getByLabel('Número de acciones').fill('0.193');
+  await f.getByRole('button', { name: 'Guardar compra' }).click();
+  await expect(page.locator('#toast')).toContainText('Compra de CSPX guardada');
+  expect(Object.keys(calls.store.row.data)).toContain('CSPX');
+});

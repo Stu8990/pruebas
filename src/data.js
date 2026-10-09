@@ -45,6 +45,13 @@ const profileKey = uid => `investsmart-profile:${uid}`;
 
 // ── Nombres y símbolos ───────────────────────────────────────
 export function yfOf(t) { return ASSET_META[t]?.yfTicker ?? t; }
+// Al revés: el símbolo de Yahoo (CSPX.L) → el que guarda la app (CSPX). Si el
+// usuario ya tiene ese símbolo tal cual, se respeta para no partir la posición.
+export function ownTicker(t) {
+  const T = String(t ?? '').trim().toUpperCase();
+  if (state.positions[T]) return T;
+  return Object.keys(ASSET_META).find(k => ASSET_META[k].yfTicker === T) ?? T;
+}
 export function nameOf(t) {
   return ASSET_META[t]?.full ?? state.market[t]?.name ?? t;
 }
